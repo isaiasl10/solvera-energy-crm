@@ -1,0 +1,195 @@
+import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { supabase } from '../lib/supabase';
+import type { User as SupabaseUser } from '@supabase/supabase-js';
+
+type RoleCategory = 'employee' | 'management' | 'field_tech' | 'admin' | 'sales_rep' | 'sales_manager';
+
+type User = {
+  id: string;
+  email: string;
+  name: string;
+  role: string;
+  role_category: RoleCategory;
+  photo_url?: string;
+};
+
+type AuthContextType = {
+  user: User | null;
+  loading: boolean;
+  isAdmin: boolean;
+  isEmployee: boolean;
+  isSalesRep: boolean;
+  canEdit: boolean;
+  login: (email: string, password: string) => Promise<void>;
+  logout: () => Promise<void>;
+  setMockUser: (roleCategory: RoleCategory) => void;
+};
+
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+export function AuthProvider({ children }: { children: ReactNode }) {
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    checkUser();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      if (session?.user) {
+        try {
+          await loadUserData(session.user);
+        } catch (error) {
+          console.error('Error loading user during auth state change:', error);
+          setUser(null);
+        }
+      } else {
+        setUser(null);
+      }
+      setLoading(false);
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, []);
+
+  const checkUser = async () => {
+    try {
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+
+      if (sessionError) {
+        console.error('Session error:', sessionError);
+        setUser(null);
+        setLoading(false);
+        return;
+      }
+
+      if (session?.user) {
+        await loadUserData(session.user);
+      } else {
+        setUser(null);
+      }
+    } catch (error) {
+      console.error('Error checking user:', error);
+      setUser(null);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadUserData = async (authUser: SupabaseUser) => {
+    try {
+      const { data: appUser, error } = await supabase
+        .from('app_users')
+        .select('id, email, full_name, role, role_category, photo_url')
+        .eq('email', authUser.email)
+        .maybeSingle();
+
+      if (error) {
+        console.error('Error querying app_users:', error);
+        // Sign out if there's a database error - this clears stale sessions
+        await supabase.auth.signOut();
+        throw error;
+      }
+
+      if (appUser) {
+        setUser({
+          id: appUser.id,
+          email: appUser.email,
+          name: appUser.full_name,
+          role: appUser.role,
+          role_category: appUser.role_category as RoleCategory,
+          photo_url: appUser.photo_url,
+        });
+      } else {
+        console.warn('No app_users record found for:', authUser.email);
+        // Sign out if no user record exists
+        await supabase.auth.signOut();
+        setUser(null);
+      }
+    } catch (error) {
+      console.error('Error loading user data:', error);
+      setUser(null);
+    }
+  };
+
+  const login = async (email: string, password: string) => {
+    setLoading(true);
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (error) {
+        console.error('Auth error:', error);
+        throw new Error(error.message || 'Failed to sign in');
+      }
+
+      if (data.user) {
+        await loadUserData(data.user);
+      }
+    } catch (error) {
+      console.error('Login error:', error);
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const logout = async () => {
+    try {
+      const { error } = await supabase.auth.signOut();
+      if (error) throw error;
+      setUser(null);
+    } catch (error) {
+      console.error('Logout error:', error);
+    }
+  };
+
+  const setMockUser = (roleCategory: RoleCategory) => {
+    const emailMap: Record<RoleCategory, string> = {
+      admin: 'isaias@solveraenergy.com',
+      management: 'management@solvera.com',
+      employee: 'employee@solvera.com',
+      field_tech: 'FIELDTECH@GMAIL.COM',
+      sales_rep: 'sales@solvera.com',
+    };
+
+    const mockUser: User = {
+      id: `demo-user-${roleCategory}`,
+      email: emailMap[roleCategory],
+      name: `${roleCategory.charAt(0).toUpperCase() + roleCategory.slice(1)} User`,
+      role: roleCategory,
+      role_category: roleCategory,
+    };
+    setUser(mockUser);
+  };
+
+  const isAdmin = user?.role_category === 'admin' || user?.role_category === 'management';
+  const isEmployee = user?.role_category === 'employee';
+  const isSalesRep = user?.role_category === 'sales_rep';
+  const canEdit = !isEmployee && !isSalesRep;
+
+  const value = {
+    user,
+    loading,
+    isAdmin,
+    isEmployee,
+    isSalesRep,
+    canEdit,
+    login,
+    logout,
+    setMockUser,
+  };
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+}
+
+export function useAuth() {
+  const context = useContext(AuthContext);
+  if (context === undefined) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
+}

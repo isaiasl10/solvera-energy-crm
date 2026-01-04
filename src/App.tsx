@@ -1,0 +1,141 @@
+import { useState, useEffect } from 'react';
+import Sidebar, { type ViewType } from './components/Sidebar';
+import Calendar from './components/Calendar';
+import CustomerQueue from './components/CustomerQueue';
+import QueueDetailView from './components/QueueDetailView';
+import UserManagement from './components/UserManagement';
+import Analytics from './components/admin/Analytics';
+import Payroll from './components/admin/Payroll';
+import CustomAdders from './components/admin/CustomAdders';
+import FinancingManagement from './components/admin/FinancingManagement';
+import Inverters from './components/admin/Inverters';
+import Optimizers from './components/admin/Optimizers';
+import Batteries from './components/admin/Batteries';
+import Racking from './components/admin/Racking';
+import Panels from './components/admin/Panels';
+import FieldTechDashboard from './components/FieldTechDashboard';
+import EmployeeProfileView from './components/EmployeeProfileView';
+import RolePreviews from './components/RolePreviews';
+import Login from './components/Login';
+import ResetPassword from './components/ResetPassword';
+import { useAuth } from './contexts/AuthContext';
+
+function App() {
+  const { user, login, loading } = useAuth();
+  const [currentPath, setCurrentPath] = useState(window.location.pathname);
+  const [currentView, setCurrentView] = useState<ViewType>(() => {
+    const saved = localStorage.getItem('currentView');
+    return (saved as ViewType) || 'calendar';
+  });
+  const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(() => {
+    return localStorage.getItem('selectedCustomerId') || null;
+  });
+
+  useEffect(() => {
+    localStorage.setItem('currentView', currentView);
+  }, [currentView]);
+
+  useEffect(() => {
+    if (selectedCustomerId) {
+      localStorage.setItem('selectedCustomerId', selectedCustomerId);
+    } else {
+      localStorage.removeItem('selectedCustomerId');
+    }
+  }, [selectedCustomerId]);
+
+  useEffect(() => {
+    const handleLocationChange = () => {
+      setCurrentPath(window.location.pathname);
+    };
+
+    window.addEventListener('popstate', handleLocationChange);
+    return () => window.removeEventListener('popstate', handleLocationChange);
+  }, []);
+
+  const handleViewCustomerProject = (customerId: string) => {
+    setSelectedCustomerId(customerId);
+    setCurrentView('customers');
+  };
+
+  if (currentPath === '/reset-password') {
+    return <ResetPassword />;
+  }
+
+  if (!user) {
+    return <Login loading={loading} />;
+  }
+
+  if (user?.role_category === 'field_tech') {
+    return <FieldTechDashboard />;
+  }
+
+  const renderView = () => {
+    if (currentView === 'employee-profile') {
+      return <EmployeeProfileView />;
+    }
+
+    if (currentView === 'role-previews') {
+      return <RolePreviews />;
+    }
+
+    switch (currentView) {
+      case 'calendar':
+        return <Calendar onViewCustomerProject={handleViewCustomerProject} />;
+      case 'customers':
+        return <CustomerQueue initialCustomerId={selectedCustomerId} onCustomerChange={() => setSelectedCustomerId(null)} />;
+      case 'user-management':
+        return <UserManagement />;
+      case 'admin-analytics':
+        return <Analytics />;
+      case 'admin-payroll':
+        return <Payroll />;
+      case 'admin-custom-adders':
+        return <CustomAdders />;
+      case 'admin-financing':
+        return <FinancingManagement />;
+      case 'admin-inverters':
+        return <Inverters />;
+      case 'admin-optimizers':
+        return <Optimizers />;
+      case 'admin-batteries':
+        return <Batteries />;
+      case 'admin-racking':
+        return <Racking />;
+      case 'admin-panels':
+        return <Panels />;
+      case 'queue-new-project':
+        return <QueueDetailView queueType="new_project" />;
+      case 'queue-site-survey':
+        return <QueueDetailView queueType="site_survey" />;
+      case 'queue-engineering':
+        return <QueueDetailView queueType="engineering" />;
+      case 'queue-utility-permits':
+        return <QueueDetailView queueType="utility_permits" />;
+      case 'queue-ready-to-order':
+        return <QueueDetailView queueType="ready_to_order" />;
+      case 'queue-coordinate-install':
+        return <QueueDetailView queueType="coordinate_install" />;
+      case 'queue-install-scheduled':
+        return <QueueDetailView queueType="install_scheduled" />;
+      case 'queue-ready-inspection':
+        return <QueueDetailView queueType="ready_inspection" />;
+      case 'queue-pending-pto':
+        return <QueueDetailView queueType="pending_pto" />;
+      case 'queue-pending-activation':
+        return <QueueDetailView queueType="pending_activation" />;
+      case 'queue-system-activated':
+        return <QueueDetailView queueType="system_activated" />;
+      default:
+        return <Calendar />;
+    }
+  };
+
+  return (
+    <div className="flex h-screen overflow-hidden">
+      <Sidebar currentView={currentView} onViewChange={setCurrentView} />
+      {renderView()}
+    </div>
+  );
+}
+
+export default App;
