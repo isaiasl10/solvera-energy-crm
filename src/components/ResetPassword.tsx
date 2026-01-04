@@ -79,41 +79,41 @@ export default function ResetPassword() {
 
   if (isCheckingToken) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-orange-50 to-gray-100 flex items-center justify-center">
-        <Loader2 className="w-12 h-12 text-orange-600 animate-spin" />
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-gray-50 to-slate-100 flex items-center justify-center">
+        <Loader2 className="w-12 h-12 text-orange-500 animate-spin" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-orange-50 to-gray-100 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-gray-50 to-slate-100 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
-        <div className="bg-white rounded-2xl shadow-xl p-8">
-          <div className="text-center mb-8">
+        <div className="bg-white rounded-2xl shadow-xl p-10 border border-gray-200/50 backdrop-blur-sm">
+          <div className="text-center mb-10">
             <img
               src="/solvera_energy_logo_redesign.png"
               alt="Solvera Energy"
-              className="w-48 h-auto mx-auto mb-6"
+              className="w-64 h-auto mx-auto mb-8"
             />
-            <h1 className="text-2xl font-bold text-gray-900 mb-2">Reset Your Password</h1>
-            <p className="text-gray-600">Enter your new password below</p>
+            <h1 className="text-3xl font-bold text-slate-800 mb-3 tracking-tight">Reset Your Password</h1>
+            <p className="text-slate-600 text-base">Enter your new password below</p>
           </div>
 
           {error && (
-            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-start gap-3">
+            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl flex items-start gap-3 animate-in fade-in duration-200">
               <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
-              <p className="text-sm text-red-800">{error}</p>
+              <p className="text-sm text-red-800 leading-relaxed">{error}</p>
             </div>
           )}
 
           {success && (
-            <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg flex items-start gap-3">
-              <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
+            <div className="mb-6 p-4 bg-emerald-50 border border-emerald-200 rounded-xl flex items-start gap-3 animate-in fade-in duration-200">
+              <CheckCircle className="w-5 h-5 text-emerald-600 flex-shrink-0 mt-0.5" />
               <div>
-                <p className="text-sm text-green-800 font-medium mb-1">
+                <p className="text-sm text-emerald-800 font-semibold mb-1">
                   Password successfully reset!
                 </p>
-                <p className="text-sm text-green-700">
+                <p className="text-sm text-emerald-700 leading-relaxed">
                   Redirecting to login page...
                 </p>
               </div>
@@ -122,12 +122,12 @@ export default function ResetPassword() {
 
           {!isValidToken ? (
             <div className="text-center">
-              <p className="text-gray-700 mb-4">
+              <p className="text-slate-700 mb-6 leading-relaxed">
                 This password reset link is invalid or has expired.
               </p>
               <a
                 href="/"
-                className="inline-block bg-orange-600 text-white py-3 px-6 rounded-lg hover:bg-orange-700 transition-colors font-medium"
+                className="inline-block bg-gradient-to-r from-orange-500 to-orange-600 text-white py-3.5 px-8 rounded-xl hover:from-orange-600 hover:to-orange-700 transition-all duration-200 font-semibold shadow-lg shadow-orange-500/25"
               >
                 Back to Login
               </a>
@@ -135,7 +135,7 @@ export default function ResetPassword() {
           ) : (
             <form onSubmit={handlePasswordReset} className="space-y-6">
               <div>
-                <label htmlFor="newPassword" className="block text-sm font-medium text-gray-700 mb-2">
+                <label htmlFor="newPassword" className="block text-sm font-semibold text-slate-700 mb-2.5">
                   New Password
                 </label>
                 <div className="relative">
@@ -144,7 +144,7 @@ export default function ResetPassword() {
                     type={showPassword ? 'text' : 'password'}
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
-                    className="w-full px-4 py-3 pr-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all"
+                    className="w-full px-4 py-3.5 pr-12 bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 focus:bg-white transition-all duration-200 text-slate-900 placeholder:text-slate-400"
                     placeholder="Enter new password"
                     required
                     disabled={isSubmitting || success}
@@ -153,19 +153,19 @@ export default function ResetPassword() {
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
                     tabIndex={-1}
                   >
                     {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                   </button>
                 </div>
-                <p className="text-xs text-gray-500 mt-1">
+                <p className="text-xs text-slate-500 mt-2">
                   Must be at least 6 characters long
                 </p>
               </div>
 
               <div>
-                <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-2">
+                <label htmlFor="confirmPassword" className="block text-sm font-semibold text-slate-700 mb-2.5">
                   Confirm Password
                 </label>
                 <div className="relative">
@@ -174,7 +174,7 @@ export default function ResetPassword() {
                     type={showConfirmPassword ? 'text' : 'password'}
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
-                    className="w-full px-4 py-3 pr-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all"
+                    className="w-full px-4 py-3.5 pr-12 bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 focus:bg-white transition-all duration-200 text-slate-900 placeholder:text-slate-400"
                     placeholder="Confirm new password"
                     required
                     disabled={isSubmitting || success}
@@ -183,7 +183,7 @@ export default function ResetPassword() {
                   <button
                     type="button"
                     onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
                     tabIndex={-1}
                   >
                     {showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
@@ -194,7 +194,7 @@ export default function ResetPassword() {
               <button
                 type="submit"
                 disabled={isSubmitting || success}
-                className="w-full bg-orange-600 text-white py-3 px-4 rounded-lg hover:bg-orange-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                className="w-full bg-gradient-to-r from-orange-500 to-orange-600 text-white py-3.5 px-4 rounded-xl hover:from-orange-600 hover:to-orange-700 transition-all duration-200 font-semibold disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-lg shadow-orange-500/25"
               >
                 {isSubmitting ? (
                   <>
