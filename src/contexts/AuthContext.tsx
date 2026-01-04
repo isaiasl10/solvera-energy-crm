@@ -34,18 +34,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     checkUser();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      if (session?.user) {
-        try {
-          await loadUserData(session.user);
-        } catch (error) {
-          console.error('Error loading user during auth state change:', error);
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      (async () => {
+        if (session?.user) {
+          try {
+            await loadUserData(session.user);
+          } catch (error) {
+            console.error('Error loading user during auth state change:', error);
+            setUser(null);
+          }
+        } else {
           setUser(null);
         }
-      } else {
-        setUser(null);
-      }
-      setLoading(false);
+        setLoading(false);
+      })();
     });
 
     return () => {
@@ -87,8 +89,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       if (error) {
         console.error('Error querying app_users:', error);
-        // Sign out if there's a database error - this clears stale sessions
-        await supabase.auth.signOut();
+        setUser(null);
         throw error;
       }
 
@@ -103,8 +104,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         });
       } else {
         console.warn('No app_users record found for:', authUser.email);
-        // Sign out if no user record exists
-        await supabase.auth.signOut();
         setUser(null);
       }
     } catch (error) {

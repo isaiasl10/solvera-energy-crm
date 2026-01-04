@@ -1,8 +1,12 @@
 {
-  "name": "vite-react-typescript-starter",
+  "name": "solvera-energy-crm",
   "private": true,
   "version": "0.0.0",
   "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/isaiasl10/solvera-energy-crm"
+  },
   "scripts": {
     "dev": "vite",
     "build": "vite build",
