@@ -344,7 +344,7 @@ export default function CustomerProject({ customer: initialCustomer, onBack }: C
           updateData = {
             full_name: formData.full_name,
             email: formData.email,
-            phone: formData.phone,
+            phone_number: formData.phone_number,
             address: formData.address,
             signature_date: formData.signature_date || null,
           };
@@ -743,13 +743,13 @@ export default function CustomerProject({ customer: initialCustomer, onBack }: C
                       {editingSection === 'customer' ? (
                         <input
                           type="tel"
-                          name="phone"
-                          value={formData.phone}
+                          name="phone_number"
+                          value={formData.phone_number}
                           onChange={handleChange}
                           className="w-full px-2 py-1 text-xs border border-gray-300 rounded focus:ring-2 focus:ring-orange-500 focus:border-transparent"
                         />
                       ) : (
-                        <p className="text-xs text-gray-900">{customer.phone}</p>
+                        <p className="text-xs text-gray-900">{customer.phone_number}</p>
                       )}
                     </div>
                     <div>

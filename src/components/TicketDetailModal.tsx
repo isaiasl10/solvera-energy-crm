@@ -575,7 +575,7 @@ export default function TicketDetailModal({ ticketId, onClose, onUpdate, onViewP
                   <div className="flex items-center gap-1.5">
                     <input type="checkbox" className="w-3 h-3 rounded" />
                     <Phone className="w-3 h-3 text-orange-500" />
-                    <span>{customer.phone}</span>
+                    <span>{customer.phone_number}</span>
                   </div>
                   <div className="flex items-center gap-1.5">
                     <Mail className="w-3 h-3 text-orange-500" />

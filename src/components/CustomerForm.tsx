@@ -6,7 +6,7 @@ import { useAuth } from '../contexts/AuthContext';
 type FormData = {
   full_name: string;
   address: string;
-  phone: string;
+  phone_number: string;
   email: string;
   signature_date: string;
   system_size_kw: string;
@@ -27,7 +27,7 @@ type FormData = {
 const initialFormData: FormData = {
   full_name: '',
   address: '',
-  phone: '',
+  phone_number: '',
   email: '',
   signature_date: '',
   system_size_kw: '',
@@ -95,7 +95,7 @@ export default function CustomerForm({ onSuccess }: CustomerFormProps) {
       const customerData: any = {
         full_name: formData.full_name,
         address: formData.address,
-        phone: formData.phone,
+        phone_number: formData.phone_number,
         email: formData.email,
         signature_date: formData.signature_date || null,
         system_size_kw: parseFloat(formData.system_size_kw),
@@ -174,15 +174,15 @@ export default function CustomerForm({ onSuccess }: CustomerFormProps) {
         </div>
 
         <div>
-          <label htmlFor="phone" className="block text-xs font-medium text-gray-700 mb-1">
+          <label htmlFor="phone_number" className="block text-xs font-medium text-gray-700 mb-1">
             Phone Number *
           </label>
           <input
             type="tel"
-            id="phone"
-            name="phone"
+            id="phone_number"
+            name="phone_number"
             required
-            value={formData.phone}
+            value={formData.phone_number}
             onChange={handleChange}
             className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             placeholder="(555) 123-4567"

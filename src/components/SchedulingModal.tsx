@@ -269,7 +269,7 @@ export default function SchedulingModal({
                   <Phone className="w-3 h-3" />
                   Phone
                 </span>
-                <p className="font-medium text-gray-900">{customer.phone}</p>
+                <p className="font-medium text-gray-900">{customer.phone_number}</p>
               </div>
 
               <div>

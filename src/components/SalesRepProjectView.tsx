@@ -175,7 +175,7 @@ export default function SalesRepProjectView({ customer: initialCustomer, onBack 
       const updateData = {
         full_name: formData.full_name,
         email: formData.email,
-        phone: formData.phone,
+        phone_number: formData.phone_number,
         address: formData.address,
         signature_date: formData.signature_date || null,
         system_size_kw: typeof formData.system_size_kw === 'string'
@@ -454,13 +454,13 @@ export default function SalesRepProjectView({ customer: initialCustomer, onBack 
                     {isEditing ? (
                       <input
                         type="tel"
-                        name="phone"
-                        value={formData.phone || ''}
+                        name="phone_number"
+                        value={formData.phone_number || ''}
                         onChange={handleChange}
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
                       />
                     ) : (
-                      <p className="text-gray-900">{customer.phone || 'N/A'}</p>
+                      <p className="text-gray-900">{customer.phone_number || 'N/A'}</p>
                     )}
                   </div>
 

@@ -34,7 +34,7 @@ export default function CustomerList({ refreshTrigger, onSelectCustomer, searchQ
           customer.customer_id?.toLowerCase().includes(query) ||
           customer.full_name.toLowerCase().includes(query) ||
           customer.email.toLowerCase().includes(query) ||
-          customer.phone.toLowerCase().includes(query) ||
+          customer.phone_number.toLowerCase().includes(query) ||
           customer.address.toLowerCase().includes(query)
         );
       });
@@ -207,7 +207,7 @@ export default function CustomerList({ refreshTrigger, onSelectCustomer, searchQ
             </div>
             <div className="flex items-center gap-3 text-gray-600">
               <Phone className="w-4 h-4 flex-shrink-0" />
-              <span className="text-sm">{customer.phone}</span>
+              <span className="text-sm">{customer.phone_number}</span>
             </div>
             <div className="flex items-center gap-3 text-gray-600">
               <User className="w-4 h-4 flex-shrink-0" />
