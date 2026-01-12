@@ -323,7 +323,7 @@ export default function ProjectTimelineQueue() {
                                       {customer.full_name}
                                     </button>
                                   </div>
-                                  <p className="text-xs text-gray-600 truncate">{customer.address}</p>
+                                  <p className="text-xs text-gray-600 truncate">{customer.installation_address}</p>
                                 </div>
 
                                 <button

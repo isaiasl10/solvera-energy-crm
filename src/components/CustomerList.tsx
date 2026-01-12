@@ -35,7 +35,7 @@ export default function CustomerList({ refreshTrigger, onSelectCustomer, searchQ
           customer.full_name.toLowerCase().includes(query) ||
           customer.email.toLowerCase().includes(query) ||
           customer.phone_number.toLowerCase().includes(query) ||
-          customer.address.toLowerCase().includes(query)
+          customer.installation_address.toLowerCase().includes(query)
         );
       });
     }
@@ -199,7 +199,7 @@ export default function CustomerList({ refreshTrigger, onSelectCustomer, searchQ
           <div className="space-y-1.5 mb-2">
             <div className="flex items-start gap-3 text-gray-600">
               <MapPin className="w-4 h-4 mt-0.5 flex-shrink-0" />
-              <span className="text-sm">{customer.address}</span>
+              <span className="text-sm">{customer.installation_address}</span>
             </div>
             <div className="flex items-center gap-3 text-gray-600">
               <Mail className="w-4 h-4 flex-shrink-0" />

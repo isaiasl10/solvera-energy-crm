@@ -176,7 +176,7 @@ export default function SalesRepProjectView({ customer: initialCustomer, onBack 
         full_name: formData.full_name,
         email: formData.email,
         phone_number: formData.phone_number,
-        address: formData.address,
+        installation_address: formData.address,
         signature_date: formData.signature_date || null,
         system_size_kw: typeof formData.system_size_kw === 'string'
           ? parseFloat(formData.system_size_kw)
@@ -339,7 +339,7 @@ export default function SalesRepProjectView({ customer: initialCustomer, onBack 
               </button>
               <div>
                 <h1 className="text-2xl font-bold text-gray-900">{customer.full_name}</h1>
-                <p className="text-sm text-gray-500">{customer.address}</p>
+                <p className="text-sm text-gray-500">{customer.installation_address}</p>
               </div>
             </div>
             <button
@@ -475,7 +475,7 @@ export default function SalesRepProjectView({ customer: initialCustomer, onBack 
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
                       />
                     ) : (
-                      <p className="text-gray-900">{customer.address}</p>
+                      <p className="text-gray-900">{customer.installation_address}</p>
                     )}
                   </div>
 

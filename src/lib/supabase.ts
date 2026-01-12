@@ -6,7 +6,8 @@ export type Customer = {
   created_at: string;
   updated_at: string;
   full_name: string;
-  address: string;
+  installation_address: string;
+  address?: string;
   phone_number: string;
   email: string;
   system_size_kw: number;

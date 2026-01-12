@@ -94,7 +94,7 @@ export default function CustomerForm({ onSuccess }: CustomerFormProps) {
     try {
       const customerData: any = {
         full_name: formData.full_name,
-        address: formData.address,
+        installation_address: formData.address,
         phone_number: formData.phone_number,
         email: formData.email,
         signature_date: formData.signature_date || null,

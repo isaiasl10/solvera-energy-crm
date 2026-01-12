@@ -297,7 +297,7 @@ export default function QueueDetailView({ queueType }: QueueDetailViewProps) {
                         {customer.full_name}
                       </button>
                     </div>
-                    <p className="text-xs text-gray-600">{customer.address}</p>
+                    <p className="text-xs text-gray-600">{customer.installation_address}</p>
                     <p className="text-xs text-gray-500">System: {customer.system_size_kw} kW</p>
                   </div>
 

@@ -345,7 +345,7 @@ export default function CustomerProject({ customer: initialCustomer, onBack }: C
             full_name: formData.full_name,
             email: formData.email,
             phone_number: formData.phone_number,
-            address: formData.address,
+            installation_address: formData.address,
             signature_date: formData.signature_date || null,
           };
           break;
@@ -569,7 +569,7 @@ export default function CustomerProject({ customer: initialCustomer, onBack }: C
               </span>
             </div>
             <h1 className="text-base font-bold text-gray-900">{customer.full_name}</h1>
-            <p className="text-xs text-gray-500">{customer.address}</p>
+            <p className="text-xs text-gray-500">{customer.installation_address}</p>
           </div>
         </div>
       </div>
@@ -765,7 +765,7 @@ export default function CustomerProject({ customer: initialCustomer, onBack }: C
                           className="w-full px-2 py-1 text-xs border border-gray-300 rounded focus:ring-2 focus:ring-orange-500 focus:border-transparent"
                         />
                       ) : (
-                        <p className="text-xs text-gray-900">{customer.address}</p>
+                        <p className="text-xs text-gray-900">{customer.installation_address}</p>
                       )}
                     </div>
                     <div>

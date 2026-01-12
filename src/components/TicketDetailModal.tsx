@@ -211,9 +211,9 @@ export default function TicketDetailModal({ ticketId, onClose, onUpdate, onViewP
   };
 
   const openMap = (type: 'apple' | 'google') => {
-    if (!customer?.address) return;
+    if (!customer?.installation_address) return;
 
-    const encodedAddress = encodeURIComponent(customer.address);
+    const encodedAddress = encodeURIComponent(customer.installation_address);
     const url = type === 'apple'
       ? `maps://maps.apple.com/?q=${encodedAddress}`
       : `https://www.google.com/maps/search/?api=1&query=${encodedAddress}`;
@@ -564,7 +564,7 @@ export default function TicketDetailModal({ ticketId, onClose, onUpdate, onViewP
                 <div className="flex items-start gap-2">
                   <input type="checkbox" className="w-3 h-3 rounded mt-0.5" />
                   <div className="flex items-center gap-2 text-orange-500 flex-1">
-                    <span className="text-sm">{customer.address}</span>
+                    <span className="text-sm">{customer.installation_address}</span>
                     <button className="p-1.5 bg-orange-500 text-white rounded-full hover:bg-orange-600 transition-colors">
                       <MapPin className="w-3 h-3" />
                     </button>
