@@ -318,15 +318,18 @@ export default function ProjectTimeline({ customer }: ProjectTimelineProps) {
 
     setSaving(true);
     try {
-      const updatedTimeline = { ...timeline, ...updates };
+      const updatedTimeline = { ...timeline, ...updates, updated_at: new Date().toISOString() };
 
       if (timeline.id) {
         const { error } = await supabase
           .from('project_timeline')
-          .update(updates)
+          .update({ ...updates, updated_at: new Date().toISOString() })
           .eq('id', timeline.id);
 
-        if (error) throw error;
+        if (error) {
+          console.error('Update error details:', error);
+          throw error;
+        }
       } else {
         const { data, error } = await supabase
           .from('project_timeline')
@@ -334,14 +337,18 @@ export default function ProjectTimeline({ customer }: ProjectTimelineProps) {
           .select()
           .single();
 
-        if (error) throw error;
+        if (error) {
+          console.error('Insert error details:', error);
+          throw error;
+        }
         updatedTimeline.id = data.id;
       }
 
       setTimeline(updatedTimeline);
-    } catch (error) {
+      await loadTimeline();
+    } catch (error: any) {
       console.error('Error updating timeline:', error);
-      alert('Failed to update timeline');
+      alert(`Failed to update timeline: ${error?.message || 'Unknown error'}`);
     } finally {
       setSaving(false);
     }
