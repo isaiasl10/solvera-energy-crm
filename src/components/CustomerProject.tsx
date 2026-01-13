@@ -566,7 +566,12 @@ export default function CustomerProject({ customer: initialCustomer, onBack, ini
     } catch (err) {
       console.error('=== SAVE FAILED ===');
       console.error('Error details:', err);
-      const errorMessage = err instanceof Error ? err.message : 'An error occurred';
+      let errorMessage = 'An error occurred';
+      if (err instanceof Error) {
+        errorMessage = err.message;
+      } else if (typeof err === 'object' && err !== null) {
+        errorMessage = JSON.stringify(err);
+      }
       console.error('Error message:', errorMessage);
       setError(errorMessage);
     } finally {
