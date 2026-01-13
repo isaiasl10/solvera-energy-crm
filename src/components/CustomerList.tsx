@@ -23,8 +23,12 @@ export default function CustomerList({ refreshTrigger, onSelectCustomer, searchQ
   useEffect(() => {
     fetchCustomers();
 
+    const timestamp = Date.now();
+    const customersChannelName = `customers_list_${timestamp}`;
+    const timelinesChannelName = `timeline_list_${timestamp}`;
+
     const customersSubscription = supabase
-      .channel('customers_list_changes')
+      .channel(customersChannelName)
       .on(
         'postgres_changes',
         {
@@ -39,7 +43,7 @@ export default function CustomerList({ refreshTrigger, onSelectCustomer, searchQ
       .subscribe();
 
     const timelinesSubscription = supabase
-      .channel('project_timeline_list_changes')
+      .channel(timelinesChannelName)
       .on(
         'postgres_changes',
         {
@@ -54,8 +58,8 @@ export default function CustomerList({ refreshTrigger, onSelectCustomer, searchQ
       .subscribe();
 
     return () => {
-      customersSubscription.unsubscribe();
-      timelinesSubscription.unsubscribe();
+      supabase.removeChannel(customersSubscription);
+      supabase.removeChannel(timelinesSubscription);
     };
   }, [refreshTrigger]);
 

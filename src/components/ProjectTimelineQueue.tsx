@@ -160,8 +160,9 @@ export default function ProjectTimelineQueue() {
   useEffect(() => {
     loadCustomersWithTimeline();
 
+    const channelName = `queue_updates_${Date.now()}`;
     const subscription = supabase
-      .channel('project_timeline_changes')
+      .channel(channelName)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'project_timeline' }, () => {
         loadCustomersWithTimeline();
       })
@@ -171,7 +172,7 @@ export default function ProjectTimelineQueue() {
       .subscribe();
 
     return () => {
-      subscription.unsubscribe();
+      supabase.removeChannel(subscription);
     };
   }, []);
 

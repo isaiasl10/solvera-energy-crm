@@ -30,8 +30,9 @@ export default function SchedulingSection({ customer }: SchedulingSectionProps) 
   useEffect(() => {
     fetchTickets();
 
+    const channelName = `scheduling_${customer.id}_${Date.now()}`;
     const subscription = supabase
-      .channel('scheduling_changes')
+      .channel(channelName)
       .on(
         'postgres_changes',
         {
@@ -47,7 +48,7 @@ export default function SchedulingSection({ customer }: SchedulingSectionProps) 
       .subscribe();
 
     return () => {
-      subscription.unsubscribe();
+      supabase.removeChannel(subscription);
     };
   }, [customer.id]);
 

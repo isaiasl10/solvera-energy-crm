@@ -88,8 +88,12 @@ export default function ProjectTimeline({ customer }: ProjectTimelineProps) {
   useEffect(() => {
     loadTimeline();
 
+    const timestamp = Date.now();
+    const timelineChannelName = `timeline_updates_${customer.id}_${timestamp}`;
+    const schedulingChannelName = `scheduling_timeline_${customer.id}_${timestamp}`;
+
     const timelineSubscription = supabase
-      .channel('project_timeline_updates')
+      .channel(timelineChannelName)
       .on(
         'postgres_changes',
         {
@@ -105,7 +109,7 @@ export default function ProjectTimeline({ customer }: ProjectTimelineProps) {
       .subscribe();
 
     const schedulingSubscription = supabase
-      .channel('scheduling_updates_for_timeline')
+      .channel(schedulingChannelName)
       .on(
         'postgres_changes',
         {
@@ -121,8 +125,8 @@ export default function ProjectTimeline({ customer }: ProjectTimelineProps) {
       .subscribe();
 
     return () => {
-      timelineSubscription.unsubscribe();
-      schedulingSubscription.unsubscribe();
+      supabase.removeChannel(timelineSubscription);
+      supabase.removeChannel(schedulingSubscription);
     };
   }, [customer.id]);
 

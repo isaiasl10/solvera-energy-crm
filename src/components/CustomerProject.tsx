@@ -189,8 +189,9 @@ export default function CustomerProject({ customer: initialCustomer, onBack }: C
 
     loadProjectStatus();
 
+    const channelName = `project_timeline_${customer.id}_${Date.now()}`;
     const subscription = supabase
-      .channel('project_timeline_changes')
+      .channel(channelName)
       .on(
         'postgres_changes',
         {
@@ -206,7 +207,7 @@ export default function CustomerProject({ customer: initialCustomer, onBack }: C
       .subscribe();
 
     return () => {
-      subscription.unsubscribe();
+      supabase.removeChannel(subscription);
     };
   }, [customer.id, customer.status]);
 
@@ -247,8 +248,9 @@ export default function CustomerProject({ customer: initialCustomer, onBack }: C
 
     loadCommission();
 
+    const channelName = `sales_commissions_${customer.id}_${Date.now()}`;
     const subscription = supabase
-      .channel('sales_commissions_changes')
+      .channel(channelName)
       .on(
         'postgres_changes',
         {
@@ -264,7 +266,7 @@ export default function CustomerProject({ customer: initialCustomer, onBack }: C
       .subscribe();
 
     return () => {
-      subscription.unsubscribe();
+      supabase.removeChannel(subscription);
     };
   }, [customer.id]);
 
@@ -290,8 +292,9 @@ export default function CustomerProject({ customer: initialCustomer, onBack }: C
       }
     };
 
+    const channelName = `customer_updates_${customer.id}_${Date.now()}`;
     const subscription = supabase
-      .channel('customer_changes')
+      .channel(channelName)
       .on(
         'postgres_changes',
         {
@@ -307,7 +310,7 @@ export default function CustomerProject({ customer: initialCustomer, onBack }: C
       .subscribe();
 
     return () => {
-      subscription.unsubscribe();
+      supabase.removeChannel(subscription);
     };
   }, [customer.id, editingSection]);
 
