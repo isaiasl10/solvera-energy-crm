@@ -91,11 +91,13 @@ export default function UserManagement() {
     try {
       let query = supabase
         .from('app_users')
-        .select('*')
+        .select('id, custom_id, full_name, email, role, role_category, status')
         .eq('status', 'active');
 
       if (formData.role === 'sales_rep') {
-        query = query.eq('role', 'sales_manager');
+        query = query
+          .eq('role_category', 'management')
+          .eq('role', 'sales_manager');
       } else {
         query = query.eq('role_category', 'management');
       }
