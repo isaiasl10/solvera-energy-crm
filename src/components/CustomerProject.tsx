@@ -408,9 +408,16 @@ export default function CustomerProject({ customer: initialCustomer, onBack }: C
             system_size_kw: typeof formData.system_size_kw === 'string'
               ? parseFloat(formData.system_size_kw)
               : formData.system_size_kw,
-            contract_price: formData.contract_price
-              ? (typeof formData.contract_price === 'string' ? parseFloat(formData.contract_price) : formData.contract_price)
-              : null,
+            contract_price: (() => {
+              if (formData.contract_price === '' || formData.contract_price === null || formData.contract_price === undefined) {
+                return null;
+              }
+              if (typeof formData.contract_price === 'string') {
+                const parsed = parseFloat(formData.contract_price);
+                return isNaN(parsed) ? null : parsed;
+              }
+              return typeof formData.contract_price === 'number' ? formData.contract_price : null;
+            })(),
             panel_quantity: typeof formData.panel_quantity === 'string'
               ? parseInt(formData.panel_quantity)
               : formData.panel_quantity,
@@ -421,10 +428,17 @@ export default function CustomerProject({ customer: initialCustomer, onBack }: C
             inverter_option: formData.inverter_option,
             racking_type: formData.racking_type,
             roof_type: formData.roof_type || null,
-            battery_brand: formData.battery_brand || null,
-            battery_quantity: typeof formData.battery_quantity === 'string'
-              ? parseInt(formData.battery_quantity) || 0
-              : (formData.battery_quantity ?? 0),
+            battery_brand: formData.battery_brand && formData.battery_brand !== '' ? formData.battery_brand : null,
+            battery_quantity: (() => {
+              if (formData.battery_quantity === '' || formData.battery_quantity === null || formData.battery_quantity === undefined) {
+                return 0;
+              }
+              if (typeof formData.battery_quantity === 'string') {
+                const parsed = parseInt(formData.battery_quantity, 10);
+                return isNaN(parsed) ? 0 : parsed;
+              }
+              return typeof formData.battery_quantity === 'number' ? formData.battery_quantity : 0;
+            })(),
             signature_date: formData.signature_date || null,
           };
           break;
@@ -443,9 +457,16 @@ export default function CustomerProject({ customer: initialCustomer, onBack }: C
           break;
         case 'epc_pricing':
           updateData = {
-            epc_ppw: formData.epc_ppw
-              ? (typeof formData.epc_ppw === 'string' ? parseFloat(formData.epc_ppw) : formData.epc_ppw)
-              : null,
+            epc_ppw: (() => {
+              if (formData.epc_ppw === '' || formData.epc_ppw === null || formData.epc_ppw === undefined) {
+                return null;
+              }
+              if (typeof formData.epc_ppw === 'string') {
+                const parsed = parseFloat(formData.epc_ppw);
+                return isNaN(parsed) ? null : parsed;
+              }
+              return typeof formData.epc_ppw === 'number' ? formData.epc_ppw : null;
+            })(),
           };
           break;
         case 'adders':
@@ -461,16 +482,30 @@ export default function CustomerProject({ customer: initialCustomer, onBack }: C
           break;
         case 'bom_cost':
           updateData = {
-            bom_cost: formData.bom_cost
-              ? (typeof formData.bom_cost === 'string' ? parseFloat(formData.bom_cost) : formData.bom_cost)
-              : 0,
+            bom_cost: (() => {
+              if (formData.bom_cost === '' || formData.bom_cost === null || formData.bom_cost === undefined) {
+                return 0;
+              }
+              if (typeof formData.bom_cost === 'string') {
+                const parsed = parseFloat(formData.bom_cost);
+                return isNaN(parsed) ? 0 : parsed;
+              }
+              return typeof formData.bom_cost === 'number' ? formData.bom_cost : 0;
+            })(),
           };
           break;
         case 'permit_engineering_cost':
           updateData = {
-            permit_engineering_cost: formData.permit_engineering_cost
-              ? (typeof formData.permit_engineering_cost === 'string' ? parseFloat(formData.permit_engineering_cost) : formData.permit_engineering_cost)
-              : 0,
+            permit_engineering_cost: (() => {
+              if (formData.permit_engineering_cost === '' || formData.permit_engineering_cost === null || formData.permit_engineering_cost === undefined) {
+                return 0;
+              }
+              if (typeof formData.permit_engineering_cost === 'string') {
+                const parsed = parseFloat(formData.permit_engineering_cost);
+                return isNaN(parsed) ? 0 : parsed;
+              }
+              return typeof formData.permit_engineering_cost === 'number' ? formData.permit_engineering_cost : 0;
+            })(),
           };
           break;
       }
@@ -1187,7 +1222,7 @@ export default function CustomerProject({ customer: initialCustomer, onBack }: C
                         <input
                           type="number"
                           name="battery_quantity"
-                          value={formData.battery_quantity || 0}
+                          value={formData.battery_quantity === null || formData.battery_quantity === undefined ? 0 : formData.battery_quantity}
                           onChange={handleChange}
                           min="0"
                           className="w-full px-2 py-1 text-xs border border-gray-300 rounded focus:ring-2 focus:ring-orange-500 focus:border-transparent"
