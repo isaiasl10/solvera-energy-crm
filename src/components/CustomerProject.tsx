@@ -132,19 +132,24 @@ export default function CustomerProject({ customer: initialCustomer, onBack, ini
 
   useEffect(() => {
     const fetchSalesReps = async () => {
-      const { data } = await supabase
+      let query = supabase
         .from('app_users')
         .select('id, full_name, email')
         .eq('role', 'sales_rep')
-        .eq('status', 'active')
-        .order('full_name', { ascending: true });
+        .eq('status', 'active');
+
+      if (user?.role === 'sales_manager') {
+        query = query.eq('reporting_manager_id', user.id);
+      }
+
+      const { data } = await query.order('full_name', { ascending: true });
 
       if (data) {
         setSalesReps(data);
       }
     };
     fetchSalesReps();
-  }, []);
+  }, [user]);
 
   useEffect(() => {
     const fetchSalesRepData = async () => {
@@ -595,7 +600,7 @@ export default function CustomerProject({ customer: initialCustomer, onBack, ini
 
   const SectionHeader = ({ title, section }: { title: string; section: EditingSection }) => {
     const isSalesRepSection = section === 'sales_rep';
-    const canEditThisSection = canEdit && !(isSalesRepSection && (user?.role_category === 'sales_rep' || user?.role_category === 'sales_manager'));
+    const canEditThisSection = canEdit && !(isSalesRepSection && user?.role_category === 'sales_rep');
 
     return (
       <div className="flex items-center justify-between mb-2">
