@@ -332,7 +332,12 @@ export default function CustomerProject({ customer: initialCustomer, onBack }: C
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    console.log(`Field changed - ${name}:`, value);
+    setFormData(prev => {
+      const updated = { ...prev, [name]: value };
+      console.log('Updated formData:', updated);
+      return updated;
+    });
     setError(null);
   };
 
@@ -387,6 +392,11 @@ export default function CustomerProject({ customer: initialCustomer, onBack }: C
   const handleSaveSection = async (section: EditingSection) => {
     setLoading(true);
     setError(null);
+
+    console.log('=== SAVE STARTED ===');
+    console.log('Section:', section);
+    console.log('Customer ID:', customer.id);
+    console.log('FormData before save:', JSON.stringify(formData, null, 2));
 
     try {
       let updateData: Partial<Customer> = {};
@@ -513,24 +523,27 @@ export default function CustomerProject({ customer: initialCustomer, onBack }: C
           break;
       }
 
-      const { error: updateError } = await supabase
+      console.log('Update payload:', JSON.stringify(updateData, null, 2));
+
+      const { data: updatedData, error: updateError } = await supabase
         .from('customers')
         .update(updateData)
-        .eq('id', customer.id);
-
-      if (updateError) throw updateError;
-
-      const { data: freshData, error: fetchError } = await supabase
-        .from('customers')
-        .select('*')
         .eq('id', customer.id)
-        .maybeSingle();
+        .select()
+        .single();
 
-      if (fetchError) throw fetchError;
+      console.log('Update response - data:', updatedData);
+      console.log('Update response - error:', updateError);
 
-      if (freshData) {
-        setCustomer(freshData);
-        setFormData(mapCustomerToFormData(freshData));
+      if (updateError) {
+        console.error('UPDATE FAILED:', updateError);
+        throw updateError;
+      }
+
+      if (updatedData) {
+        console.log('SUCCESS - Updated customer data:', updatedData);
+        setCustomer(updatedData);
+        setFormData(mapCustomerToFormData(updatedData));
       }
 
       if (user) {
@@ -543,8 +556,13 @@ export default function CustomerProject({ customer: initialCustomer, onBack }: C
       }
 
       setEditingSection(null);
+      console.log('=== SAVE COMPLETED SUCCESSFULLY ===');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred');
+      console.error('=== SAVE FAILED ===');
+      console.error('Error details:', err);
+      const errorMessage = err instanceof Error ? err.message : 'An error occurred';
+      console.error('Error message:', errorMessage);
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -662,6 +680,28 @@ export default function CustomerProject({ customer: initialCustomer, onBack }: C
           </div>
         </div>
       </div>
+
+      {error && (
+        <div className="mx-2 mt-2 p-3 bg-red-50 border border-red-200 rounded">
+          <div className="flex items-start gap-2">
+            <div className="flex-shrink-0">
+              <svg className="w-5 h-5 text-red-600" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+              </svg>
+            </div>
+            <div className="flex-1">
+              <h3 className="text-sm font-medium text-red-800">Error Saving Changes</h3>
+              <p className="text-sm text-red-700 mt-1">{error}</p>
+            </div>
+            <button
+              onClick={() => setError(null)}
+              className="flex-shrink-0 text-red-600 hover:text-red-800"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+        </div>
+      )}
 
       <div className="flex-1 overflow-auto px-2 py-2">
         <div className="bg-white rounded shadow-sm border border-gray-200 overflow-hidden">
