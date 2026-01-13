@@ -278,6 +278,22 @@ export default function UserManagement() {
         }
       }
 
+      if (!editingUser) {
+        console.log('Checking for existing user with email:', formData.email);
+        const { data: existingUser } = await supabase
+          .from('app_users')
+          .select('id, email, full_name')
+          .eq('email', formData.email)
+          .maybeSingle();
+
+        if (existingUser) {
+          console.error('VALIDATION FAILED: User with this email already exists');
+          setError(`A user with email "${formData.email}" already exists. Please use a different email address.`);
+          setSubmitting(false);
+          return;
+        }
+      }
+
       let photoUrl = formData.photo_url;
       let employeeId = formData.custom_id;
 
@@ -319,8 +335,19 @@ export default function UserManagement() {
         const tempPassword = `Temp${Math.random().toString(36).slice(-8)}!`;
 
         console.log('Step 1: Creating auth user...');
-        await createAuthUser(formData.email, tempPassword);
-        console.log('Auth user created successfully');
+        try {
+          await createAuthUser(formData.email, tempPassword);
+          console.log('Auth user created successfully');
+        } catch (authError: any) {
+          console.error('AUTH USER CREATION FAILED:', authError);
+          if (authError.message && authError.message.includes('already been registered')) {
+            setError(`This email is already registered. If you believe this is an error, please contact your administrator or use a different email address.`);
+          } else {
+            setError(`Failed to create user account: ${authError.message || 'Unknown error'}`);
+          }
+          setSubmitting(false);
+          return;
+        }
 
         const insertData = {
           custom_id: employeeId || null,
