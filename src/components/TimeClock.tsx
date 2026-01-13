@@ -131,12 +131,6 @@ export default function TimeClock() {
   const handleClockIn = async () => {
     setError(null);
     setLocationError(null);
-
-    if (!selectedCustomerId) {
-      setError('Please select a customer before clocking in');
-      return;
-    }
-
     setClockkingIn(true);
 
     try {
@@ -146,7 +140,7 @@ export default function TimeClock() {
         .from('time_clock')
         .insert({
           user_id: userInfo.id,
-          customer_id: selectedCustomerId,
+          customer_id: selectedCustomerId || null,
           clock_in_time: new Date().toISOString(),
           clock_in_latitude: location.latitude,
           clock_in_longitude: location.longitude,
@@ -296,9 +290,13 @@ export default function TimeClock() {
                 <p className="text-xs text-green-700 mt-1">
                   {formatTime(currentEntry.clock_in_time)} on {formatDate(currentEntry.clock_in_time)}
                 </p>
-                {currentEntry.customer_id && (
+                {currentEntry.customer_id ? (
                   <p className="text-xs text-green-600 mt-1">
                     Working on: {customers.find(c => c.id === currentEntry.customer_id)?.full_name || 'Unknown Customer'}
+                  </p>
+                ) : (
+                  <p className="text-xs text-gray-600 mt-1">
+                    General work (hourly pay only)
                   </p>
                 )}
               </div>
@@ -313,20 +311,25 @@ export default function TimeClock() {
         {!currentEntry && (
           <div className="mb-4">
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Select Customer/Project
+              Select Customer/Project <span className="text-gray-500 text-xs">(Optional)</span>
             </label>
             <select
               value={selectedCustomerId}
               onChange={(e) => setSelectedCustomerId(e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
             >
-              <option value="">Choose a customer...</option>
+              <option value="">General work (no specific customer)</option>
               {customers.map((customer) => (
                 <option key={customer.id} value={customer.id}>
                   {customer.full_name}
                 </option>
               ))}
             </select>
+            {selectedCustomerId && (
+              <p className="text-xs text-green-600 mt-1">
+                Battery and per-watt pay will be calculated for this customer
+              </p>
+            )}
           </div>
         )}
 
@@ -334,7 +337,7 @@ export default function TimeClock() {
           {!currentEntry ? (
             <button
               onClick={handleClockIn}
-              disabled={clockingIn || !selectedCustomerId}
+              disabled={clockingIn}
               className="flex-1 flex items-center justify-center gap-2 px-6 py-4 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-semibold text-lg"
             >
               {clockingIn ? (
@@ -435,9 +438,13 @@ export default function TimeClock() {
                     <p className="text-xs text-gray-600 mt-1">
                       {formatTime(entry.clock_in_time)} - {entry.clock_out_time ? formatTime(entry.clock_out_time) : 'In Progress'}
                     </p>
-                    {customer && (
+                    {customer ? (
                       <p className="text-xs text-orange-600 font-medium mt-1">
                         {customer.full_name}
+                      </p>
+                    ) : (
+                      <p className="text-xs text-gray-500 font-medium mt-1">
+                        General work
                       </p>
                     )}
                   </div>
