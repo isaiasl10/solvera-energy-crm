@@ -125,22 +125,69 @@ export default function TicketDetailModal({ ticketId, onClose, onUpdate, onViewP
     try {
       setSaving(true);
 
-      if (field === 'arrived_at' && value !== null) {
-        const { data: { user } } = await supabase.auth.getUser();
+      const { data: { user } } = await supabase.auth.getUser();
 
-        if (user) {
+      if (user && ticket.customer_id) {
+        if ((field === 'arrived_at' || field === 'begin_ticket_at') && value !== null) {
           const { data: activeClockEntry } = await supabase
             .from('time_clock')
             .select('id')
             .eq('user_id', user.id)
-            .not('clocked_in_at', 'is', null)
             .is('clocked_out_at', null)
             .maybeSingle();
 
+          if (!activeClockEntry) {
+            const { data: locationData } = await new Promise<{ data: GeolocationPosition | null }>((resolve) => {
+              if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                  (position) => resolve({ data: position }),
+                  () => resolve({ data: null })
+                );
+              } else {
+                resolve({ data: null });
+              }
+            });
+
+            await supabase.from('time_clock').insert({
+              user_id: user.id,
+              customer_id: ticket.customer_id,
+              clocked_in_at: new Date().toISOString(),
+              clock_in_latitude: locationData?.coords.latitude || null,
+              clock_in_longitude: locationData?.coords.longitude || null,
+            });
+          }
+        }
+
+        if ((field === 'departing_at' || field === 'closed_at') && value !== null) {
+          const { data: activeClockEntry } = await supabase
+            .from('time_clock')
+            .select('id')
+            .eq('user_id', user.id)
+            .eq('customer_id', ticket.customer_id)
+            .is('clocked_out_at', null)
+            .order('clocked_in_at', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+
           if (activeClockEntry) {
+            const { data: locationData } = await new Promise<{ data: GeolocationPosition | null }>((resolve) => {
+              if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                  (position) => resolve({ data: position }),
+                  () => resolve({ data: null })
+                );
+              } else {
+                resolve({ data: null });
+              }
+            });
+
             await supabase
               .from('time_clock')
-              .update({ clocked_out_at: new Date().toISOString() })
+              .update({
+                clocked_out_at: new Date().toISOString(),
+                clock_out_latitude: locationData?.coords.latitude || null,
+                clock_out_longitude: locationData?.coords.longitude || null,
+              })
               .eq('id', activeClockEntry.id);
           }
         }
