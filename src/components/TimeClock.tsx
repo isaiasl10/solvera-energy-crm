@@ -22,8 +22,6 @@ type UserInfo = {
 
 type Customer = {
   id: string;
-  first_name: string;
-  last_name: string;
   full_name: string;
 };
 
@@ -63,7 +61,7 @@ export default function TimeClock() {
 
       const { data: customersData, error: customersError } = await supabase
         .from('customers')
-        .select('id, first_name, last_name, full_name')
+        .select('id, full_name')
         .order('full_name', { ascending: true });
 
       if (customersError) throw customersError;
