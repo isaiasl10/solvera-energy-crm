@@ -828,7 +828,9 @@ function WorkflowPhase({
       alert('Installation date must be at least 48 hours in advance to allow time for material ordering.');
       return;
     }
-    onUpdate(selectedStatus, dateValue || null, showNotes ? notesValue : undefined);
+
+    const formattedDate = dateValue ? new Date(dateValue + 'T00:00:00').toISOString() : null;
+    onUpdate(selectedStatus, formattedDate, showNotes ? notesValue : undefined);
     setDateValue('');
   };
 
