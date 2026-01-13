@@ -1,13 +1,15 @@
 import { useState, useEffect } from 'react';
-import { User, DollarSign, Clock, TrendingUp } from 'lucide-react';
+import { User, DollarSign, Clock, TrendingUp, Calendar } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import PaymentPreferences from './PaymentPreferences';
 import TimeClock from './TimeClock';
 import SalesManagerDashboard from './SalesManagerDashboard';
+import PayrollPeriodView from './PayrollPeriodView';
 
 export default function EmployeeProfileView() {
-  const [activeTab, setActiveTab] = useState<'payment' | 'timeclock' | 'overrides'>('payment');
+  const [activeTab, setActiveTab] = useState<'payment' | 'timeclock' | 'overrides' | 'payroll'>('payment');
   const [userRole, setUserRole] = useState<string | null>(null);
+  const [roleCategory, setRoleCategory] = useState<string | null>(null);
 
   useEffect(() => {
     fetchUserRole();
@@ -20,15 +22,18 @@ export default function EmployeeProfileView() {
 
       const { data, error } = await supabase
         .from('app_users')
-        .select('role')
+        .select('role, role_category')
         .eq('email', user.email)
         .maybeSingle();
 
       if (error) throw error;
       setUserRole(data?.role || null);
+      setRoleCategory(data?.role_category || null);
 
       if (data?.role === 'sales_manager') {
         setActiveTab('overrides');
+      } else if (data?.role_category === 'field_tech') {
+        setActiveTab('payroll');
       }
     } catch (err) {
       console.error('Failed to fetch user role:', err);
@@ -45,6 +50,8 @@ export default function EmployeeProfileView() {
         <p className="text-sm text-gray-600 mt-1">
           {userRole === 'sales_manager'
             ? 'Manage your team, commissions, and preferences'
+            : roleCategory === 'field_tech'
+            ? 'View your payroll, track time, and manage payment preferences'
             : 'Manage your payment preferences and time tracking'}
         </p>
       </div>
@@ -66,6 +73,22 @@ export default function EmployeeProfileView() {
               >
                 <TrendingUp className="w-4 h-4" />
                 Overrides & Commission
+              </button>
+            )}
+            {roleCategory === 'field_tech' && (
+              <button
+                onClick={() => setActiveTab('payroll')}
+                className={`
+                  flex items-center gap-2 px-6 py-3 text-sm font-medium border-b-2 transition-colors
+                  ${
+                    activeTab === 'payroll'
+                      ? 'border-orange-600 text-orange-600'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  }
+                `}
+              >
+                <Calendar className="w-4 h-4" />
+                Payroll Periods
               </button>
             )}
             <button
@@ -103,6 +126,7 @@ export default function EmployeeProfileView() {
 
         <div className="p-6">
           {activeTab === 'overrides' && userRole === 'sales_manager' && <SalesManagerDashboard />}
+          {activeTab === 'payroll' && roleCategory === 'field_tech' && <PayrollPeriodView />}
           {activeTab === 'payment' && <PaymentPreferences />}
           {activeTab === 'timeclock' && <TimeClock />}
         </div>
