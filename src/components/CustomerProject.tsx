@@ -286,12 +286,7 @@ export default function CustomerProject({ customer: initialCustomer, onBack }: C
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-    console.log('Field changed:', name, 'New value:', value);
-    setFormData(prev => {
-      const updated = { ...prev, [name]: value };
-      console.log('Updated formData:', updated);
-      return updated;
-    });
+    setFormData(prev => ({ ...prev, [name]: value }));
     setError(null);
   };
 
@@ -387,6 +382,7 @@ export default function CustomerProject({ customer: initialCustomer, onBack }: C
             battery_quantity: typeof formData.battery_quantity === 'string'
               ? parseInt(formData.battery_quantity) || 0
               : (formData.battery_quantity ?? 0),
+            signature_date: formData.signature_date || null,
           };
           break;
         case 'utility':
@@ -436,19 +432,12 @@ export default function CustomerProject({ customer: initialCustomer, onBack }: C
           break;
       }
 
-      console.log('Updating customer with data:', updateData);
-
       const { error: updateError } = await supabase
         .from('customers')
         .update(updateData)
         .eq('id', customer.id);
 
-      if (updateError) {
-        console.error('Update error:', updateError);
-        throw updateError;
-      }
-
-      console.log('Update successful');
+      if (updateError) throw updateError;
 
       const { data: freshData, error: fetchError } = await supabase
         .from('customers')
@@ -458,12 +447,9 @@ export default function CustomerProject({ customer: initialCustomer, onBack }: C
 
       if (fetchError) throw fetchError;
 
-      console.log('Fresh data from database:', freshData);
-
       if (freshData) {
         setCustomer(freshData);
         setFormData(mapCustomerToFormData(freshData));
-        console.log('Customer and formData updated with fresh data');
       }
 
       if (user) {
