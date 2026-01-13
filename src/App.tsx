@@ -24,7 +24,7 @@ import FirstLoginPasswordReset from './components/FirstLoginPasswordReset';
 import { useAuth } from './contexts/AuthContext';
 
 function App() {
-  const { user, loading, requiresPasswordReset, refreshUser } = useAuth();
+  const { user, loading, requiresPasswordReset, refreshUser, isAdmin } = useAuth();
   const [currentPath, setCurrentPath] = useState(window.location.pathname);
   const [currentView, setCurrentView] = useState<ViewType>(() => {
     const saved = localStorage.getItem('currentView');
@@ -83,6 +83,10 @@ function App() {
     }
 
     if (currentView === 'role-previews') {
+      if (!isAdmin) {
+        setCurrentView('calendar');
+        return <Calendar onViewCustomerProject={handleViewCustomerProject} />;
+      }
       return <RolePreviews />;
     }
 
@@ -92,24 +96,64 @@ function App() {
       case 'customers':
         return <CustomerQueue initialCustomerId={selectedCustomerId} onCustomerChange={() => setSelectedCustomerId(null)} />;
       case 'user-management':
+        if (!isAdmin) {
+          setCurrentView('calendar');
+          return <Calendar onViewCustomerProject={handleViewCustomerProject} />;
+        }
         return <UserManagement />;
       case 'admin-analytics':
+        if (!isAdmin) {
+          setCurrentView('calendar');
+          return <Calendar onViewCustomerProject={handleViewCustomerProject} />;
+        }
         return <Analytics />;
       case 'admin-payroll':
+        if (!isAdmin) {
+          setCurrentView('calendar');
+          return <Calendar onViewCustomerProject={handleViewCustomerProject} />;
+        }
         return <Payroll />;
       case 'admin-custom-adders':
+        if (!isAdmin) {
+          setCurrentView('calendar');
+          return <Calendar onViewCustomerProject={handleViewCustomerProject} />;
+        }
         return <CustomAdders />;
       case 'admin-financing':
+        if (!isAdmin) {
+          setCurrentView('calendar');
+          return <Calendar onViewCustomerProject={handleViewCustomerProject} />;
+        }
         return <FinancingManagement />;
       case 'admin-inverters':
+        if (!isAdmin) {
+          setCurrentView('calendar');
+          return <Calendar onViewCustomerProject={handleViewCustomerProject} />;
+        }
         return <Inverters />;
       case 'admin-optimizers':
+        if (!isAdmin) {
+          setCurrentView('calendar');
+          return <Calendar onViewCustomerProject={handleViewCustomerProject} />;
+        }
         return <Optimizers />;
       case 'admin-batteries':
+        if (!isAdmin) {
+          setCurrentView('calendar');
+          return <Calendar onViewCustomerProject={handleViewCustomerProject} />;
+        }
         return <Batteries />;
       case 'admin-racking':
+        if (!isAdmin) {
+          setCurrentView('calendar');
+          return <Calendar onViewCustomerProject={handleViewCustomerProject} />;
+        }
         return <Racking />;
       case 'admin-panels':
+        if (!isAdmin) {
+          setCurrentView('calendar');
+          return <Calendar onViewCustomerProject={handleViewCustomerProject} />;
+        }
         return <Panels />;
       case 'queue-new-project':
         return <QueueDetailView queueType="new_project" />;

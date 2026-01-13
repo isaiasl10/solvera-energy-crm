@@ -20,6 +20,7 @@ type AuthContextType = {
   isAdmin: boolean;
   isEmployee: boolean;
   isSalesRep: boolean;
+  isSalesManager: boolean;
   canEdit: boolean;
   requiresPasswordReset: boolean;
   login: (email: string, password: string) => Promise<void>;
@@ -168,6 +169,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       employee: 'employee@solvera.com',
       field_tech: 'FIELDTECH@GMAIL.COM',
       sales_rep: 'sales@solvera.com',
+      sales_manager: 'salesmanager@solvera.com',
     };
 
     const mockUser: User = {
@@ -180,9 +182,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(mockUser);
   };
 
-  const isAdmin = user?.role_category === 'admin' || user?.role_category === 'management';
+  const isAdmin = user?.role_category === 'admin';
   const isEmployee = user?.role_category === 'employee';
   const isSalesRep = user?.role_category === 'sales_rep';
+  const isSalesManager = user?.role === 'sales_manager';
   const canEdit = !isEmployee && !isSalesRep;
   const requiresPasswordReset = user?.first_login === true;
 
@@ -192,6 +195,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     isAdmin,
     isEmployee,
     isSalesRep,
+    isSalesManager,
     canEdit,
     requiresPasswordReset,
     login,
