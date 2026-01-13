@@ -199,7 +199,22 @@ export default function UserManagement() {
     return publicUrl;
   };
 
-  const createAuthUser = async (email: string, password: string) => {
+  const createAuthUser = async (userData: {
+    email: string;
+    password: string;
+    full_name: string;
+    phone?: string;
+    role: string;
+    role_category: string;
+    custom_id?: string;
+    photo_url?: string;
+    reporting_manager_id?: string;
+    hourly_rate?: number;
+    is_salary?: boolean;
+    battery_pay_rates?: Record<string, number>;
+    per_watt_rate?: number;
+    ppw_redline?: number;
+  }) => {
     try {
       const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-auth-user`;
       const response = await fetch(apiUrl, {
@@ -208,7 +223,7 @@ export default function UserManagement() {
           'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify(userData),
       });
 
       if (!response.ok) {
@@ -336,58 +351,42 @@ export default function UserManagement() {
         console.log('Creating new user...');
         const tempPassword = `Temp${Math.random().toString(36).slice(-8)}!`;
 
-        console.log('Step 1: Creating auth user...');
-        try {
-          await createAuthUser(formData.email, tempPassword);
-          console.log('Auth user created successfully');
-        } catch (authError: any) {
-          console.error('AUTH USER CREATION FAILED:', authError);
-          if (authError.message && authError.message.includes('already been registered')) {
-            setError(`This email is already registered. If you believe this is an error, please contact your administrator or use a different email address.`);
-          } else {
-            setError(`Failed to create user account: ${authError.message || 'Unknown error'}`);
-          }
-          setSubmitting(false);
-          return;
-        }
-
-        const insertData = {
-          custom_id: employeeId || null,
+        const userData = {
           email: formData.email,
+          password: tempPassword,
           full_name: formData.full_name,
           phone: formData.phone,
-          role_category: formData.role_category,
           role: formData.role,
-          status: formData.status,
-          photo_url: photoUrl,
-          reporting_manager_id: formData.reporting_manager_id || null,
+          role_category: formData.role_category,
+          custom_id: employeeId || undefined,
+          photo_url: photoUrl || undefined,
+          reporting_manager_id: formData.reporting_manager_id || undefined,
           hourly_rate: formData.hourly_rate,
           is_salary: formData.is_salary,
           battery_pay_rates: formData.battery_pay_rates,
           per_watt_rate: formData.per_watt_rate,
-          ppw_redline: formData.ppw_redline || null,
+          ppw_redline: formData.ppw_redline || undefined,
         };
 
-        console.log('Step 2: Inserting user into app_users table...');
-        console.log('Insert data:', JSON.stringify(insertData, null, 2));
+        console.log('Creating user with edge function...');
+        console.log('User data:', JSON.stringify(userData, null, 2));
 
-        const { error: insertError } = await supabase
-          .from('app_users')
-          .insert([insertData]);
+        try {
+          const result = await createAuthUser(userData);
+          console.log('User created successfully:', result);
 
-        if (insertError) {
-          console.error('INSERT FAILED:', insertError);
-          throw insertError;
-        }
-
-        console.log('User inserted successfully');
-
-        if (sendInvite) {
-          try {
-            await sendInviteEmail(formData.email, formData.full_name);
-          } catch (emailErr) {
-            console.error('Failed to send invite email:', emailErr);
+          if (sendInvite) {
+            try {
+              await sendInviteEmail(formData.email, formData.full_name);
+            } catch (emailErr) {
+              console.error('Failed to send invite email:', emailErr);
+            }
           }
+        } catch (authError: any) {
+          console.error('USER CREATION FAILED:', authError);
+          setError(`Failed to create user: ${authError.message || 'Unknown error'}`);
+          setSubmitting(false);
+          return;
         }
       }
 
