@@ -58,10 +58,20 @@ function App() {
   }, []);
 
   useEffect(() => {
-    if (user && isSalesManager && !localStorage.getItem('currentView')) {
-      setCurrentView('sales-manager-dashboard');
+    if (!user) return;
+
+    const savedView = localStorage.getItem('currentView');
+
+    if (isAdmin) {
+      if (!savedView || savedView === 'sales-manager-dashboard') {
+        setCurrentView('administration');
+      }
+    } else if (isSalesManager) {
+      if (!savedView) {
+        setCurrentView('sales-manager-dashboard');
+      }
     }
-  }, [user, isSalesManager]);
+  }, [user, isAdmin, isSalesManager]);
 
   const handleViewCustomerProject = (customerId: string) => {
     setSelectedCustomerId(customerId);
@@ -90,6 +100,10 @@ function App() {
     }
 
     if (currentView === 'sales-manager-dashboard') {
+      if (!isSalesManager) {
+        setCurrentView('calendar');
+        return <Calendar onViewCustomerProject={handleViewCustomerProject} />;
+      }
       return <SalesManagerDashboard />;
     }
 
