@@ -22,6 +22,41 @@ export default function CustomerList({ refreshTrigger, onSelectCustomer, searchQ
 
   useEffect(() => {
     fetchCustomers();
+
+    const customersSubscription = supabase
+      .channel('customers_list_changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'customers',
+        },
+        () => {
+          fetchCustomers();
+        }
+      )
+      .subscribe();
+
+    const timelinesSubscription = supabase
+      .channel('project_timeline_list_changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'project_timeline',
+        },
+        () => {
+          fetchCustomers();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      customersSubscription.unsubscribe();
+      timelinesSubscription.unsubscribe();
+    };
   }, [refreshTrigger]);
 
   useEffect(() => {

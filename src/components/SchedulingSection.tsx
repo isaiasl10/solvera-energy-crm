@@ -29,6 +29,26 @@ export default function SchedulingSection({ customer }: SchedulingSectionProps) 
 
   useEffect(() => {
     fetchTickets();
+
+    const subscription = supabase
+      .channel('scheduling_changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'scheduling',
+          filter: `customer_id=eq.${customer.id}`,
+        },
+        () => {
+          fetchTickets();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      subscription.unsubscribe();
+    };
   }, [customer.id]);
 
   useEffect(() => {

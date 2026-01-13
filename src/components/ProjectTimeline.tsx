@@ -87,6 +87,43 @@ export default function ProjectTimeline({ customer }: ProjectTimelineProps) {
 
   useEffect(() => {
     loadTimeline();
+
+    const timelineSubscription = supabase
+      .channel('project_timeline_updates')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'project_timeline',
+          filter: `customer_id=eq.${customer.id}`,
+        },
+        () => {
+          loadTimeline();
+        }
+      )
+      .subscribe();
+
+    const schedulingSubscription = supabase
+      .channel('scheduling_updates_for_timeline')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'scheduling',
+          filter: `customer_id=eq.${customer.id}`,
+        },
+        () => {
+          loadTimeline();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      timelineSubscription.unsubscribe();
+      schedulingSubscription.unsubscribe();
+    };
   }, [customer.id]);
 
   const loadTimeline = async () => {

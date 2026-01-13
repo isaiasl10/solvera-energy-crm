@@ -268,6 +268,49 @@ export default function CustomerProject({ customer: initialCustomer, onBack }: C
     };
   }, [customer.id]);
 
+  useEffect(() => {
+    const reloadCustomerData = async () => {
+      try {
+        const { data: freshData, error } = await supabase
+          .from('customers')
+          .select('*')
+          .eq('id', customer.id)
+          .maybeSingle();
+
+        if (error) throw error;
+
+        if (freshData) {
+          setCustomer(freshData);
+          if (editingSection === null) {
+            setFormData(mapCustomerToFormData(freshData));
+          }
+        }
+      } catch (error) {
+        console.error('Error reloading customer data:', error);
+      }
+    };
+
+    const subscription = supabase
+      .channel('customer_changes')
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'customers',
+          filter: `id=eq.${customer.id}`,
+        },
+        () => {
+          reloadCustomerData();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [customer.id, editingSection]);
+
   const allTabs = [
     { id: 'system' as Tab, label: 'System Details' },
     { id: 'pricing' as Tab, label: 'Pricing & Financing' },
