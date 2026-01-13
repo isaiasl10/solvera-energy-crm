@@ -536,7 +536,7 @@ export default function CustomerProject({ customer: initialCustomer, onBack, ini
         .update(updateData)
         .eq('id', customer.id)
         .select()
-        .single();
+        .maybeSingle();
 
       console.log('Update response - data:', updatedData);
       console.log('Update response - error:', updateError);
@@ -550,6 +550,24 @@ export default function CustomerProject({ customer: initialCustomer, onBack, ini
         console.log('SUCCESS - Updated customer data:', updatedData);
         setCustomer(updatedData);
         setFormData(mapCustomerToFormData(updatedData));
+      } else {
+        console.warn('UPDATE succeeded but no data returned, refetching...');
+        const { data: refetchedData, error: refetchError } = await supabase
+          .from('customers')
+          .select()
+          .eq('id', customer.id)
+          .maybeSingle();
+
+        if (refetchError) {
+          console.error('REFETCH FAILED:', refetchError);
+          throw refetchError;
+        }
+
+        if (refetchedData) {
+          console.log('REFETCH SUCCESS:', refetchedData);
+          setCustomer(refetchedData);
+          setFormData(mapCustomerToFormData(refetchedData));
+        }
       }
 
       if (user) {
