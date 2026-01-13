@@ -171,6 +171,19 @@ export default function SchedulingModal({
       return;
     }
 
+    if (ticketType === 'installation') {
+      const { data: financing } = await supabase
+        .from('customer_financing')
+        .select('contract_type, pre_install_payment_received')
+        .eq('customer_id', customer.id)
+        .maybeSingle();
+
+      if (financing?.contract_type === 'CASH' && !financing?.pre_install_payment_received) {
+        setError('Cannot schedule installation: Pre-install payment must be received first. Please collect the payment and mark it as received in the Pricing & Financing tab.');
+        return;
+      }
+    }
+
     setLoading(true);
     setError(null);
 

@@ -1,14 +1,22 @@
 import { useState, useEffect } from 'react';
-import { Edit2, Save, X, Loader2, CheckCircle, Circle, DollarSign } from 'lucide-react';
+import { Edit2, Save, X, Loader2, CheckCircle, Circle, DollarSign, AlertTriangle, Clock } from 'lucide-react';
 import { supabase, type Customer, type CustomerFinancing, type FinancingProduct, type Financier } from '../lib/supabase';
 
 type FinancingSectionProps = {
   customer: Customer;
 };
 
+type ProjectTimeline = {
+  permit_status: string;
+  utility_status: string;
+  city_permits_approved_date: string | null;
+  utility_application_approved_date: string | null;
+};
+
 export default function FinancingSection({ customer }: FinancingSectionProps) {
   const [financing, setFinancing] = useState<CustomerFinancing | null>(null);
   const [products, setProducts] = useState<FinancingProduct[]>([]);
+  const [timeline, setTimeline] = useState<ProjectTimeline | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [editing, setEditing] = useState(false);
@@ -30,7 +38,7 @@ export default function FinancingSection({ customer }: FinancingSectionProps) {
     setLoading(true);
     setError(null);
 
-    const [financingResult, productsResult] = await Promise.all([
+    const [financingResult, productsResult, timelineResult] = await Promise.all([
       supabase
         .from('customer_financing')
         .select('*, financing_product:financing_products(*, financier:financiers(*))')
@@ -41,6 +49,11 @@ export default function FinancingSection({ customer }: FinancingSectionProps) {
         .select('*, financier:financiers(*)')
         .eq('active', true)
         .order('product_name'),
+      supabase
+        .from('project_timeline')
+        .select('permit_status, utility_status, city_permits_approved_date, utility_application_approved_date')
+        .eq('customer_id', customer.id)
+        .maybeSingle(),
     ]);
 
     if (financingResult.error) {
@@ -62,6 +75,12 @@ export default function FinancingSection({ customer }: FinancingSectionProps) {
       setError(productsResult.error.message);
     } else {
       setProducts(productsResult.data || []);
+    }
+
+    if (timelineResult.error) {
+      console.error('Error loading timeline:', timelineResult.error);
+    } else {
+      setTimeline(timelineResult.data);
     }
 
     setLoading(false);
@@ -156,6 +175,11 @@ export default function FinancingSection({ customer }: FinancingSectionProps) {
       </div>
     );
   }
+
+  const isPreInstallPaymentEligible = () => {
+    if (!timeline) return false;
+    return timeline.permit_status === 'approved' && timeline.utility_status === 'approved';
+  };
 
   const filteredProducts = products.filter(p => p.product_type === formData.contract_type);
 
@@ -367,24 +391,76 @@ export default function FinancingSection({ customer }: FinancingSectionProps) {
                       </button>
                     </div>
 
-                    <div className="flex items-start justify-between p-3 bg-gray-50 rounded-lg">
+                    <div className={`flex items-start justify-between p-3 rounded-lg ${
+                      isPreInstallPaymentEligible() && !financing.pre_install_payment_received
+                        ? 'bg-amber-50 border-2 border-amber-400'
+                        : 'bg-gray-50'
+                    }`}>
                       <div className="flex-1">
                         <div className="flex items-center gap-2 mb-1">
                           <h4 className="font-medium text-gray-900">2. Pre-Install Payment</h4>
-                          {financing.pre_install_payment_received && (
+                          {financing.pre_install_payment_received ? (
                             <span className="text-xs px-2 py-0.5 bg-green-100 text-green-800 rounded-full">
                               Received
+                            </span>
+                          ) : isPreInstallPaymentEligible() ? (
+                            <span className="text-xs px-2 py-0.5 bg-amber-100 text-amber-800 rounded-full flex items-center gap-1">
+                              <AlertTriangle className="w-3 h-3" />
+                              Payment Due Now
+                            </span>
+                          ) : (
+                            <span className="text-xs px-2 py-0.5 bg-gray-100 text-gray-600 rounded-full flex items-center gap-1">
+                              <Clock className="w-3 h-3" />
+                              Awaiting Approvals
                             </span>
                           )}
                         </div>
                         <p className="text-xl font-bold text-gray-900">
                           ${financing.pre_install_payment_amount.toLocaleString('en-US', { minimumFractionDigits: 2 })}
                         </p>
-                        <p className="text-xs text-gray-500 mt-1">After permit approval, before install</p>
+                        <p className="text-xs text-gray-500 mt-1">
+                          {financing.pre_install_payment_received ? (
+                            'Received and confirmed'
+                          ) : isPreInstallPaymentEligible() ? (
+                            'Due: Permits & utility approved - Collect before scheduling installation'
+                          ) : (
+                            'Will be due when permits and utility are approved'
+                          )}
+                        </p>
                         {financing.pre_install_payment_received && financing.pre_install_payment_received_date && (
                           <p className="text-xs text-gray-500">
                             Received: {new Date(financing.pre_install_payment_received_date).toLocaleDateString()}
                           </p>
+                        )}
+                        {!financing.pre_install_payment_received && timeline && (
+                          <div className="mt-2 space-y-1">
+                            <div className="flex items-center gap-2 text-xs">
+                              {timeline.permit_status === 'approved' ? (
+                                <span className="flex items-center gap-1 text-green-600">
+                                  <CheckCircle className="w-3 h-3" />
+                                  Permits Approved
+                                </span>
+                              ) : (
+                                <span className="flex items-center gap-1 text-gray-500">
+                                  <Circle className="w-3 h-3" />
+                                  Permits: {timeline.permit_status || 'Pending'}
+                                </span>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-2 text-xs">
+                              {timeline.utility_status === 'approved' ? (
+                                <span className="flex items-center gap-1 text-green-600">
+                                  <CheckCircle className="w-3 h-3" />
+                                  Utility Approved
+                                </span>
+                              ) : (
+                                <span className="flex items-center gap-1 text-gray-500">
+                                  <Circle className="w-3 h-3" />
+                                  Utility: {timeline.utility_status || 'Pending'}
+                                </span>
+                              )}
+                            </div>
+                          </div>
                         )}
                       </div>
                       <button
