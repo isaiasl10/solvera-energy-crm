@@ -16,6 +16,7 @@ import Batteries from './components/admin/Batteries';
 import Racking from './components/admin/Racking';
 import Panels from './components/admin/Panels';
 import FieldTechDashboard from './components/FieldTechDashboard';
+import SalesManagerDashboard from './components/SalesManagerDashboard';
 import EmployeeProfileView from './components/EmployeeProfileView';
 import RolePreviews from './components/RolePreviews';
 import Login from './components/Login';
@@ -80,6 +81,10 @@ function App() {
   const renderView = () => {
     if (currentView === 'employee-profile') {
       return <EmployeeProfileView />;
+    }
+
+    if (currentView === 'sales-manager-dashboard') {
+      return <SalesManagerDashboard />;
     }
 
     if (currentView === 'role-previews') {

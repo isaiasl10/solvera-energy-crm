@@ -3,7 +3,7 @@ import { Calendar, Users, Settings, ChevronDown, ChevronRight, UserCog, LogOut, 
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 
-export type ViewType = 'calendar' | 'customers' | 'user-management' | 'employee-profile' | 'role-previews' | 'admin-analytics' | 'admin-custom-adders' | 'admin-inverters' | 'admin-optimizers' | 'admin-batteries' | 'admin-racking' | 'admin-panels' | 'admin-financing' | 'admin-payroll' | 'queue-new-project' | 'queue-site-survey' | 'queue-engineering' | 'queue-utility-permits' | 'queue-ready-to-order' | 'queue-coordinate-install' | 'queue-install-scheduled' | 'queue-ready-inspection' | 'queue-pending-pto' | 'queue-pending-activation' | 'queue-system-activated' | 'queue-service-tickets';
+export type ViewType = 'calendar' | 'customers' | 'user-management' | 'employee-profile' | 'sales-manager-dashboard' | 'role-previews' | 'admin-analytics' | 'admin-custom-adders' | 'admin-inverters' | 'admin-optimizers' | 'admin-batteries' | 'admin-racking' | 'admin-panels' | 'admin-financing' | 'admin-payroll' | 'queue-new-project' | 'queue-site-survey' | 'queue-engineering' | 'queue-utility-permits' | 'queue-ready-to-order' | 'queue-coordinate-install' | 'queue-install-scheduled' | 'queue-ready-inspection' | 'queue-pending-pto' | 'queue-pending-activation' | 'queue-system-activated' | 'queue-service-tickets';
 
 interface SidebarProps {
   currentView: ViewType;
@@ -267,6 +267,21 @@ export default function Sidebar({ currentView, onViewChange, isMobileOpen, onMob
               </ul>
             )}
           </li>
+          {userRole === 'sales_manager' && (
+            <li>
+              <button
+                onClick={() => handleViewChange('sales-manager-dashboard')}
+                className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg transition-colors text-sm ${
+                  currentView === 'sales-manager-dashboard'
+                    ? 'bg-orange-600 text-white'
+                    : 'text-gray-300 hover:bg-gray-800'
+                }`}
+              >
+                <Users className="w-4 h-4" />
+                <span className="font-medium">Sales Manager Dashboard</span>
+              </button>
+            </li>
+          )}
           {!isAdmin && !isManagement && (
             <li>
               <button
