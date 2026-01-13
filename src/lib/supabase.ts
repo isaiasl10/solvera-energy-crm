@@ -39,6 +39,11 @@ export type Customer = {
   battery_quantity?: number;
   signature_date?: string;
   sales_rep_id?: string;
+  labor_battery_pay?: number;
+  labor_hourly_pay?: number;
+  labor_per_watt_pay?: number;
+  labor_total?: number;
+  labor_breakdown?: any[];
 };
 
 export type SchedulingAppointment = {

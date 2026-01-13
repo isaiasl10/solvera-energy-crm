@@ -18,7 +18,7 @@ type CustomerProjectProps = {
 
 type Tab = 'system' | 'pricing' | 'adders' | 'epc-costs' | 'documents' | 'scheduling' | 'timeline' | 'chat' | 'activity';
 type EditingSection = 'customer' | 'sales_rep' | 'system' | 'utility' | 'hoa' | 'epc_pricing' | 'adders' | 'bom_cost' | 'permit_engineering_cost' | null;
-type DeductionTab = 'bom' | 'permit_engineering';
+type DeductionTab = 'bom' | 'permit_engineering' | 'labor';
 
 type AdderKey = 'adder_steep_roof' | 'adder_metal_roof' | 'adder_tile_roof' | 'adder_small_system' | 'adder_fsu' | 'adder_mpu' | 'adder_critter_guard';
 
@@ -1419,7 +1419,11 @@ export default function CustomerProject({ customer: initialCustomer, onBack }: C
               const epcGrossTotal = baseEpcCost + totalAdders;
               const bomCost = customer.bom_cost || 0;
               const permitEngineeringCost = customer.permit_engineering_cost || 0;
-              const epcNetProfit = epcGrossTotal - totalAdders - bomCost - permitEngineeringCost;
+              const laborBatteryPay = customer.labor_battery_pay || 0;
+              const laborHourlyPay = customer.labor_hourly_pay || 0;
+              const laborPerWattPay = customer.labor_per_watt_pay || 0;
+              const laborTotal = customer.labor_total || 0;
+              const epcNetProfit = epcGrossTotal - totalAdders - bomCost - permitEngineeringCost - laborTotal;
 
               return (
                 <div className="space-y-3">
@@ -1545,6 +1549,20 @@ export default function CustomerProject({ customer: initialCustomer, onBack }: C
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                           </svg>
                           Permit & Eng
+                        </button>
+                        <button
+                          onClick={() => setDeductionTab('labor')}
+                          className={`
+                            flex items-center gap-0.5 px-2 py-1.5 text-xs font-medium border-b-2 transition-colors
+                            ${deductionTab === 'labor'
+                              ? 'border-gray-900 text-gray-900'
+                              : 'border-transparent text-gray-500 hover:text-gray-700'}
+                          `}
+                        >
+                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                          </svg>
+                          Labor Costs
                         </button>
                       </nav>
                     </div>
@@ -1676,6 +1694,86 @@ export default function CustomerProject({ customer: initialCustomer, onBack }: C
                         ) : null}
                       </div>
                     )}
+
+                    {deductionTab === 'labor' && (() => {
+                      const laborBreakdown = customer.labor_breakdown || [];
+
+                      return (
+                        <div className="space-y-1.5">
+                          <div className="flex justify-between items-start">
+                            <div>
+                              <h4 className="text-xs font-semibold text-gray-900">Labor Costs</h4>
+                              <p className="text-xs text-gray-500 mt-0.5">Auto-calculated from time entries and tickets</p>
+                            </div>
+                            <p className="text-sm font-bold text-gray-900">
+                              ${laborTotal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            </p>
+                          </div>
+
+                          {laborTotal > 0 ? (
+                            <div className="space-y-2">
+                              <div className="bg-white border border-gray-200 rounded p-2">
+                                <div className="space-y-1.5">
+                                  <div className="flex justify-between items-center pb-1 border-b border-gray-200">
+                                    <span className="text-xs font-semibold text-gray-700">Battery Pay</span>
+                                    <span className="text-xs font-bold text-gray-900">
+                                      ${laborBatteryPay.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                    </span>
+                                  </div>
+                                  <div className="flex justify-between items-center pb-1 border-b border-gray-200">
+                                    <span className="text-xs font-semibold text-gray-700">Hourly Pay</span>
+                                    <span className="text-xs font-bold text-gray-900">
+                                      ${laborHourlyPay.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                    </span>
+                                  </div>
+                                  <div className="flex justify-between items-center">
+                                    <span className="text-xs font-semibold text-gray-700">Per Watt Pay</span>
+                                    <span className="text-xs font-bold text-gray-900">
+                                      ${laborPerWattPay.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                    </span>
+                                  </div>
+                                </div>
+                              </div>
+
+                              <div className="bg-gray-50 border border-gray-200 rounded p-2">
+                                <h5 className="text-xs font-semibold text-gray-700 mb-2">Detailed Breakdown</h5>
+                                <div className="space-y-1.5 max-h-64 overflow-y-auto">
+                                  {laborBreakdown.map((item: any, index: number) => (
+                                    <div key={index} className="bg-white border border-gray-200 rounded p-1.5">
+                                      <div className="flex justify-between items-start">
+                                        <div className="flex-1">
+                                          <p className="text-xs font-medium text-gray-900">{item.user_name}</p>
+                                          <p className="text-xs text-gray-600 capitalize">
+                                            {item.type === 'battery_pay' ? 'Battery Installation' :
+                                             item.type === 'hourly_pay' ? `Hourly (${item.hours?.toFixed(2)}h @ $${item.rate}/hr)` :
+                                             item.type === 'per_watt_pay' ? `Per Watt (${item.system_size_kw}kW @ $${item.rate}/W)` : item.type}
+                                          </p>
+                                        </div>
+                                        <span className="text-xs font-semibold text-gray-900">
+                                          ${(item.amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                        </span>
+                                      </div>
+                                    </div>
+                                  ))}
+                                  {laborBreakdown.length === 0 && (
+                                    <p className="text-xs text-gray-500 italic">No labor entries recorded yet.</p>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="bg-blue-50 border border-blue-200 rounded p-2 flex items-start gap-2">
+                              <svg className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                                <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                              </svg>
+                              <p className="text-sm text-blue-800">
+                                <span className="font-semibold">No labor costs recorded.</span> Labor costs automatically calculate from time clock entries and completed installation tickets.
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })()}
                   </div>
 
                   <div className="space-y-2">
@@ -1694,9 +1792,9 @@ export default function CustomerProject({ customer: initialCustomer, onBack }: C
                       <div className="flex justify-between items-center">
                         <div>
                           <p className="text-xs font-bold text-gray-900">EPC Net Profit</p>
-                          <p className="text-xs text-gray-500">Gross - Adders - BOM - Permit/Eng</p>
+                          <p className="text-xs text-gray-500">Gross - Adders - BOM - Permit/Eng - Labor</p>
                           <p className="text-xs text-gray-400">
-                            ${epcGrossTotal.toFixed(2)} - ${totalAdders.toFixed(2)} - ${bomCost.toFixed(2)} - ${permitEngineeringCost.toFixed(2)}
+                            ${epcGrossTotal.toFixed(2)} - ${totalAdders.toFixed(2)} - ${bomCost.toFixed(2)} - ${permitEngineeringCost.toFixed(2)} - ${laborTotal.toFixed(2)}
                           </p>
                         </div>
                         <p className="text-sm font-bold text-green-600">
