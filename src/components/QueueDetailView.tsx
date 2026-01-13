@@ -108,6 +108,7 @@ export default function QueueDetailView({ queueType }: QueueDetailViewProps) {
   const [customers, setCustomers] = useState<CustomerWithTimeline[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
+  const [initialTab, setInitialTab] = useState<'system' | 'pricing' | 'adders' | 'epc-costs' | 'documents' | 'scheduling' | 'timeline' | 'chat' | 'activity'>('system');
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [userAppId, setUserAppId] = useState<string | null>(null);
   const [userRole, setUserRole] = useState<string | null>(null);
@@ -269,8 +270,8 @@ export default function QueueDetailView({ queueType }: QueueDetailViewProps) {
         activation_method: 'tech_dispatch'
       });
 
-      alert('Service ticket created for tech dispatch. Customer will remain in Pending Activation queue until the service ticket is completed.');
-      setRefreshTrigger(prev => prev + 1);
+      setInitialTab('scheduling');
+      setSelectedCustomer(customer);
     } catch (error) {
       console.error('Error creating service ticket:', error);
       alert('Failed to create service ticket');
@@ -281,8 +282,10 @@ export default function QueueDetailView({ queueType }: QueueDetailViewProps) {
     return (
       <CustomerProject
         customer={selectedCustomer}
+        initialTab={initialTab}
         onBack={() => {
           setSelectedCustomer(null);
+          setInitialTab('system');
           setRefreshTrigger(prev => prev + 1);
         }}
       />
@@ -316,7 +319,10 @@ export default function QueueDetailView({ queueType }: QueueDetailViewProps) {
             {customers.map(customer => (
               <div
                 key={customer.id}
-                onClick={() => setSelectedCustomer(customer)}
+                onClick={() => {
+                  setInitialTab('system');
+                  setSelectedCustomer(customer);
+                }}
                 className="bg-white rounded shadow-sm border border-gray-200 p-3 cursor-pointer hover:border-orange-400 hover:shadow-md transition-all"
               >
                 <div className="flex items-start justify-between gap-3 mb-3">

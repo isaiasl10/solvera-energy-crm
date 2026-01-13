@@ -14,6 +14,7 @@ import { logCustomerUpdate } from '../lib/activityLogger';
 type CustomerProjectProps = {
   customer: Customer;
   onBack: () => void;
+  initialTab?: Tab;
 };
 
 type Tab = 'system' | 'pricing' | 'adders' | 'epc-costs' | 'documents' | 'scheduling' | 'timeline' | 'chat' | 'activity';
@@ -89,7 +90,7 @@ const getDerivedProjectStatus = (timeline: ProjectTimelineData): string => {
   return 'New Lead';
 };
 
-export default function CustomerProject({ customer: initialCustomer, onBack }: CustomerProjectProps) {
+export default function CustomerProject({ customer: initialCustomer, onBack, initialTab }: CustomerProjectProps) {
   const { canEdit, isEmployee, isSalesRep, user } = useAuth();
 
   if (isSalesRep) {
@@ -101,7 +102,7 @@ export default function CustomerProject({ customer: initialCustomer, onBack }: C
     address: cust.installation_address,
   });
 
-  const [activeTab, setActiveTab] = useState<Tab>('system');
+  const [activeTab, setActiveTab] = useState<Tab>(initialTab || 'system');
   const [editingSection, setEditingSection] = useState<EditingSection>(null);
   const [customer, setCustomer] = useState(initialCustomer);
   const [formData, setFormData] = useState(mapCustomerToFormData(initialCustomer));
