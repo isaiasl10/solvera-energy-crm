@@ -25,7 +25,7 @@ import FirstLoginPasswordReset from './components/FirstLoginPasswordReset';
 import { useAuth } from './contexts/AuthContext';
 
 function App() {
-  const { user, loading, requiresPasswordReset, refreshUser, isAdmin, isManagement } = useAuth();
+  const { user, loading, requiresPasswordReset, refreshUser, isAdmin, isManagement, isSalesManager } = useAuth();
   const [currentPath, setCurrentPath] = useState(window.location.pathname);
   const [currentView, setCurrentView] = useState<ViewType>(() => {
     const saved = localStorage.getItem('currentView');
@@ -56,6 +56,12 @@ function App() {
     window.addEventListener('popstate', handleLocationChange);
     return () => window.removeEventListener('popstate', handleLocationChange);
   }, []);
+
+  useEffect(() => {
+    if (user && isSalesManager && !localStorage.getItem('currentView')) {
+      setCurrentView('sales-manager-dashboard');
+    }
+  }, [user, isSalesManager]);
 
   const handleViewCustomerProject = (customerId: string) => {
     setSelectedCustomerId(customerId);
