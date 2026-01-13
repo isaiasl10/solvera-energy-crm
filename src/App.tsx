@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { Menu } from 'lucide-react';
 import Sidebar, { type ViewType } from './components/Sidebar';
 import Calendar from './components/Calendar';
 import CustomerQueue from './components/CustomerQueue';
@@ -30,6 +31,7 @@ function App() {
   const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(() => {
     return localStorage.getItem('selectedCustomerId') || null;
   });
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
 
   useEffect(() => {
     localStorage.setItem('currentView', currentView);
@@ -132,8 +134,28 @@ function App() {
 
   return (
     <div className="flex h-screen overflow-hidden">
-      <Sidebar currentView={currentView} onViewChange={setCurrentView} />
-      {renderView()}
+      <Sidebar
+        currentView={currentView}
+        onViewChange={setCurrentView}
+        isMobileOpen={isMobileSidebarOpen}
+        onMobileClose={() => setIsMobileSidebarOpen(false)}
+      />
+      <div className="flex-1 flex flex-col overflow-hidden">
+        <div className="lg:hidden bg-gray-900 text-white p-4 flex items-center gap-3">
+          <button
+            onClick={() => setIsMobileSidebarOpen(true)}
+            className="text-white hover:text-orange-500 transition-colors"
+          >
+            <Menu className="w-6 h-6" />
+          </button>
+          <img
+            src="/solvera_energy_logo_redesign.png"
+            alt="Solvera Energy"
+            className="h-8 object-contain"
+          />
+        </div>
+        {renderView()}
+      </div>
     </div>
   );
 }

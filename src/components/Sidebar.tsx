@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Calendar, Users, Settings, ChevronDown, ChevronRight, UserCog, LogOut, User, Eye, Layers } from 'lucide-react';
+import { Calendar, Users, Settings, ChevronDown, ChevronRight, UserCog, LogOut, User, Eye, Layers, X } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 
@@ -8,9 +8,11 @@ export type ViewType = 'calendar' | 'customers' | 'user-management' | 'employee-
 interface SidebarProps {
   currentView: ViewType;
   onViewChange: (view: ViewType) => void;
+  isMobileOpen: boolean;
+  onMobileClose: () => void;
 }
 
-export default function Sidebar({ currentView, onViewChange }: SidebarProps) {
+export default function Sidebar({ currentView, onViewChange, isMobileOpen, onMobileClose }: SidebarProps) {
   const { isAdmin, logout, user } = useAuth();
   const isAdminView = currentView.startsWith('admin-');
   const isQueueView = currentView.startsWith('queue-');
@@ -19,6 +21,11 @@ export default function Sidebar({ currentView, onViewChange }: SidebarProps) {
   const [queueCounts, setQueueCounts] = useState<Record<string, number>>({});
   const [userRole, setUserRole] = useState<string | null>(null);
   const [userAppId, setUserAppId] = useState<string | null>(null);
+
+  const handleViewChange = (view: ViewType) => {
+    onViewChange(view);
+    onMobileClose();
+  };
 
   useEffect(() => {
     if (isAdminView) {
@@ -150,20 +157,38 @@ export default function Sidebar({ currentView, onViewChange }: SidebarProps) {
   ];
 
   return (
-    <div className="w-48 bg-gray-900 text-white h-screen flex flex-col">
-      <div className="px-2 py-2 border-b border-gray-700">
-        <img
-          src="/solvera_energy_logo_redesign.png"
-          alt="Solvera Energy"
-          className="w-full h-auto object-contain"
+    <>
+      {isMobileOpen && (
+        <div
+          className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
+          onClick={onMobileClose}
         />
-      </div>
+      )}
+      <div className={`
+        w-48 bg-gray-900 text-white h-screen flex flex-col
+        fixed lg:static inset-y-0 left-0 z-50
+        transform transition-transform duration-300 ease-in-out
+        ${isMobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
+      `}>
+        <div className="px-2 py-2 border-b border-gray-700 flex items-center justify-between">
+          <img
+            src="/solvera_energy_logo_redesign.png"
+            alt="Solvera Energy"
+            className="w-full h-auto object-contain"
+          />
+          <button
+            onClick={onMobileClose}
+            className="lg:hidden text-gray-400 hover:text-white ml-2"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
 
       <nav className="flex-1 p-2 overflow-y-auto">
         <ul className="space-y-1">
           <li>
             <button
-              onClick={() => onViewChange('calendar')}
+              onClick={() => handleViewChange('calendar')}
               className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg transition-colors text-sm ${
                 currentView === 'calendar'
                   ? 'bg-orange-600 text-white'
@@ -176,7 +201,7 @@ export default function Sidebar({ currentView, onViewChange }: SidebarProps) {
           </li>
           <li>
             <button
-              onClick={() => onViewChange('customers')}
+              onClick={() => handleViewChange('customers')}
               className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg transition-colors text-sm ${
                 currentView === 'customers'
                   ? 'bg-orange-600 text-white'
@@ -209,7 +234,7 @@ export default function Sidebar({ currentView, onViewChange }: SidebarProps) {
                 {queueItems.map((item) => (
                   <li key={item.id}>
                     <button
-                      onClick={() => onViewChange(item.id)}
+                      onClick={() => handleViewChange(item.id)}
                       className={`w-full text-left px-2 py-1.5 rounded-lg transition-colors text-xs flex items-center justify-between ${
                         currentView === item.id
                           ? 'bg-orange-500 text-white'
@@ -231,7 +256,7 @@ export default function Sidebar({ currentView, onViewChange }: SidebarProps) {
           {!isAdmin && (
             <li>
               <button
-                onClick={() => onViewChange('employee-profile')}
+                onClick={() => handleViewChange('employee-profile')}
                 className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg transition-colors text-sm ${
                   currentView === 'employee-profile'
                     ? 'bg-orange-600 text-white'
@@ -247,7 +272,7 @@ export default function Sidebar({ currentView, onViewChange }: SidebarProps) {
             <>
               <li>
                 <button
-                  onClick={() => onViewChange('user-management')}
+                  onClick={() => handleViewChange('user-management')}
                   className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg transition-colors text-sm ${
                     currentView === 'user-management'
                       ? 'bg-orange-600 text-white'
@@ -260,7 +285,7 @@ export default function Sidebar({ currentView, onViewChange }: SidebarProps) {
               </li>
               <li>
                 <button
-                  onClick={() => onViewChange('role-previews')}
+                  onClick={() => handleViewChange('role-previews')}
                   className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg transition-colors text-sm ${
                     currentView === 'role-previews'
                       ? 'bg-orange-600 text-white'
@@ -293,7 +318,7 @@ export default function Sidebar({ currentView, onViewChange }: SidebarProps) {
                     {adminSubItems.map((item) => (
                       <li key={item.id}>
                         <button
-                          onClick={() => onViewChange(item.id)}
+                          onClick={() => handleViewChange(item.id)}
                           className={`w-full text-left px-3 py-1.5 rounded-lg transition-colors text-xs ${
                             currentView === item.id
                               ? 'bg-orange-500 text-white'
@@ -322,5 +347,6 @@ export default function Sidebar({ currentView, onViewChange }: SidebarProps) {
         </button>
       </div>
     </div>
+    </>
   );
 }
