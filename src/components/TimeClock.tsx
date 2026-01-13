@@ -12,11 +12,19 @@ type TimeEntry = {
   clock_out_latitude: number | null;
   clock_out_longitude: number | null;
   total_hours: number | null;
+  customer_id: string | null;
 };
 
 type UserInfo = {
   hourly_rate: number;
   is_salary: boolean;
+};
+
+type Customer = {
+  id: string;
+  first_name: string;
+  last_name: string;
+  full_name: string;
 };
 
 export default function TimeClock() {
@@ -29,6 +37,8 @@ export default function TimeClock() {
   const [userInfo, setUserInfo] = useState<UserInfo & { id: string }>({ id: '', hourly_rate: 0, is_salary: false });
   const [error, setError] = useState<string | null>(null);
   const [locationError, setLocationError] = useState<string | null>(null);
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [selectedCustomerId, setSelectedCustomerId] = useState<string>('');
 
   useEffect(() => {
     loadData();
@@ -50,6 +60,14 @@ export default function TimeClock() {
       }
 
       setUserInfo(userData);
+
+      const { data: customersData, error: customersError } = await supabase
+        .from('customers')
+        .select('id, first_name, last_name, full_name')
+        .order('full_name', { ascending: true });
+
+      if (customersError) throw customersError;
+      setCustomers(customersData || []);
 
       const { data: currentData, error: currentError } = await supabase
         .from('time_clock')
@@ -115,6 +133,12 @@ export default function TimeClock() {
   const handleClockIn = async () => {
     setError(null);
     setLocationError(null);
+
+    if (!selectedCustomerId) {
+      setError('Please select a customer before clocking in');
+      return;
+    }
+
     setClockkingIn(true);
 
     try {
@@ -124,6 +148,7 @@ export default function TimeClock() {
         .from('time_clock')
         .insert({
           user_id: userInfo.id,
+          customer_id: selectedCustomerId,
           clock_in_time: new Date().toISOString(),
           clock_in_latitude: location.latitude,
           clock_in_longitude: location.longitude,
@@ -134,6 +159,7 @@ export default function TimeClock() {
       if (error) throw error;
 
       setCurrentEntry(data);
+      setSelectedCustomerId('');
       await loadData();
     } catch (err: any) {
       console.error('Error clocking in:', err);
@@ -272,6 +298,11 @@ export default function TimeClock() {
                 <p className="text-xs text-green-700 mt-1">
                   {formatTime(currentEntry.clock_in_time)} on {formatDate(currentEntry.clock_in_time)}
                 </p>
+                {currentEntry.customer_id && (
+                  <p className="text-xs text-green-600 mt-1">
+                    Working on: {customers.find(c => c.id === currentEntry.customer_id)?.full_name || 'Unknown Customer'}
+                  </p>
+                )}
               </div>
               <div className="flex items-center gap-2 text-green-700">
                 <MapPin className="w-4 h-4" />
@@ -281,11 +312,31 @@ export default function TimeClock() {
           </div>
         )}
 
+        {!currentEntry && (
+          <div className="mb-4">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Select Customer/Project
+            </label>
+            <select
+              value={selectedCustomerId}
+              onChange={(e) => setSelectedCustomerId(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+            >
+              <option value="">Choose a customer...</option>
+              {customers.map((customer) => (
+                <option key={customer.id} value={customer.id}>
+                  {customer.full_name}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+
         <div className="flex gap-4">
           {!currentEntry ? (
             <button
               onClick={handleClockIn}
-              disabled={clockingIn}
+              disabled={clockingIn || !selectedCustomerId}
               className="flex-1 flex items-center justify-center gap-2 px-6 py-4 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-semibold text-lg"
             >
               {clockingIn ? (
@@ -372,35 +423,43 @@ export default function TimeClock() {
           </div>
         ) : (
           <div className="space-y-2">
-            {weekEntries.map((entry) => (
-              <div
-                key={entry.id}
-                className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200"
-              >
-                <div className="flex-1">
-                  <p className="text-sm font-semibold text-gray-900">
-                    {formatDate(entry.clock_in_time)}
-                  </p>
-                  <p className="text-xs text-gray-600 mt-1">
-                    {formatTime(entry.clock_in_time)} - {entry.clock_out_time ? formatTime(entry.clock_out_time) : 'In Progress'}
-                  </p>
-                </div>
-                <div className="text-right">
-                  {entry.total_hours ? (
-                    <>
-                      <p className="text-sm font-bold text-gray-900">
-                        {entry.total_hours.toFixed(2)} hrs
+            {weekEntries.map((entry) => {
+              const customer = customers.find(c => c.id === entry.customer_id);
+              return (
+                <div
+                  key={entry.id}
+                  className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200"
+                >
+                  <div className="flex-1">
+                    <p className="text-sm font-semibold text-gray-900">
+                      {formatDate(entry.clock_in_time)}
+                    </p>
+                    <p className="text-xs text-gray-600 mt-1">
+                      {formatTime(entry.clock_in_time)} - {entry.clock_out_time ? formatTime(entry.clock_out_time) : 'In Progress'}
+                    </p>
+                    {customer && (
+                      <p className="text-xs text-orange-600 font-medium mt-1">
+                        {customer.full_name}
                       </p>
-                      <p className="text-xs text-green-600 font-semibold">
-                        ${(entry.total_hours * userInfo.hourly_rate).toFixed(2)}
-                      </p>
-                    </>
-                  ) : (
-                    <span className="text-xs text-yellow-600 font-semibold">Active</span>
-                  )}
+                    )}
+                  </div>
+                  <div className="text-right">
+                    {entry.total_hours ? (
+                      <>
+                        <p className="text-sm font-bold text-gray-900">
+                          {entry.total_hours.toFixed(2)} hrs
+                        </p>
+                        <p className="text-xs text-green-600 font-semibold">
+                          ${(entry.total_hours * userInfo.hourly_rate).toFixed(2)}
+                        </p>
+                      </>
+                    ) : (
+                      <span className="text-xs text-yellow-600 font-semibold">Active</span>
+                    )}
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>
