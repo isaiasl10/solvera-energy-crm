@@ -20,10 +20,11 @@ import EmployeeProfileView from './components/EmployeeProfileView';
 import RolePreviews from './components/RolePreviews';
 import Login from './components/Login';
 import ResetPassword from './components/ResetPassword';
+import FirstLoginPasswordReset from './components/FirstLoginPasswordReset';
 import { useAuth } from './contexts/AuthContext';
 
 function App() {
-  const { user, login, loading } = useAuth();
+  const { user, loading, requiresPasswordReset, refreshUser } = useAuth();
   const [currentPath, setCurrentPath] = useState(window.location.pathname);
   const [currentView, setCurrentView] = useState<ViewType>(() => {
     const saved = localStorage.getItem('currentView');
@@ -66,6 +67,10 @@ function App() {
 
   if (!user) {
     return <Login loading={loading} />;
+  }
+
+  if (requiresPasswordReset) {
+    return <FirstLoginPasswordReset onSuccess={refreshUser} />;
   }
 
   if (user?.role_category === 'field_tech') {

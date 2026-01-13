@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { Plus, X, Mail, Phone, User, Shield, Loader2, Edit2, Trash2, Briefcase, Upload, Hash, Users, DollarSign } from 'lucide-react';
+import { Plus, X, Mail, Phone, User, Shield, Loader2, Edit2, Trash2, Briefcase, Upload, Hash, Users, DollarSign, Key, Copy, Check, RefreshCw } from 'lucide-react';
+import { generateSecurePassword, copyToClipboard } from '../lib/passwordUtils';
 
 type RoleCategory = 'employee' | 'management' | 'field_tech' | 'admin';
 
@@ -77,6 +78,11 @@ export default function UserManagement() {
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [managers, setManagers] = useState<AppUser[]>([]);
+  const [generatedPassword, setGeneratedPassword] = useState<string>('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [copiedPassword, setCopiedPassword] = useState(false);
+  const [resettingPassword, setResettingPassword] = useState<string | null>(null);
+  const [resetPasswordResult, setResetPasswordResult] = useState<{userId: string; password: string} | null>(null);
 
   useEffect(() => {
     fetchUsers();
@@ -259,6 +265,54 @@ export default function UserManagement() {
     }
   };
 
+  const handleResetPassword = async (userId: string, email: string) => {
+    if (!confirm('Are you sure you want to reset this user\'s password? This will generate a new password and require them to change it on next login.')) {
+      return;
+    }
+
+    setResettingPassword(userId);
+    setError(null);
+
+    try {
+      const newPassword = generateSecurePassword(16);
+
+      const { error: updateError } = await supabase.auth.admin.updateUserById(userId, {
+        password: newPassword
+      });
+
+      if (updateError) throw updateError;
+
+      const { error: appUserError } = await supabase
+        .from('app_users')
+        .update({
+          first_login: true,
+          password_last_changed: null
+        })
+        .eq('id', userId);
+
+      if (appUserError) throw appUserError;
+
+      setResetPasswordResult({ userId, password: newPassword });
+      await fetchUsers();
+    } catch (err) {
+      console.error('Error resetting password:', err);
+      setError(err instanceof Error ? err.message : 'Failed to reset password');
+    } finally {
+      setResettingPassword(null);
+    }
+  };
+
+  const handleCopyPassword = async (password: string) => {
+    try {
+      await copyToClipboard(password);
+      setCopiedPassword(true);
+      setTimeout(() => setCopiedPassword(false), 2000);
+    } catch (err) {
+      console.error('Failed to copy password:', err);
+      setError('Failed to copy password to clipboard');
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
@@ -349,11 +403,13 @@ export default function UserManagement() {
         if (updateError) throw updateError;
       } else {
         console.log('Creating new user...');
-        const tempPassword = `Temp${Math.random().toString(36).slice(-8)}!`;
+        const autoPassword = generateSecurePassword(16);
+        setGeneratedPassword(autoPassword);
+        setShowPassword(true);
 
         const userData = {
           email: formData.email,
-          password: tempPassword,
+          password: autoPassword,
           full_name: formData.full_name,
           phone: formData.phone,
           role: formData.role,
@@ -541,6 +597,141 @@ export default function UserManagement() {
 
   return (
     <div className="flex-1 flex flex-col h-screen bg-gray-50">
+      {showPassword && generatedPassword && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-bold text-gray-900">User Created Successfully</h3>
+              <button
+                onClick={() => {
+                  setShowPassword(false);
+                  setGeneratedPassword('');
+                }}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
+              <p className="text-sm text-yellow-800 mb-2 font-medium">
+                Save this password now - it will not be shown again!
+              </p>
+              <p className="text-xs text-yellow-700">
+                The user will be required to change this password on first login.
+              </p>
+            </div>
+
+            <div className="space-y-3">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Temporary Password
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={generatedPassword}
+                    readOnly
+                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 font-mono text-sm"
+                  />
+                  <button
+                    onClick={() => handleCopyPassword(generatedPassword)}
+                    className="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
+                  >
+                    {copiedPassword ? (
+                      <>
+                        <Check className="w-4 h-4" />
+                        Copied
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="w-4 h-4" />
+                        Copy
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              <button
+                onClick={() => {
+                  setShowPassword(false);
+                  setGeneratedPassword('');
+                  setShowForm(false);
+                }}
+                className="w-full px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
+              >
+                Done
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {resetPasswordResult && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-bold text-gray-900">Password Reset Successfully</h3>
+              <button
+                onClick={() => setResetPasswordResult(null)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
+              <p className="text-sm text-yellow-800 mb-2 font-medium">
+                Save this password now - it will not be shown again!
+              </p>
+              <p className="text-xs text-yellow-700">
+                The user will be required to change this password on next login.
+              </p>
+            </div>
+
+            <div className="space-y-3">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  New Temporary Password
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={resetPasswordResult.password}
+                    readOnly
+                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 font-mono text-sm"
+                  />
+                  <button
+                    onClick={() => handleCopyPassword(resetPasswordResult.password)}
+                    className="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
+                  >
+                    {copiedPassword ? (
+                      <>
+                        <Check className="w-4 h-4" />
+                        Copied
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="w-4 h-4" />
+                        Copy
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              <button
+                onClick={() => setResetPasswordResult(null)}
+                className="w-full px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
+              >
+                Done
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="bg-white border-b border-gray-200 p-3">
         <div className="flex items-center justify-between">
           <div>
@@ -1122,6 +1313,18 @@ export default function UserManagement() {
                             )}
                           </div>
                           <div className="flex items-center gap-1 ml-2">
+                            <button
+                              onClick={() => handleResetPassword(user.id, user.email)}
+                              disabled={resettingPassword === user.id}
+                              className="p-1.5 text-orange-600 hover:bg-orange-50 rounded transition-colors disabled:opacity-50"
+                              title="Reset password"
+                            >
+                              {resettingPassword === user.id ? (
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                              ) : (
+                                <Key className="w-4 h-4" />
+                              )}
+                            </button>
                             <button
                               onClick={() => handleEdit(user)}
                               className="p-1.5 text-blue-600 hover:bg-blue-50 rounded transition-colors"

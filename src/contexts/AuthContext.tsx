@@ -11,6 +11,7 @@ type User = {
   role: string;
   role_category: RoleCategory;
   photo_url?: string;
+  first_login?: boolean;
 };
 
 type AuthContextType = {
@@ -20,9 +21,11 @@ type AuthContextType = {
   isEmployee: boolean;
   isSalesRep: boolean;
   canEdit: boolean;
+  requiresPasswordReset: boolean;
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   setMockUser: (roleCategory: RoleCategory) => void;
+  refreshUser: () => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -83,7 +86,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const { data: appUser, error } = await supabase
         .from('app_users')
-        .select('id, email, full_name, role, role_category, photo_url')
+        .select('id, email, full_name, role, role_category, photo_url, first_login')
         .eq('email', authUser.email)
         .maybeSingle();
 
@@ -101,6 +104,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           role: appUser.role,
           role_category: appUser.role_category as RoleCategory,
           photo_url: appUser.photo_url,
+          first_login: appUser.first_login || false,
         });
       } else {
         console.warn('No app_users record found for:', authUser.email);
@@ -109,6 +113,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch (error) {
       console.error('Error loading user data:', error);
       setUser(null);
+    }
+  };
+
+  const refreshUser = async () => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user) {
+        await loadUserData(session.user);
+      }
+    } catch (error) {
+      console.error('Error refreshing user:', error);
     }
   };
 
@@ -169,6 +184,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const isEmployee = user?.role_category === 'employee';
   const isSalesRep = user?.role_category === 'sales_rep';
   const canEdit = !isEmployee && !isSalesRep;
+  const requiresPasswordReset = user?.first_login === true;
 
   const value = {
     user,
@@ -177,9 +193,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     isEmployee,
     isSalesRep,
     canEdit,
+    requiresPasswordReset,
     login,
     logout,
     setMockUser,
+    refreshUser,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
