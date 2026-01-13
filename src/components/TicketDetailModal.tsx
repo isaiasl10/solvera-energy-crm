@@ -269,7 +269,52 @@ export default function TicketDetailModal({ ticketId, onClose, onUpdate, onViewP
 
       if (error) throw error;
 
-      if (ticket.ticket_type === 'inspection' && customer) {
+      if ((ticket.ticket_type === 'inspection' && ticket.problem_code === 'site_survey') ||
+          (ticket.ticket_type === 'service' && ticket.appointment_type === 'site_survey')) {
+        if (customer && (reason === 'Survey Complete' || reason === 'Work Complete')) {
+          const { data: existingTimeline } = await supabase
+            .from('project_timeline')
+            .select('id')
+            .eq('customer_id', customer.id)
+            .maybeSingle();
+
+          const timelineUpdate: any = {
+            site_survey_status: 'completed',
+            site_survey_completed_date: now,
+            engineering_status: 'pending',
+          };
+
+          if (existingTimeline) {
+            const { error: timelineError } = await supabase
+              .from('project_timeline')
+              .update(timelineUpdate)
+              .eq('id', existingTimeline.id);
+
+            if (timelineError) {
+              console.error('Error updating project timeline:', timelineError);
+            }
+          } else {
+            const { error: insertError } = await supabase
+              .from('project_timeline')
+              .insert({
+                customer_id: customer.id,
+                ...timelineUpdate,
+                approved_for_site_survey: true,
+                utility_status: 'not_started',
+                permit_status: 'not_started',
+                installation_status: 'pending_customer',
+                material_order_status: 'not_ordered',
+                inspection_status: 'not_ready',
+              });
+
+            if (insertError) {
+              console.error('Error inserting project timeline:', insertError);
+            }
+          }
+        }
+      }
+
+      if (ticket.ticket_type === 'inspection' && ticket.problem_code === 'city_inspection' && customer) {
         let inspectionStatus = null;
 
         if (reason === 'Inspection Passed') {

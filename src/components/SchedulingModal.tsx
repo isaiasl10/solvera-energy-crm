@@ -224,6 +224,40 @@ export default function SchedulingModal({
         if (insertError) throw insertError;
       }
 
+      if (problemCode === 'site_survey' && ticketStatus === 'scheduled' && scheduledDate) {
+        const { data: existingTimeline } = await supabase
+          .from('project_timeline')
+          .select('id')
+          .eq('customer_id', customer.id)
+          .maybeSingle();
+
+        if (existingTimeline) {
+          await supabase
+            .from('project_timeline')
+            .update({
+              approved_for_site_survey: true,
+              site_survey_status: 'scheduled',
+              site_survey_scheduled_date: scheduledDate,
+            })
+            .eq('id', existingTimeline.id);
+        } else {
+          await supabase
+            .from('project_timeline')
+            .insert({
+              customer_id: customer.id,
+              approved_for_site_survey: true,
+              site_survey_status: 'scheduled',
+              site_survey_scheduled_date: scheduledDate,
+              engineering_status: 'pending',
+              utility_status: 'not_started',
+              permit_status: 'not_started',
+              installation_status: 'pending_customer',
+              material_order_status: 'not_ordered',
+              inspection_status: 'not_ready',
+            });
+        }
+      }
+
       onClose();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');

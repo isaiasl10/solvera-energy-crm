@@ -95,10 +95,16 @@ export default function CustomerProject({ customer: initialCustomer, onBack }: C
   if (isSalesRep) {
     return <SalesRepProjectView customer={initialCustomer} onBack={onBack} />;
   }
+
+  const mapCustomerToFormData = (cust: Customer) => ({
+    ...cust,
+    address: cust.installation_address,
+  });
+
   const [activeTab, setActiveTab] = useState<Tab>('system');
   const [editingSection, setEditingSection] = useState<EditingSection>(null);
   const [customer, setCustomer] = useState(initialCustomer);
-  const [formData, setFormData] = useState(initialCustomer);
+  const [formData, setFormData] = useState(mapCustomerToFormData(initialCustomer));
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [deductionTab, setDeductionTab] = useState<DeductionTab>('bom');
@@ -321,13 +327,13 @@ export default function CustomerProject({ customer: initialCustomer, onBack }: C
   };
 
   const handleEdit = (section: EditingSection) => {
-    setFormData(customer);
+    setFormData(mapCustomerToFormData(customer));
     setEditingSection(section);
     setError(null);
   };
 
   const handleCancel = () => {
-    setFormData(customer);
+    setFormData(mapCustomerToFormData(customer));
     setEditingSection(null);
     setError(null);
   };
@@ -441,7 +447,7 @@ export default function CustomerProject({ customer: initialCustomer, onBack }: C
       if (fetchError) throw fetchError;
       if (freshData) {
         setCustomer(freshData);
-        setFormData(freshData);
+        setFormData(mapCustomerToFormData(freshData));
       }
 
       if (user) {
