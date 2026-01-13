@@ -54,13 +54,33 @@ type PayrollPeriod = {
   }>;
 };
 
+type CommissionDetail = {
+  customer_id: string;
+  customer_name: string;
+  sales_rep_id: string;
+  sales_rep_name: string;
+  system_size_w: number;
+  override_per_watt: number;
+  total_override_amount: number;
+  sales_rep_ppw: number;
+  manager_ppw: number;
+  m1_override: number;
+  m2_override: number;
+  m1_status: string;
+  m2_status: string;
+  m1_paid_date: string | null;
+  m2_paid_date: string | null;
+  signature_date: string;
+};
+
 export default function SalesManagerDashboard() {
   const [managerInfo, setManagerInfo] = useState<{ ppw_redline: number; full_name: string; id: string } | null>(null);
   const [salesReps, setSalesReps] = useState<SalesRep[]>([]);
   const [repOverrides, setRepOverrides] = useState<RepOverride[]>([]);
   const [payrollPeriods, setPayrollPeriods] = useState<PayrollPeriod[]>([]);
+  const [commissionDetails, setCommissionDetails] = useState<CommissionDetail[]>([]);
   const [selectedPeriod, setSelectedPeriod] = useState<PayrollPeriod | null>(null);
-  const [activeTab, setActiveTab] = useState<'overview' | 'payroll'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'commissions' | 'payroll'>('overview');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -114,7 +134,8 @@ export default function SalesManagerDashboard() {
 
       await Promise.all([
         fetchTeamOverrides(user.email, manager),
-        fetchPayrollData(manager.id)
+        fetchPayrollData(manager.id),
+        fetchCommissionDetails(manager.id, manager.ppw_redline)
       ]);
     } catch (err) {
       console.error('Failed to fetch dashboard data:', err);
@@ -284,6 +305,95 @@ export default function SalesManagerDashboard() {
     setPayrollPeriods(periodData);
   };
 
+  const fetchCommissionDetails = async (managerId: string, managerPpw: number) => {
+    const { data: commissions, error: commissionsError } = await supabase
+      .from('sales_commissions')
+      .select(`
+        id,
+        customer_id,
+        sales_rep_id,
+        sales_manager_override_amount,
+        total_commission,
+        m1_payment_amount,
+        m1_payment_status,
+        m1_paid_date,
+        m2_payment_amount,
+        m2_payment_status,
+        m2_paid_date,
+        signature_date
+      `)
+      .eq('sales_manager_id', managerId)
+      .order('signature_date', { ascending: false });
+
+    if (commissionsError) throw commissionsError;
+
+    if (!commissions || commissions.length === 0) {
+      setCommissionDetails([]);
+      return;
+    }
+
+    const customerIds = [...new Set(commissions.map(c => c.customer_id))];
+    const repIds = [...new Set(commissions.map(c => c.sales_rep_id))];
+
+    const { data: customers } = await supabase
+      .from('customers')
+      .select('id, first_name, last_name, customer_name, system_size_w')
+      .in('id', customerIds);
+
+    const { data: reps } = await supabase
+      .from('app_users')
+      .select('id, full_name, ppw_redline')
+      .in('id', repIds);
+
+    const customerMap = new Map(customers?.map(c => [c.id, {
+      name: c.customer_name || `${c.first_name} ${c.last_name}`,
+      system_size_w: c.system_size_w || 0
+    }]) || []);
+
+    const repMap = new Map(reps?.map(r => [r.id, {
+      name: r.full_name,
+      ppw: r.ppw_redline || 0
+    }]) || []);
+
+    const details: CommissionDetail[] = commissions.map(commission => {
+      const customer = customerMap.get(commission.customer_id);
+      const rep = repMap.get(commission.sales_rep_id);
+
+      const systemSizeW = customer?.system_size_w || 0;
+      const repPpw = rep?.ppw || 0;
+      const overridePerWatt = repPpw - managerPpw;
+      const totalOverride = commission.sales_manager_override_amount || 0;
+
+      const m1Override = totalOverride > 0 && commission.total_commission > 0
+        ? (commission.m1_payment_amount / commission.total_commission) * totalOverride
+        : 0;
+      const m2Override = totalOverride > 0 && commission.total_commission > 0
+        ? (commission.m2_payment_amount / commission.total_commission) * totalOverride
+        : 0;
+
+      return {
+        customer_id: commission.customer_id,
+        customer_name: customer?.name || 'Unknown',
+        sales_rep_id: commission.sales_rep_id,
+        sales_rep_name: rep?.name || 'Unknown',
+        system_size_w: systemSizeW,
+        override_per_watt: overridePerWatt,
+        total_override_amount: totalOverride,
+        sales_rep_ppw: repPpw,
+        manager_ppw: managerPpw,
+        m1_override: m1Override,
+        m2_override: m2Override,
+        m1_status: commission.m1_payment_status,
+        m2_status: commission.m2_payment_status,
+        m1_paid_date: commission.m1_paid_date,
+        m2_paid_date: commission.m2_paid_date,
+        signature_date: commission.signature_date
+      };
+    });
+
+    setCommissionDetails(details);
+  };
+
   const totalOverrides = repOverrides.reduce((sum, ro) => sum + ro.total_override_amount, 0);
   const totalCustomers = repOverrides.reduce((sum, ro) => sum + ro.total_customers, 0);
   const totalSystemSize = repOverrides.reduce((sum, ro) => sum + ro.total_system_size, 0);
@@ -446,6 +556,16 @@ export default function SalesManagerDashboard() {
           Team Overview
         </button>
         <button
+          onClick={() => setActiveTab('commissions')}
+          className={`px-4 py-2 font-medium text-sm transition-colors ${
+            activeTab === 'commissions'
+              ? 'text-blue-600 border-b-2 border-blue-600'
+              : 'text-gray-600 hover:text-gray-900'
+          }`}
+        >
+          Commission Details
+        </button>
+        <button
           onClick={() => setActiveTab('payroll')}
           className={`px-4 py-2 font-medium text-sm transition-colors ${
             activeTab === 'payroll'
@@ -596,6 +716,128 @@ export default function SalesManagerDashboard() {
             </div>
           </div>
         </>
+      )}
+
+      {activeTab === 'commissions' && (
+        <div className="space-y-4">
+          <div>
+            <h3 className="text-lg font-semibold text-gray-900 mb-1">Commission Details</h3>
+            <p className="text-sm text-gray-600">All customers from your sales reps with override calculations</p>
+          </div>
+
+          {commissionDetails.length === 0 ? (
+            <div className="text-center py-12 bg-white rounded-lg border border-gray-200">
+              <DollarSign className="w-12 h-12 text-gray-400 mx-auto mb-3" />
+              <p className="text-gray-600">No commission data available</p>
+            </div>
+          ) : (
+            <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead className="bg-gray-50 border-b border-gray-200">
+                    <tr>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase">Customer</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase">Sales Rep</th>
+                      <th className="px-4 py-3 text-right text-xs font-semibold text-gray-700 uppercase">System Size</th>
+                      <th className="px-4 py-3 text-right text-xs font-semibold text-gray-700 uppercase">Rep PPW</th>
+                      <th className="px-4 py-3 text-right text-xs font-semibold text-gray-700 uppercase">Your PPW</th>
+                      <th className="px-4 py-3 text-right text-xs font-semibold text-gray-700 uppercase">Override/Watt</th>
+                      <th className="px-4 py-3 text-right text-xs font-semibold text-gray-700 uppercase">Total Override</th>
+                      <th className="px-4 py-3 text-center text-xs font-semibold text-gray-700 uppercase">M1 Status</th>
+                      <th className="px-4 py-3 text-center text-xs font-semibold text-gray-700 uppercase">M2 Status</th>
+                      <th className="px-4 py-3 text-right text-xs font-semibold text-gray-700 uppercase">M1 Override</th>
+                      <th className="px-4 py-3 text-right text-xs font-semibold text-gray-700 uppercase">M2 Override</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-200">
+                    {commissionDetails.map((detail) => (
+                      <tr key={detail.customer_id} className="hover:bg-gray-50">
+                        <td className="px-4 py-3 text-sm text-gray-900">{detail.customer_name}</td>
+                        <td className="px-4 py-3 text-sm text-gray-900">{detail.sales_rep_name}</td>
+                        <td className="px-4 py-3 text-sm text-right text-gray-900">
+                          {(detail.system_size_w / 1000).toFixed(2)} kW
+                        </td>
+                        <td className="px-4 py-3 text-sm text-right text-gray-900">
+                          ${detail.sales_rep_ppw.toFixed(4)}
+                        </td>
+                        <td className="px-4 py-3 text-sm text-right text-gray-900">
+                          ${detail.manager_ppw.toFixed(4)}
+                        </td>
+                        <td className={`px-4 py-3 text-sm text-right font-semibold ${
+                          detail.override_per_watt >= 0 ? 'text-green-600' : 'text-red-600'
+                        }`}>
+                          ${Math.abs(detail.override_per_watt).toFixed(4)}
+                        </td>
+                        <td className={`px-4 py-3 text-sm text-right font-bold ${
+                          detail.total_override_amount >= 0 ? 'text-green-600' : 'text-red-600'
+                        }`}>
+                          {formatCurrency(detail.total_override_amount)}
+                        </td>
+                        <td className="px-4 py-3 text-center">
+                          <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                            detail.m1_status === 'paid'
+                              ? 'bg-green-100 text-green-800'
+                              : detail.m1_status === 'eligible'
+                              ? 'bg-yellow-100 text-yellow-800'
+                              : 'bg-gray-100 text-gray-800'
+                          }`}>
+                            {detail.m1_status}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-center">
+                          <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                            detail.m2_status === 'paid'
+                              ? 'bg-green-100 text-green-800'
+                              : detail.m2_status === 'eligible'
+                              ? 'bg-yellow-100 text-yellow-800'
+                              : 'bg-gray-100 text-gray-800'
+                          }`}>
+                            {detail.m2_status}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-sm text-right text-green-700 font-medium">
+                          {formatCurrency(detail.m1_override)}
+                        </td>
+                        <td className="px-4 py-3 text-sm text-right text-blue-700 font-medium">
+                          {formatCurrency(detail.m2_override)}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                  <tfoot className="bg-gray-50 border-t-2 border-gray-300">
+                    <tr>
+                      <td colSpan={6} className="px-4 py-3 text-sm font-bold text-gray-900 text-right">
+                        Totals:
+                      </td>
+                      <td className="px-4 py-3 text-sm font-bold text-green-600 text-right">
+                        {formatCurrency(commissionDetails.reduce((sum, d) => sum + d.total_override_amount, 0))}
+                      </td>
+                      <td colSpan={2}></td>
+                      <td className="px-4 py-3 text-sm font-bold text-green-700 text-right">
+                        {formatCurrency(commissionDetails.reduce((sum, d) => sum + d.m1_override, 0))}
+                      </td>
+                      <td className="px-4 py-3 text-sm font-bold text-blue-700 text-right">
+                        {formatCurrency(commissionDetails.reduce((sum, d) => sum + d.m2_override, 0))}
+                      </td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+            </div>
+          )}
+
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <h4 className="text-sm font-semibold text-blue-900 mb-2">Understanding Override Commissions</h4>
+            <div className="text-sm text-blue-800 space-y-2">
+              <p><strong>Total Override:</strong> The total override amount you earn from this customer based on your sales rep's PPW vs your PPW.</p>
+              <p><strong>M1 Override:</strong> The portion of your override paid at Milestone 1 (typically after signature + 3 days).</p>
+              <p><strong>M2 Override:</strong> The portion of your override paid at Milestone 2 (typically after installation completion).</p>
+              <p className="text-xs text-blue-700 mt-2">
+                These override amounts are automatically added to your payroll periods when the milestones are marked as paid.
+              </p>
+            </div>
+          </div>
+        </div>
       )}
 
       {activeTab === 'payroll' && (
