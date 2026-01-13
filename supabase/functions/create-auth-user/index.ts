@@ -37,6 +37,12 @@ Deno.serve(async (req: Request) => {
     const { email, password, full_name, phone, role, role_category, custom_id, photo_url,
             reporting_manager_id, hourly_rate, is_salary, battery_pay_rates, per_watt_rate, ppw_redline } = requestData;
 
+    console.log('=== CREATE USER REQUEST ===');
+    console.log('Email:', email);
+    console.log('Full Name:', full_name);
+    console.log('Role:', role);
+    console.log('Role Category:', role_category);
+
     if (!email || !password || !full_name || !role || !role_category) {
       return new Response(
         JSON.stringify({ error: "Email, password, full_name, role, and role_category are required" }),
@@ -64,6 +70,7 @@ Deno.serve(async (req: Request) => {
     let authUserId: string;
     let userAlreadyExists = false;
 
+    console.log('Step 1: Creating auth.users record...');
     const createResult = await supabaseAdmin.auth.admin.createUser({
       email,
       password,
@@ -72,7 +79,7 @@ Deno.serve(async (req: Request) => {
 
     if (createResult.error) {
       if (createResult.error.message.includes('already') || createResult.error.message.includes('registered')) {
-        console.log('User already exists in auth, looking up existing user...');
+        console.log('✓ User already exists in auth.users, looking up existing user...');
         userAlreadyExists = true;
 
         const { data: existingUsers, error: listError } = await supabaseAdmin.auth.admin.listUsers();
@@ -92,6 +99,7 @@ Deno.serve(async (req: Request) => {
 
         const existingUser = existingUsers.users.find(u => u.email === email);
         if (!existingUser) {
+          console.error('✗ User already registered but could not be found in auth.users');
           return new Response(
             JSON.stringify({ error: "User already registered but could not be found" }),
             {
@@ -105,8 +113,9 @@ Deno.serve(async (req: Request) => {
         }
 
         authUserId = existingUser.id;
+        console.log('✓ Found existing auth user with ID:', authUserId);
       } else {
-        console.error('Error creating auth user:', createResult.error);
+        console.error('✗ Error creating auth user:', createResult.error);
         return new Response(
           JSON.stringify({ error: createResult.error.message }),
           {
@@ -120,9 +129,11 @@ Deno.serve(async (req: Request) => {
       }
     } else {
       authUserId = createResult.data.user.id;
+      console.log('✓ Created new auth user with ID:', authUserId);
     }
 
     const appUserData = {
+      id: authUserId,
       auth_user_id: authUserId,
       email,
       full_name,
@@ -140,14 +151,23 @@ Deno.serve(async (req: Request) => {
       ppw_redline: ppw_redline || null,
     };
 
+    console.log('Step 2: Upserting into public.app_users...');
+    console.log('App user data:', JSON.stringify({
+      id: appUserData.id,
+      email: appUserData.email,
+      full_name: appUserData.full_name,
+      role: appUserData.role,
+      role_category: appUserData.role_category,
+    }, null, 2));
+
     const { data: appUser, error: upsertError } = await supabaseAdmin
       .from('app_users')
-      .upsert(appUserData, { onConflict: 'email' })
+      .upsert(appUserData, { onConflict: 'id' })
       .select()
       .single();
 
     if (upsertError) {
-      console.error('Error upserting app_users:', upsertError);
+      console.error('✗ Error upserting app_users:', upsertError);
       return new Response(
         JSON.stringify({ error: `Failed to create user profile: ${upsertError.message}` }),
         {
@@ -159,6 +179,9 @@ Deno.serve(async (req: Request) => {
         }
       );
     }
+
+    console.log('✓ Successfully upserted app_users record');
+    console.log('=== USER CREATION COMPLETE ===');
 
     return new Response(
       JSON.stringify({
