@@ -14,7 +14,7 @@ type SalesRep = {
 type Customer = {
   id: string;
   customer_name: string;
-  system_size_w: number;
+  system_size_kw: number;
   sales_rep_id: string;
   sales_rep_name: string;
   epc_gross_total: number;
@@ -59,7 +59,7 @@ type CommissionDetail = {
   customer_name: string;
   sales_rep_id: string;
   sales_rep_name: string;
-  system_size_w: number;
+  system_size_kw: number;
   override_per_watt: number;
   total_override_amount: number;
   sales_rep_ppw: number;
@@ -162,14 +162,14 @@ export default function SalesManagerDashboard() {
     const overridePromises = validReps.map(async (rep) => {
       const { data: customers, error: customersError } = await supabase
         .from('customers')
-        .select('id, customer_name, system_size_w, epc_gross_total, created_at')
+        .select('id, full_name, system_size_kw, contract_price, created_at')
         .eq('sales_rep_id', rep.id);
 
       if (customersError) throw customersError;
 
-      const totalSystemSize = (customers || []).reduce((sum, c) => sum + (c.system_size_w || 0), 0);
+      const totalSystemSize = (customers || []).reduce((sum, c) => sum + (Number(c.system_size_kw) || 0), 0);
       const overridePerWatt = (rep.ppw_redline || 0) - (manager.ppw_redline || 0);
-      const totalOverrideAmount = totalSystemSize * overridePerWatt;
+      const totalOverrideAmount = totalSystemSize * 1000 * overridePerWatt;
 
       return {
         rep,
@@ -227,7 +227,7 @@ export default function SalesManagerDashboard() {
 
         const { data: customers } = await supabase
           .from('customers')
-          .select('id, first_name, last_name, customer_name')
+          .select('id, full_name')
           .in('id', customerIds);
 
         const { data: reps } = await supabase
@@ -235,7 +235,7 @@ export default function SalesManagerDashboard() {
           .select('id, full_name')
           .in('id', repIds);
 
-        const customerMap = new Map(customers?.map(c => [c.id, c.customer_name || `${c.first_name} ${c.last_name}`]) || []);
+        const customerMap = new Map(customers?.map(c => [c.id, c.full_name]) || []);
         const repMap = new Map(reps?.map(r => [r.id, r.full_name]) || []);
 
         for (const commission of commissions) {
@@ -337,7 +337,7 @@ export default function SalesManagerDashboard() {
 
     const { data: customers } = await supabase
       .from('customers')
-      .select('id, first_name, last_name, customer_name, system_size_w')
+      .select('id, full_name, system_size_kw')
       .in('id', customerIds);
 
     const { data: reps } = await supabase
@@ -346,8 +346,8 @@ export default function SalesManagerDashboard() {
       .in('id', repIds);
 
     const customerMap = new Map(customers?.map(c => [c.id, {
-      name: c.customer_name || `${c.first_name} ${c.last_name}`,
-      system_size_w: c.system_size_w || 0
+      name: c.full_name,
+      system_size_kw: Number(c.system_size_kw) || 0
     }]) || []);
 
     const repMap = new Map(reps?.map(r => [r.id, {
@@ -359,7 +359,7 @@ export default function SalesManagerDashboard() {
       const customer = customerMap.get(commission.customer_id);
       const rep = repMap.get(commission.sales_rep_id);
 
-      const systemSizeW = customer?.system_size_w || 0;
+      const systemSizeKw = customer?.system_size_kw || 0;
       const repPpw = rep?.ppw || 0;
       const overridePerWatt = repPpw - managerPpw;
       const totalOverride = commission.sales_manager_override_amount || 0;
@@ -376,7 +376,7 @@ export default function SalesManagerDashboard() {
         customer_name: customer?.name || 'Unknown',
         sales_rep_id: commission.sales_rep_id,
         sales_rep_name: rep?.name || 'Unknown',
-        system_size_w: systemSizeW,
+        system_size_kw: systemSizeKw,
         override_per_watt: overridePerWatt,
         total_override_amount: totalOverride,
         sales_rep_ppw: repPpw,
@@ -755,7 +755,7 @@ export default function SalesManagerDashboard() {
                         <td className="px-4 py-3 text-sm text-gray-900">{detail.customer_name}</td>
                         <td className="px-4 py-3 text-sm text-gray-900">{detail.sales_rep_name}</td>
                         <td className="px-4 py-3 text-sm text-right text-gray-900">
-                          {(detail.system_size_w / 1000).toFixed(2)} kW
+                          {detail.system_size_kw.toFixed(2)} kW
                         </td>
                         <td className="px-4 py-3 text-sm text-right text-gray-900">
                           ${detail.sales_rep_ppw.toFixed(4)}
