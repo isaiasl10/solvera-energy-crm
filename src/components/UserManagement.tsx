@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { Plus, X, Mail, Phone, User, Shield, Loader2, Edit2, Trash2, Briefcase, Upload, Hash, Users, DollarSign, Key, Copy, Check, RefreshCw } from 'lucide-react';
 import { generateSecurePassword, copyToClipboard } from '../lib/passwordUtils';
+import { useAuth } from '../contexts/AuthContext';
 
 type RoleCategory = 'employee' | 'management' | 'field_tech' | 'admin';
 
@@ -50,7 +51,36 @@ const ROLE_OPTIONS = {
   ],
 };
 
+const getAvailableRoleOptions = (currentUserRole: string) => {
+  if (currentUserRole === 'admin') {
+    return ROLE_OPTIONS;
+  }
+
+  if (currentUserRole === 'sales_manager') {
+    return {
+      employee: [
+        { value: 'sales_rep', label: 'Sales Representative' },
+      ],
+      management: [],
+      field_tech: [],
+      admin: [],
+    };
+  }
+
+  if (currentUserRole === 'project_manager') {
+    return {
+      employee: ROLE_OPTIONS.employee.filter(r => r.value !== 'sales_rep'),
+      management: [],
+      field_tech: [],
+      admin: [],
+    };
+  }
+
+  return ROLE_OPTIONS;
+};
+
 export default function UserManagement() {
+  const { user: currentUser } = useAuth();
   const [users, setUsers] = useState<AppUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -150,10 +180,25 @@ export default function UserManagement() {
   const fetchUsers = async () => {
     try {
       setLoading(true);
-      const { data, error: fetchError } = await supabase
+      let query = supabase
         .from('app_users')
-        .select('id, custom_id, email, full_name, phone, role, role_category, status, photo_url, reporting_manager_id, created_at, updated_at, hourly_rate, is_salary, battery_pay_rates, per_watt_rate, ppw_redline')
-        .order('created_at', { ascending: false });
+        .select('id, custom_id, email, full_name, phone, role, role_category, status, photo_url, reporting_manager_id, created_at, updated_at, hourly_rate, is_salary, battery_pay_rates, per_watt_rate, ppw_redline');
+
+      if (currentUser?.role === 'sales_manager') {
+        const { data: currentUserData } = await supabase
+          .from('app_users')
+          .select('id')
+          .eq('email', currentUser.email)
+          .maybeSingle();
+
+        if (currentUserData) {
+          query = query.eq('reporting_manager_id', currentUserData.id).eq('role', 'sales_rep');
+        }
+      } else if (currentUser?.role === 'project_manager') {
+        query = query.eq('role_category', 'employee').neq('role', 'sales_rep');
+      }
+
+      const { data, error: fetchError } = await query.order('created_at', { ascending: false });
 
       if (fetchError) throw fetchError;
       setUsers(data || []);
@@ -325,7 +370,17 @@ export default function UserManagement() {
 
     try {
       if (formData.role === 'sales_rep') {
-        if (!formData.reporting_manager_id) {
+        if (currentUser?.role === 'sales_manager') {
+          const { data: currentUserData } = await supabase
+            .from('app_users')
+            .select('id')
+            .eq('email', currentUser.email)
+            .maybeSingle();
+
+          if (currentUserData) {
+            formData.reporting_manager_id = currentUserData.id;
+          }
+        } else if (!formData.reporting_manager_id) {
           console.error('VALIDATION FAILED: Manager is required for Sales Representatives');
           setError('Manager is required for Sales Representatives');
           setSubmitting(false);
@@ -446,22 +501,7 @@ export default function UserManagement() {
         }
       }
 
-      setFormData({
-        custom_id: '',
-        email: '',
-        full_name: '',
-        phone: '',
-        role_category: 'employee',
-        role: 'customer_service',
-        status: 'active',
-        photo_url: null,
-        reporting_manager_id: null,
-        hourly_rate: 0,
-        is_salary: false,
-        battery_pay_rates: {},
-        per_watt_rate: 0,
-        ppw_redline: 0,
-      });
+      setFormData(getDefaultFormData());
       setSendInvite(false);
       setPhotoFile(null);
       setPhotoPreview(null);
@@ -523,17 +563,53 @@ export default function UserManagement() {
     }
   };
 
-  const handleCancel = () => {
-    setShowForm(false);
-    setEditingUser(null);
-    setFormData({
+  const getDefaultFormData = () => {
+    if (currentUser?.role === 'sales_manager') {
+      return {
+        custom_id: '',
+        email: '',
+        full_name: '',
+        phone: '',
+        role_category: 'employee' as RoleCategory,
+        role: 'sales_rep',
+        status: 'active' as AppUser['status'],
+        photo_url: null,
+        reporting_manager_id: null,
+        hourly_rate: 0,
+        is_salary: false,
+        battery_pay_rates: {},
+        per_watt_rate: 0,
+        ppw_redline: 0,
+      };
+    }
+
+    if (currentUser?.role === 'project_manager') {
+      return {
+        custom_id: '',
+        email: '',
+        full_name: '',
+        phone: '',
+        role_category: 'employee' as RoleCategory,
+        role: 'customer_service',
+        status: 'active' as AppUser['status'],
+        photo_url: null,
+        reporting_manager_id: null,
+        hourly_rate: 0,
+        is_salary: false,
+        battery_pay_rates: {},
+        per_watt_rate: 0,
+        ppw_redline: 0,
+      };
+    }
+
+    return {
       custom_id: '',
       email: '',
       full_name: '',
       phone: '',
-      role_category: 'employee',
+      role_category: 'employee' as RoleCategory,
       role: 'customer_service',
-      status: 'active',
+      status: 'active' as AppUser['status'],
       photo_url: null,
       reporting_manager_id: null,
       hourly_rate: 0,
@@ -541,7 +617,13 @@ export default function UserManagement() {
       battery_pay_rates: {},
       per_watt_rate: 0,
       ppw_redline: 0,
-    });
+    };
+  };
+
+  const handleCancel = () => {
+    setShowForm(false);
+    setEditingUser(null);
+    setFormData(getDefaultFormData());
     setSendInvite(false);
     setPhotoFile(null);
     setPhotoPreview(null);
@@ -587,13 +669,33 @@ export default function UserManagement() {
   };
 
   const handleCategoryChange = (category: RoleCategory) => {
-    const firstRoleInCategory = ROLE_OPTIONS[category][0].value;
+    const availableOptions = getAvailableRoleOptions(currentUser?.role || 'employee');
+    const firstRoleInCategory = availableOptions[category][0]?.value || '';
     setFormData({
       ...formData,
       role_category: category,
       role: firstRoleInCategory,
     });
   };
+
+  const canManageUser = (targetUser: AppUser): boolean => {
+    if (currentUser?.role === 'admin') {
+      return true;
+    }
+
+    if (currentUser?.role === 'sales_manager') {
+      return targetUser.role === 'sales_rep';
+    }
+
+    if (currentUser?.role === 'project_manager') {
+      return targetUser.role_category === 'employee' && targetUser.role !== 'sales_rep';
+    }
+
+    return true;
+  };
+
+  const availableRoleOptions = currentUser ? getAvailableRoleOptions(currentUser.role) : ROLE_OPTIONS;
+  const availableCategories = Object.entries(availableRoleOptions).filter(([_, roles]) => roles.length > 0).map(([cat]) => cat as RoleCategory);
 
   return (
     <div className="flex-1 flex flex-col h-screen bg-gray-50">
@@ -851,10 +953,10 @@ export default function UserManagement() {
                         onChange={(e) => handleCategoryChange(e.target.value as RoleCategory)}
                         className="w-full pl-9 pr-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent appearance-none bg-white"
                       >
-                        <option value="employee">Employee</option>
-                        <option value="management">Management</option>
-                        <option value="field_tech">Field Tech</option>
-                        <option value="admin">Admin</option>
+                        {availableCategories.includes('employee' as RoleCategory) && <option value="employee">Employee</option>}
+                        {availableCategories.includes('management' as RoleCategory) && <option value="management">Management</option>}
+                        {availableCategories.includes('field_tech' as RoleCategory) && <option value="field_tech">Field Tech</option>}
+                        {availableCategories.includes('admin' as RoleCategory) && <option value="admin">Admin</option>}
                       </select>
                     </div>
                   </div>
@@ -871,7 +973,7 @@ export default function UserManagement() {
                         onChange={(e) => setFormData({ ...formData, role: e.target.value })}
                         className="w-full pl-9 pr-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent appearance-none bg-white"
                       >
-                        {ROLE_OPTIONS[formData.role_category]?.map((roleOption) => (
+                        {availableRoleOptions[formData.role_category]?.map((roleOption) => (
                           <option key={roleOption.value} value={roleOption.value}>
                             {roleOption.label}
                           </option>
@@ -1057,28 +1159,39 @@ export default function UserManagement() {
                         Required fields for sales representatives
                       </p>
                       <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <label className="block text-xs font-medium text-gray-700 mb-1">
-                            <Users className="w-4 h-4 inline mr-1" />
-                            Sales Manager *
-                          </label>
-                          <select
-                            required={formData.role === 'sales_rep'}
-                            value={formData.reporting_manager_id || ''}
-                            onChange={(e) => setFormData({ ...formData, reporting_manager_id: e.target.value || null })}
-                            className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent appearance-none bg-white"
-                          >
-                            <option value="">Select Sales Manager</option>
-                            {managers.map((manager) => (
-                              <option key={manager.id} value={manager.id}>
-                                {manager.full_name} - {getRoleLabel(manager.role)}
-                              </option>
-                            ))}
-                          </select>
-                          <p className="text-xs text-gray-500 mt-1">
-                            Sales rep must have a sales manager
-                          </p>
-                        </div>
+                        {currentUser?.role !== 'sales_manager' && (
+                          <div>
+                            <label className="block text-xs font-medium text-gray-700 mb-1">
+                              <Users className="w-4 h-4 inline mr-1" />
+                              Sales Manager *
+                            </label>
+                            <select
+                              required={formData.role === 'sales_rep' && currentUser?.role !== 'sales_manager'}
+                              value={formData.reporting_manager_id || ''}
+                              onChange={(e) => setFormData({ ...formData, reporting_manager_id: e.target.value || null })}
+                              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent appearance-none bg-white"
+                            >
+                              <option value="">Select Sales Manager</option>
+                              {managers.map((manager) => (
+                                <option key={manager.id} value={manager.id}>
+                                  {manager.full_name} - {getRoleLabel(manager.role)}
+                                </option>
+                              ))}
+                            </select>
+                            <p className="text-xs text-gray-500 mt-1">
+                              Sales rep must have a sales manager
+                            </p>
+                          </div>
+                        )}
+                        {currentUser?.role === 'sales_manager' && (
+                          <div className="col-span-2">
+                            <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                              <p className="text-xs text-blue-800">
+                                <strong>Note:</strong> You will be automatically assigned as the reporting manager for this sales representative
+                              </p>
+                            </div>
+                          </div>
+                        )}
                         <div>
                           <label className="block text-xs font-medium text-gray-700 mb-1">
                             PPW Redline ($) *
@@ -1312,34 +1425,36 @@ export default function UserManagement() {
                               <p className="text-xs text-gray-500 mb-1">ID: {user.custom_id}</p>
                             )}
                           </div>
-                          <div className="flex items-center gap-1 ml-2">
-                            <button
-                              onClick={() => handleResetPassword(user.id, user.email)}
-                              disabled={resettingPassword === user.id}
-                              className="p-1.5 text-orange-600 hover:bg-orange-50 rounded transition-colors disabled:opacity-50"
-                              title="Reset password"
-                            >
-                              {resettingPassword === user.id ? (
-                                <Loader2 className="w-4 h-4 animate-spin" />
-                              ) : (
-                                <Key className="w-4 h-4" />
-                              )}
-                            </button>
-                            <button
-                              onClick={() => handleEdit(user)}
-                              className="p-1.5 text-blue-600 hover:bg-blue-50 rounded transition-colors"
-                              title="Edit user"
-                            >
-                              <Edit2 className="w-4 h-4" />
-                            </button>
-                            <button
-                              onClick={() => handleDelete(user.id)}
-                              className="p-1.5 text-red-600 hover:bg-red-50 rounded transition-colors"
-                              title="Delete user"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
-                          </div>
+                          {canManageUser(user) && (
+                            <div className="flex items-center gap-1 ml-2">
+                              <button
+                                onClick={() => handleResetPassword(user.id, user.email)}
+                                disabled={resettingPassword === user.id}
+                                className="p-1.5 text-orange-600 hover:bg-orange-50 rounded transition-colors disabled:opacity-50"
+                                title="Reset password"
+                              >
+                                {resettingPassword === user.id ? (
+                                  <Loader2 className="w-4 h-4 animate-spin" />
+                                ) : (
+                                  <Key className="w-4 h-4" />
+                                )}
+                              </button>
+                              <button
+                                onClick={() => handleEdit(user)}
+                                className="p-1.5 text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                                title="Edit user"
+                              >
+                                <Edit2 className="w-4 h-4" />
+                              </button>
+                              <button
+                                onClick={() => handleDelete(user.id)}
+                                className="p-1.5 text-red-600 hover:bg-red-50 rounded transition-colors"
+                                title="Delete user"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </div>
+                          )}
                         </div>
                         <div className="flex items-center gap-2 mb-2 flex-wrap">
                           <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${getRoleBadgeColor(user.role_category)}`}>
