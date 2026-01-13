@@ -8,6 +8,7 @@ import ProjectTimeline from './ProjectTimeline';
 import ProjectChat from './ProjectChat';
 import ActivityLog from './ActivityLog';
 import SalesRepProjectView from './SalesRepProjectView';
+import SalesManagerProjectView from './SalesManagerProjectView';
 import { useAuth } from '../contexts/AuthContext';
 import { logCustomerUpdate } from '../lib/activityLogger';
 
@@ -91,10 +92,14 @@ const getDerivedProjectStatus = (timeline: ProjectTimelineData): string => {
 };
 
 export default function CustomerProject({ customer: initialCustomer, onBack, initialTab }: CustomerProjectProps) {
-  const { canEdit, isEmployee, isSalesRep, user } = useAuth();
+  const { canEdit, isEmployee, isSalesRep, isSalesManager, user } = useAuth();
 
   if (isSalesRep) {
     return <SalesRepProjectView customer={initialCustomer} onBack={onBack} />;
+  }
+
+  if (isSalesManager) {
+    return <SalesManagerProjectView customer={initialCustomer} onBack={onBack} />;
   }
 
   const mapCustomerToFormData = (cust: Customer) => ({

@@ -5,6 +5,7 @@ import { supabase } from '../lib/supabase';
 
 interface DocumentsSectionProps {
   customerId: string;
+  allowedTypes?: string[];
 }
 
 type PhotoTicket = {
@@ -17,7 +18,7 @@ type PhotoTicket = {
   created_at: string;
 };
 
-export default function DocumentsSection({ customerId }: DocumentsSectionProps) {
+export default function DocumentsSection({ customerId, allowedTypes }: DocumentsSectionProps) {
   const [expandedFolders, setExpandedFolders] = useState<Record<string, boolean>>({
     customer: false,
     permits: false,
@@ -25,6 +26,11 @@ export default function DocumentsSection({ customerId }: DocumentsSectionProps) 
     installation: false,
     siteSurvey: false,
   });
+
+  const isTypeAllowed = (type: string) => {
+    if (!allowedTypes || allowedTypes.length === 0) return true;
+    return allowedTypes.includes(type);
+  };
   const [installationTickets, setInstallationTickets] = useState<PhotoTicket[]>([]);
   const [selectedTicket, setSelectedTicket] = useState<PhotoTicket | null>(null);
   const [loading, setLoading] = useState(false);
@@ -101,6 +107,7 @@ export default function DocumentsSection({ customerId }: DocumentsSectionProps) 
 
   return (
     <div className="space-y-4">
+      {isTypeAllowed('customer_documents') && (
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
         <button
           onClick={() => toggleFolder('customer')}
@@ -188,7 +195,9 @@ export default function DocumentsSection({ customerId }: DocumentsSectionProps) 
           </div>
         )}
       </div>
+      )}
 
+      {isTypeAllowed('permits') && (
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
         <button
           onClick={() => toggleFolder('permits')}
@@ -234,7 +243,9 @@ export default function DocumentsSection({ customerId }: DocumentsSectionProps) 
           </div>
         )}
       </div>
+      )}
 
+      {isTypeAllowed('receipts') && (
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
         <button
           onClick={() => toggleFolder('receipts')}
@@ -260,7 +271,9 @@ export default function DocumentsSection({ customerId }: DocumentsSectionProps) 
           </div>
         )}
       </div>
+      )}
 
+      {isTypeAllowed('installation_photos') && (
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
         <button
           onClick={() => toggleFolder('installation')}
@@ -360,7 +373,9 @@ export default function DocumentsSection({ customerId }: DocumentsSectionProps) 
           </div>
         )}
       </div>
+      )}
 
+      {isTypeAllowed('site_survey_photos') && (
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
         <button
           onClick={() => toggleFolder('siteSurvey')}
@@ -385,6 +400,7 @@ export default function DocumentsSection({ customerId }: DocumentsSectionProps) 
           </div>
         )}
       </div>
+      )}
     </div>
   );
 }
