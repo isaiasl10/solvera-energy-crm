@@ -283,30 +283,24 @@ export default function QueueDetailView({ queueType }: QueueDetailViewProps) {
         ) : (
           <div className="space-y-2">
             {customers.map(customer => (
-              <div key={customer.id} className="bg-white rounded shadow-sm border border-gray-200 p-3">
+              <div
+                key={customer.id}
+                onClick={() => setSelectedCustomer(customer)}
+                className="bg-white rounded shadow-sm border border-gray-200 p-3 cursor-pointer hover:border-orange-400 hover:shadow-md transition-all"
+              >
                 <div className="flex items-start justify-between gap-3 mb-3">
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-1">
                       <span className="text-xs font-mono font-semibold text-orange-600 bg-orange-50 px-1.5 py-0.5 rounded">
                         {customer.customer_id}
                       </span>
-                      <button
-                        onClick={() => setSelectedCustomer(customer)}
-                        className="text-sm font-semibold text-gray-900 hover:text-orange-600 transition-colors"
-                      >
+                      <span className="text-sm font-semibold text-gray-900">
                         {customer.full_name}
-                      </button>
+                      </span>
                     </div>
                     <p className="text-xs text-gray-600">{customer.installation_address}</p>
                     <p className="text-xs text-gray-500">System: {customer.system_size_kw} kW</p>
                   </div>
-
-                  <button
-                    onClick={() => setSelectedCustomer(customer)}
-                    className="px-2 py-1 text-xs bg-gray-100 text-gray-700 rounded hover:bg-gray-200 transition-colors whitespace-nowrap"
-                  >
-                    View Details
-                  </button>
                 </div>
 
                 {queueType === 'new_project' && customer.timeline && (
@@ -318,7 +312,7 @@ export default function QueueDetailView({ queueType }: QueueDetailViewProps) {
                 )}
 
                 {queueType === 'ready_to_order' && customer.timeline && (
-                  <div className="mt-2 space-y-1 border-t border-gray-200 pt-2">
+                  <div className="mt-2 space-y-1 border-t border-gray-200 pt-2" onClick={(e) => e.stopPropagation()}>
                     <label className="flex items-center gap-2 text-xs">
                       <input
                         type="checkbox"
@@ -347,7 +341,7 @@ export default function QueueDetailView({ queueType }: QueueDetailViewProps) {
                 )}
 
                 {queueType === 'pending_activation' && customer.timeline && (
-                  <div className="mt-2 border-t border-gray-200 pt-2">
+                  <div className="mt-2 border-t border-gray-200 pt-2" onClick={(e) => e.stopPropagation()}>
                     <div className="flex gap-2">
                       <button
                         onClick={() => handleUpdateTimeline(customer.id, { activation_method: 'tech_dispatch' })}
@@ -450,7 +444,7 @@ function NewProjectVerification({ customer, onUpdate, onApprove }: NewProjectVer
   const completedCount = verificationItems.filter(item => item.checked).length;
 
   return (
-    <div className="border-t border-gray-200 pt-3 mt-3">
+    <div className="border-t border-gray-200 pt-3 mt-3" onClick={(e) => e.stopPropagation()}>
       <div className="flex items-center justify-between mb-2">
         <h3 className="text-xs font-semibold text-gray-900">Project Verification</h3>
         <span className="text-xs text-gray-500">

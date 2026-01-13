@@ -310,29 +310,23 @@ export default function ProjectTimelineQueue() {
                       ) : (
                         <div className="divide-y divide-gray-200">
                           {queueCustomers.map(customer => (
-                            <div key={customer.id} className="px-3 py-3 hover:bg-gray-50 transition-colors">
+                            <div
+                              key={customer.id}
+                              onClick={() => handleSelectCustomer(customer)}
+                              className="px-3 py-3 hover:bg-gray-50 transition-colors cursor-pointer"
+                            >
                               <div className="flex items-start justify-between gap-3">
                                 <div className="flex-1 min-w-0">
                                   <div className="flex items-center gap-2 mb-1">
                                     <span className="text-xs font-mono font-semibold text-orange-600 bg-orange-50 px-1.5 py-0.5 rounded">
                                       {customer.customer_id}
                                     </span>
-                                    <button
-                                      onClick={() => handleSelectCustomer(customer)}
-                                      className="text-sm font-semibold text-gray-900 hover:text-orange-600 transition-colors truncate"
-                                    >
+                                    <span className="text-sm font-semibold text-gray-900 truncate">
                                       {customer.full_name}
-                                    </button>
+                                    </span>
                                   </div>
                                   <p className="text-xs text-gray-600 truncate">{customer.installation_address}</p>
                                 </div>
-
-                                <button
-                                  onClick={() => handleSelectCustomer(customer)}
-                                  className="px-2 py-1 text-xs bg-gray-100 text-gray-700 rounded hover:bg-gray-200 transition-colors whitespace-nowrap"
-                                >
-                                  View Details
-                                </button>
                               </div>
                             </div>
                           ))}
