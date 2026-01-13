@@ -608,7 +608,7 @@ export default function SalesManagerDashboard() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-gray-600 mb-1">Total System Size</p>
-                  <p className="text-2xl font-bold text-gray-900">{(totalSystemSize / 1000).toFixed(2)} kW</p>
+                  <p className="text-2xl font-bold text-gray-900">{totalSystemSize.toFixed(2)} kW</p>
                 </div>
                 <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
                   <DollarSign className="w-6 h-6 text-orange-600" />
@@ -679,7 +679,7 @@ export default function SalesManagerDashboard() {
                         </div>
                         <div>
                           <p className="text-xs text-gray-600 mb-1">System Size</p>
-                          <p className="text-sm font-semibold text-gray-900">{(total_system_size / 1000).toFixed(2)} kW</p>
+                          <p className="text-sm font-semibold text-gray-900">{total_system_size.toFixed(2)} kW</p>
                         </div>
                         <div>
                           <p className="text-xs text-gray-600 mb-1">Total Override</p>
