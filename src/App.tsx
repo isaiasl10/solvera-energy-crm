@@ -4,6 +4,7 @@ import Sidebar, { type ViewType } from './components/Sidebar';
 import Calendar from './components/Calendar';
 import CustomerQueue from './components/CustomerQueue';
 import QueueDetailView from './components/QueueDetailView';
+import ServiceTicketsQueue from './components/ServiceTicketsQueue';
 import UserManagement from './components/UserManagement';
 import Analytics from './components/admin/Analytics';
 import Payroll from './components/admin/Payroll';
@@ -127,6 +128,8 @@ function App() {
         return <QueueDetailView queueType="pending_activation" />;
       case 'queue-system-activated':
         return <QueueDetailView queueType="system_activated" />;
+      case 'queue-service-tickets':
+        return <ServiceTicketsQueue />;
       default:
         return <Calendar />;
     }

@@ -3,7 +3,7 @@ import { Calendar, Users, Settings, ChevronDown, ChevronRight, UserCog, LogOut, 
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 
-export type ViewType = 'calendar' | 'customers' | 'user-management' | 'employee-profile' | 'role-previews' | 'admin-analytics' | 'admin-custom-adders' | 'admin-inverters' | 'admin-optimizers' | 'admin-batteries' | 'admin-racking' | 'admin-panels' | 'admin-financing' | 'admin-payroll' | 'queue-new-project' | 'queue-site-survey' | 'queue-engineering' | 'queue-utility-permits' | 'queue-ready-to-order' | 'queue-coordinate-install' | 'queue-install-scheduled' | 'queue-ready-inspection' | 'queue-pending-pto' | 'queue-pending-activation' | 'queue-system-activated';
+export type ViewType = 'calendar' | 'customers' | 'user-management' | 'employee-profile' | 'role-previews' | 'admin-analytics' | 'admin-custom-adders' | 'admin-inverters' | 'admin-optimizers' | 'admin-batteries' | 'admin-racking' | 'admin-panels' | 'admin-financing' | 'admin-payroll' | 'queue-new-project' | 'queue-site-survey' | 'queue-engineering' | 'queue-utility-permits' | 'queue-ready-to-order' | 'queue-coordinate-install' | 'queue-install-scheduled' | 'queue-ready-inspection' | 'queue-pending-pto' | 'queue-pending-activation' | 'queue-system-activated' | 'queue-service-tickets';
 
 interface SidebarProps {
   currentView: ViewType;
@@ -51,6 +51,9 @@ export default function Sidebar({ currentView, onViewChange, isMobileOpen, onMob
     const subscription = supabase
       .channel('queue_counts')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'project_timeline' }, () => {
+        loadQueueCounts();
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'scheduling' }, () => {
         loadQueueCounts();
       })
       .subscribe();
@@ -102,6 +105,7 @@ export default function Sidebar({ currentView, onViewChange, isMobileOpen, onMob
         'pending_pto': 0,
         'pending_activation': 0,
         'system_activated': 0,
+        'service_tickets': 0,
       };
 
       customers?.forEach(customer => {
@@ -109,6 +113,15 @@ export default function Sidebar({ currentView, onViewChange, isMobileOpen, onMob
         const queue = getCustomerQueue(timeline);
         counts[queue]++;
       });
+
+      const { data: serviceTickets } = await supabase
+        .from('scheduling')
+        .select('*')
+        .eq('ticket_type', 'service')
+        .in('ticket_status', ['open', 'in_progress', 'scheduled'])
+        .eq('is_active', true);
+
+      counts['service_tickets'] = serviceTickets?.length || 0;
 
       setQueueCounts(counts);
     } catch (error) {
@@ -119,7 +132,7 @@ export default function Sidebar({ currentView, onViewChange, isMobileOpen, onMob
   const getCustomerQueue = (timeline: any): string => {
     if (!timeline || !timeline.approved_for_site_survey) return 'new_project';
     if (timeline.activation_completed_date || timeline.system_activated_date) return 'system_activated';
-    if (timeline.pto_approved_date && timeline.activation_method === 'pending') return 'pending_activation';
+    if (timeline.pto_approved_date) return 'pending_activation';
     if (timeline.pto_submitted_date || timeline.inspection_status === 'passed') return 'pending_pto';
     if (timeline.inspection_status === 'ready' || timeline.installation_status === 'completed') return 'ready_inspection';
     if (timeline.material_ordered_date) return 'install_scheduled';
@@ -142,6 +155,7 @@ export default function Sidebar({ currentView, onViewChange, isMobileOpen, onMob
     { id: 'queue-pending-pto' as ViewType, label: 'Pending PTO', key: 'pending_pto' },
     { id: 'queue-pending-activation' as ViewType, label: 'Pending Activation', key: 'pending_activation' },
     { id: 'queue-system-activated' as ViewType, label: 'System Activated', key: 'system_activated' },
+    { id: 'queue-service-tickets' as ViewType, label: 'Service Tickets', key: 'service_tickets' },
   ];
 
   const adminSubItems = [

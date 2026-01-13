@@ -184,7 +184,7 @@ export default function QueueDetailView({ queueType }: QueueDetailViewProps) {
   const getCustomerQueue = (timeline: ProjectTimeline | null): QueueType => {
     if (!timeline || !timeline.approved_for_site_survey) return 'new_project';
     if (timeline.activation_completed_date || timeline.system_activated_date) return 'system_activated';
-    if (timeline.pto_approved_date && timeline.activation_method === 'pending') return 'pending_activation';
+    if (timeline.pto_approved_date) return 'pending_activation';
     if (timeline.pto_submitted_date || timeline.inspection_status === 'passed') return 'pending_pto';
     if (timeline.inspection_status === 'ready' || timeline.installation_status === 'completed') return 'ready_inspection';
     if (timeline.material_ordered_date) return 'install_scheduled';
@@ -244,6 +244,37 @@ export default function QueueDetailView({ queueType }: QueueDetailViewProps) {
       approved_for_site_survey: true,
       site_survey_status: 'pending_schedule'
     });
+  };
+
+  const handleScheduleTechDispatch = async (customerId: string) => {
+    try {
+      const customer = customers.find(c => c.id === customerId);
+      if (!customer) return;
+
+      const { error: ticketError } = await supabase
+        .from('scheduling')
+        .insert([{
+          customer_id: customerId,
+          ticket_type: 'service',
+          problem_code: 'general',
+          ticket_status: 'open',
+          priority: 'normal',
+          notes: 'System activation - tech dispatch required',
+          is_active: true
+        }]);
+
+      if (ticketError) throw ticketError;
+
+      await handleUpdateTimeline(customerId, {
+        activation_method: 'tech_dispatch'
+      });
+
+      alert('Service ticket created for tech dispatch. Customer will remain in Pending Activation queue until the service ticket is completed.');
+      setRefreshTrigger(prev => prev + 1);
+    } catch (error) {
+      console.error('Error creating service ticket:', error);
+      alert('Failed to create service ticket');
+    }
   };
 
   if (selectedCustomer) {
@@ -344,7 +375,7 @@ export default function QueueDetailView({ queueType }: QueueDetailViewProps) {
                   <div className="mt-2 border-t border-gray-200 pt-2" onClick={(e) => e.stopPropagation()}>
                     <div className="flex gap-2">
                       <button
-                        onClick={() => handleUpdateTimeline(customer.id, { activation_method: 'tech_dispatch' })}
+                        onClick={() => handleScheduleTechDispatch(customer.id)}
                         className="px-2 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors flex items-center gap-1"
                       >
                         <Users className="w-3 h-3" />
@@ -353,7 +384,8 @@ export default function QueueDetailView({ queueType }: QueueDetailViewProps) {
                       <button
                         onClick={() => handleUpdateTimeline(customer.id, {
                           activation_method: 'remote',
-                          activation_completed_date: new Date().toISOString()
+                          activation_completed_date: new Date().toISOString(),
+                          system_activated_date: new Date().toISOString()
                         })}
                         className="px-2 py-1 text-xs bg-green-600 text-white rounded hover:bg-green-700 transition-colors flex items-center gap-1"
                       >
