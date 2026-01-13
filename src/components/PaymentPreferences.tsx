@@ -28,9 +28,12 @@ type UserData = {
 type SalesCommission = {
   id: string;
   customer_id: string;
+  customer_name?: string;
+  customer_number?: string;
   total_commission: number;
   m1_payment_amount: number;
   m1_payment_status: 'pending' | 'eligible' | 'paid';
+  m1_eligibility_date: string | null;
   m1_paid_date: string | null;
   m1_payroll_period_end: string | null;
   m2_payment_amount: number;
@@ -196,7 +199,13 @@ export default function PaymentPreferences() {
 
         const { data: commissionsData, error: commissionsError } = await supabase
           .from('sales_commissions')
-          .select('*')
+          .select(`
+            *,
+            customers!inner (
+              customer_id,
+              full_name
+            )
+          `)
           .or(
             userDataResult.role === 'sales_rep'
               ? `and(sales_rep_id.eq.${userDataResult.id},or(m1_payroll_period_end.eq.${endDateStr},m2_payroll_period_end.eq.${endDateStr}))`
@@ -207,10 +216,13 @@ export default function PaymentPreferences() {
 
         const parsedCommissions = (commissionsData || []).map((comm: any) => ({
           ...comm,
+          customer_name: comm.customers?.full_name || 'Unknown Customer',
+          customer_number: comm.customers?.customer_id || '',
           total_commission: parseFloat(comm.total_commission) || 0,
           m1_payment_amount: parseFloat(comm.m1_payment_amount) || 0,
           m2_payment_amount: parseFloat(comm.m2_payment_amount) || 0,
           sales_manager_override_amount: comm.sales_manager_override_amount ? parseFloat(comm.sales_manager_override_amount) : null,
+          m1_eligibility_date: comm.m1_eligibility_date || null,
           m1_payroll_period_end: comm.m1_payroll_period_end || null,
           m2_payroll_period_end: comm.m2_payroll_period_end || null,
           manager_override_payroll_period_end: comm.manager_override_payroll_period_end || null,
@@ -363,7 +375,7 @@ export default function PaymentPreferences() {
             </div>
           </div>
 
-          <div className="bg-gradient-to-r from-blue-600 to-blue-700 rounded-lg p-4 text-white">
+          <div className="bg-gradient-to-r from-blue-600 to-blue-700 rounded-lg p-4 text-white mb-6">
             <p className="text-sm font-medium mb-1">Total Pay Period Earnings</p>
             <p className="text-3xl font-bold">
               ${estimatedCheck.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
@@ -372,6 +384,91 @@ export default function PaymentPreferences() {
               Commission payments for current pay period
             </p>
           </div>
+
+          {commissions.length > 0 && (
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold text-gray-900">Commission Payment Details</h3>
+              {commissions.map((comm) => (
+                <div key={comm.id} className="bg-white rounded-lg border border-gray-200 p-4 space-y-3">
+                  <div className="border-b border-gray-200 pb-3">
+                    <p className="text-base font-bold text-gray-900 mb-1">
+                      {comm.customer_name}
+                    </p>
+                    {comm.customer_number && (
+                      <p className="text-xs text-gray-500 mb-2">{comm.customer_number}</p>
+                    )}
+                    <p className="text-sm font-semibold text-blue-600">
+                      Total Commission: ${comm.total_commission.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </p>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="bg-green-50 rounded-lg p-3 border border-green-200">
+                      <div className="flex items-center justify-between mb-2">
+                        <p className="text-sm font-semibold text-gray-900">M1 Payment</p>
+                        <span className={`px-2 py-1 rounded text-xs font-medium ${
+                          comm.m1_payment_status === 'paid' ? 'bg-green-600 text-white' :
+                          comm.m1_payment_status === 'eligible' ? 'bg-yellow-500 text-white' :
+                          'bg-gray-400 text-white'
+                        }`}>
+                          {comm.m1_payment_status.charAt(0).toUpperCase() + comm.m1_payment_status.slice(1)}
+                        </span>
+                      </div>
+                      <p className="text-2xl font-bold text-green-600 mb-2">
+                        ${comm.m1_payment_amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </p>
+                      <div className="space-y-1 text-xs text-gray-600">
+                        {comm.m1_eligibility_date && (
+                          <p>
+                            <span className="font-medium">Approved:</span> {new Date(comm.m1_eligibility_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                          </p>
+                        )}
+                        {comm.m1_payroll_period_end && comm.m1_payment_status !== 'pending' && (
+                          <p>
+                            <span className="font-medium">{comm.m1_payment_status === 'paid' ? 'Paid on:' : 'Pay date:'}</span> {new Date(comm.m1_payroll_period_end).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                          </p>
+                        )}
+                        {comm.m1_payment_status === 'pending' && (
+                          <p className="text-gray-500 italic">Waiting for site survey completion</p>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="bg-blue-50 rounded-lg p-3 border border-blue-200">
+                      <div className="flex items-center justify-between mb-2">
+                        <p className="text-sm font-semibold text-gray-900">M2 Payment</p>
+                        <span className={`px-2 py-1 rounded text-xs font-medium ${
+                          comm.m2_payment_status === 'paid' ? 'bg-green-600 text-white' :
+                          comm.m2_payment_status === 'eligible' ? 'bg-yellow-500 text-white' :
+                          'bg-gray-400 text-white'
+                        }`}>
+                          {comm.m2_payment_status.charAt(0).toUpperCase() + comm.m2_payment_status.slice(1)}
+                        </span>
+                      </div>
+                      <p className="text-2xl font-bold text-blue-600 mb-2">
+                        ${comm.m2_payment_amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </p>
+                      <div className="space-y-1 text-xs text-gray-600">
+                        {comm.m2_payment_status === 'eligible' && (
+                          <p>
+                            <span className="font-medium">Approved:</span> Installation completed
+                          </p>
+                        )}
+                        {comm.m2_payroll_period_end && comm.m2_payment_status !== 'pending' && (
+                          <p>
+                            <span className="font-medium">{comm.m2_payment_status === 'paid' ? 'Paid on:' : 'Pay date:'}</span> {new Date(comm.m2_payroll_period_end).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                          </p>
+                        )}
+                        {comm.m2_payment_status === 'pending' && (
+                          <p className="text-gray-500 italic">Waiting for installation completion</p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
