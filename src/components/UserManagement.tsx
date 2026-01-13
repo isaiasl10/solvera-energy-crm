@@ -247,14 +247,21 @@ export default function UserManagement() {
     setSubmitting(true);
     setError(null);
 
+    console.log('=== USER SUBMIT STARTED ===');
+    console.log('Role Category:', formData.role_category);
+    console.log('Role:', formData.role);
+    console.log('Form Data:', JSON.stringify(formData, null, 2));
+
     try {
       if (formData.role === 'sales_rep') {
         if (!formData.reporting_manager_id) {
+          console.error('VALIDATION FAILED: Manager is required for Sales Representatives');
           setError('Manager is required for Sales Representatives');
           setSubmitting(false);
           return;
         }
         if (!formData.ppw_redline || formData.ppw_redline <= 0) {
+          console.error('VALIDATION FAILED: PPW Redline is required for Sales Representatives');
           setError('PPW Redline is required for Sales Representatives');
           setSubmitting(false);
           return;
@@ -263,7 +270,9 @@ export default function UserManagement() {
 
       if (formData.role === 'sales_manager') {
         if (!formData.ppw_redline || formData.ppw_redline <= 0) {
-          setError('PPW Redline is required for Sales Managers');
+          console.error('VALIDATION FAILED: PPW Redline is required for Sales Managers');
+          console.error('Current ppw_redline value:', formData.ppw_redline);
+          setError('PPW Redline is required for Sales Managers (e.g., 2.40)');
           setSubmitting(false);
           return;
         }
@@ -306,30 +315,43 @@ export default function UserManagement() {
 
         if (updateError) throw updateError;
       } else {
+        console.log('Creating new user...');
         const tempPassword = `Temp${Math.random().toString(36).slice(-8)}!`;
 
+        console.log('Step 1: Creating auth user...');
         await createAuthUser(formData.email, tempPassword);
+        console.log('Auth user created successfully');
+
+        const insertData = {
+          custom_id: employeeId || null,
+          email: formData.email,
+          full_name: formData.full_name,
+          phone: formData.phone,
+          role_category: formData.role_category,
+          role: formData.role,
+          status: formData.status,
+          photo_url: photoUrl,
+          reporting_manager_id: formData.reporting_manager_id || null,
+          hourly_rate: formData.hourly_rate,
+          is_salary: formData.is_salary,
+          battery_pay_rates: formData.battery_pay_rates,
+          per_watt_rate: formData.per_watt_rate,
+          ppw_redline: formData.ppw_redline || null,
+        };
+
+        console.log('Step 2: Inserting user into app_users table...');
+        console.log('Insert data:', JSON.stringify(insertData, null, 2));
 
         const { error: insertError } = await supabase
           .from('app_users')
-          .insert([{
-            custom_id: employeeId || null,
-            email: formData.email,
-            full_name: formData.full_name,
-            phone: formData.phone,
-            role_category: formData.role_category,
-            role: formData.role,
-            status: formData.status,
-            photo_url: photoUrl,
-            reporting_manager_id: formData.reporting_manager_id || null,
-            hourly_rate: formData.hourly_rate,
-            is_salary: formData.is_salary,
-            battery_pay_rates: formData.battery_pay_rates,
-            per_watt_rate: formData.per_watt_rate,
-            ppw_redline: formData.ppw_redline || null,
-          }]);
+          .insert([insertData]);
 
-        if (insertError) throw insertError;
+        if (insertError) {
+          console.error('INSERT FAILED:', insertError);
+          throw insertError;
+        }
+
+        console.log('User inserted successfully');
 
         if (sendInvite) {
           try {
@@ -361,10 +383,16 @@ export default function UserManagement() {
       setPhotoPreview(null);
       setShowForm(false);
       setEditingUser(null);
+      console.log('Step 3: Refreshing user list...');
       await fetchUsers();
       await fetchManagers();
+      console.log('=== USER CREATION COMPLETED SUCCESSFULLY ===');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to save user');
+      console.error('=== USER CREATION FAILED ===');
+      console.error('Error:', err);
+      const errorMessage = err instanceof Error ? err.message : 'Failed to save user';
+      console.error('Error message:', errorMessage);
+      setError(errorMessage);
     } finally {
       setSubmitting(false);
       setUploadingPhoto(false);
