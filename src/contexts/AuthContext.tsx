@@ -18,6 +18,7 @@ type AuthContextType = {
   user: User | null;
   loading: boolean;
   isAdmin: boolean;
+  isManagement: boolean;
   isEmployee: boolean;
   isSalesRep: boolean;
   isSalesManager: boolean;
@@ -183,6 +184,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const isAdmin = user?.role_category === 'admin';
+  const isManagement = user?.role_category === 'management';
   const isEmployee = user?.role_category === 'employee';
   const isSalesRep = user?.role_category === 'sales_rep';
   const isSalesManager = user?.role === 'sales_manager';
@@ -193,6 +195,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     user,
     loading,
     isAdmin,
+    isManagement,
     isEmployee,
     isSalesRep,
     isSalesManager,

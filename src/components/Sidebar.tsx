@@ -13,7 +13,7 @@ interface SidebarProps {
 }
 
 export default function Sidebar({ currentView, onViewChange, isMobileOpen, onMobileClose }: SidebarProps) {
-  const { isAdmin, logout, user } = useAuth();
+  const { isAdmin, isManagement, logout, user } = useAuth();
   const isAdminView = currentView.startsWith('admin-');
   const isQueueView = currentView.startsWith('queue-');
   const [adminExpanded, setAdminExpanded] = useState(isAdminView);
@@ -267,7 +267,7 @@ export default function Sidebar({ currentView, onViewChange, isMobileOpen, onMob
               </ul>
             )}
           </li>
-          {!isAdmin && (
+          {!isAdmin && !isManagement && (
             <li>
               <button
                 onClick={() => handleViewChange('employee-profile')}
@@ -282,21 +282,23 @@ export default function Sidebar({ currentView, onViewChange, isMobileOpen, onMob
               </button>
             </li>
           )}
+          {(isAdmin || isManagement) && (
+            <li>
+              <button
+                onClick={() => handleViewChange('user-management')}
+                className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg transition-colors text-sm ${
+                  currentView === 'user-management'
+                    ? 'bg-orange-600 text-white'
+                    : 'text-gray-300 hover:bg-gray-800'
+                }`}
+              >
+                <UserCog className="w-4 h-4" />
+                <span className="font-medium">User Logins</span>
+              </button>
+            </li>
+          )}
           {isAdmin && (
             <>
-              <li>
-                <button
-                  onClick={() => handleViewChange('user-management')}
-                  className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg transition-colors text-sm ${
-                    currentView === 'user-management'
-                      ? 'bg-orange-600 text-white'
-                      : 'text-gray-300 hover:bg-gray-800'
-                  }`}
-                >
-                  <UserCog className="w-4 h-4" />
-                  <span className="font-medium">User Logins</span>
-                </button>
-              </li>
               <li>
                 <button
                   onClick={() => handleViewChange('role-previews')}

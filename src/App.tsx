@@ -24,7 +24,7 @@ import FirstLoginPasswordReset from './components/FirstLoginPasswordReset';
 import { useAuth } from './contexts/AuthContext';
 
 function App() {
-  const { user, loading, requiresPasswordReset, refreshUser, isAdmin } = useAuth();
+  const { user, loading, requiresPasswordReset, refreshUser, isAdmin, isManagement } = useAuth();
   const [currentPath, setCurrentPath] = useState(window.location.pathname);
   const [currentView, setCurrentView] = useState<ViewType>(() => {
     const saved = localStorage.getItem('currentView');
@@ -96,7 +96,7 @@ function App() {
       case 'customers':
         return <CustomerQueue initialCustomerId={selectedCustomerId} onCustomerChange={() => setSelectedCustomerId(null)} />;
       case 'user-management':
-        if (!isAdmin) {
+        if (!isAdmin && !isManagement) {
           setCurrentView('calendar');
           return <Calendar onViewCustomerProject={handleViewCustomerProject} />;
         }
