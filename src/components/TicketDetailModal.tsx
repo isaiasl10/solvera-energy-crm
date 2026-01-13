@@ -133,7 +133,7 @@ export default function TicketDetailModal({ ticketId, onClose, onUpdate, onViewP
             .from('time_clock')
             .select('id')
             .eq('user_id', user.id)
-            .is('clocked_out_at', null)
+            .is('clock_out_time', null)
             .maybeSingle();
 
           if (!activeClockEntry) {
@@ -151,7 +151,7 @@ export default function TicketDetailModal({ ticketId, onClose, onUpdate, onViewP
             await supabase.from('time_clock').insert({
               user_id: user.id,
               customer_id: ticket.customer_id,
-              clocked_in_at: new Date().toISOString(),
+              clock_in_time: new Date().toISOString(),
               clock_in_latitude: locationData?.coords.latitude || null,
               clock_in_longitude: locationData?.coords.longitude || null,
             });
@@ -164,8 +164,8 @@ export default function TicketDetailModal({ ticketId, onClose, onUpdate, onViewP
             .select('id')
             .eq('user_id', user.id)
             .eq('customer_id', ticket.customer_id)
-            .is('clocked_out_at', null)
-            .order('clocked_in_at', { ascending: false })
+            .is('clock_out_time', null)
+            .order('clock_in_time', { ascending: false })
             .limit(1)
             .maybeSingle();
 
@@ -184,7 +184,7 @@ export default function TicketDetailModal({ ticketId, onClose, onUpdate, onViewP
             await supabase
               .from('time_clock')
               .update({
-                clocked_out_at: new Date().toISOString(),
+                clock_out_time: new Date().toISOString(),
                 clock_out_latitude: locationData?.coords.latitude || null,
                 clock_out_longitude: locationData?.coords.longitude || null,
               })
