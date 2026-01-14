@@ -1512,10 +1512,20 @@ export default function Proposals() {
   );
 
   const systemSummary = useMemo(() => {
-    if (!proposal || !selectedPanelModel) return null;
+    if (!proposal) return null;
 
     const panelCount = panels.length;
-    const systemSizeKw = (panelCount * selectedPanelModel.watts) / 1000;
+    if (panelCount === 0) return null;
+
+    let panelModelToUse = selectedPanelModel;
+    if (!panelModelToUse && panels.length > 0) {
+      const firstPanel = panels[0];
+      panelModelToUse = panelModels.find(pm => pm.id === firstPanel.panel_model_id) || null;
+    }
+
+    if (!panelModelToUse) return null;
+
+    const systemSizeKw = (panelCount * panelModelToUse.watts) / 1000;
 
     const yieldFactor = 1400;
     const derateStdSun = 0.77;
@@ -1539,7 +1549,7 @@ export default function Proposals() {
     let offsetPercent = 0;
     if (proposal.usage_mode === "annual" && proposal.annual_kwh > 0) {
       offsetPercent = (estimatedAnnualProduction / proposal.annual_kwh) * 100;
-    } else if (proposal.usage_mode === "monthly" && proposal.monthly_kwh.length === 12) {
+    } else if (proposal.usage_mode === "monthly" && proposal.monthly_kwh?.length === 12) {
       const totalMonthlyUsage = proposal.monthly_kwh.reduce((sum, val) => sum + val, 0);
       if (totalMonthlyUsage > 0) {
         offsetPercent = (estimatedAnnualProduction / totalMonthlyUsage) * 100;
@@ -1553,7 +1563,7 @@ export default function Proposals() {
       monthlyProduction,
       offsetPercent: offsetPercent.toFixed(1),
     };
-  }, [proposal, selectedPanelModel, panels]);
+  }, [proposal, selectedPanelModel, panels, panelModels]);
 
   if (proposal && proposalStep === "pricing" && systemSummary) {
     const systemSizeKw = parseFloat(systemSummary.systemSizeKw);
@@ -2466,7 +2476,7 @@ export default function Proposals() {
                     </div>
                   </div>
 
-                  {proposal.usage_mode === "annual" && (
+                  {proposal.usage_mode === "annual" && proposal.annual_kwh > 0 && (
                     <div style={{
                       padding: 12,
                       borderRadius: 10,
@@ -2480,7 +2490,7 @@ export default function Proposals() {
                     </div>
                   )}
 
-                  {proposal.usage_mode === "monthly" && proposal.monthly_kwh.length === 12 && (
+                  {proposal.usage_mode === "monthly" && proposal.monthly_kwh?.length === 12 && (
                     <div style={{
                       padding: 12,
                       borderRadius: 10,
