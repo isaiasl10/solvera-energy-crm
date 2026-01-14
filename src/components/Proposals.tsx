@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import { FileText } from "lucide-react";
 import { createClient } from "@supabase/supabase-js";
 import { useAuth } from "../contexts/AuthContext";
 
