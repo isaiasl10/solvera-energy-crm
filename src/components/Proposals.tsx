@@ -52,7 +52,13 @@ const mToFt = (m: number) => m * 3.28084;
 const m2ToFt2 = (m2: number) => m2 * 10.7639104167097;
 
 function isGoogleReady() {
-  return typeof (window as any).google !== "undefined" && !!(window as any).google.maps;
+  return (
+    typeof (window as any).google !== "undefined" &&
+    !!(window as any).google.maps &&
+    !!(window as any).google.maps.places &&
+    !!(window as any).google.maps.drawing &&
+    !!(window as any).google.maps.geometry
+  );
 }
 
 type ToolMode = "none" | "roof" | "circle" | "rect" | "tree";
@@ -86,59 +92,66 @@ export default function Proposals() {
   );
 
   useEffect(() => {
+    let attempts = 0;
+    const maxAttempts = 100;
+
     const checkGoogleMaps = () => {
+      attempts++;
+
       if (isGoogleReady()) {
+        console.log('Google Maps loaded successfully');
         setMapsLoading(false);
         setMapsError(null);
-      } else {
-        setTimeout(checkGoogleMaps, 100);
+        return;
       }
+
+      if (attempts >= maxAttempts) {
+        console.error('Google Maps failed to load after', attempts, 'attempts');
+        console.log('Google object:', (window as any).google);
+        setMapsLoading(false);
+        setMapsError(
+          "Google Maps failed to load. Please refresh the page or check your internet connection."
+        );
+        return;
+      }
+
+      setTimeout(checkGoogleMaps, 100);
     };
 
     checkGoogleMaps();
-
-    const timeout = setTimeout(() => {
-      if (!isGoogleReady()) {
-        setMapsLoading(false);
-        setMapsError(
-          "Google Maps failed to load. Please check your API key configuration."
-        );
-      }
-    }, 10000);
-
-    return () => clearTimeout(timeout);
   }, []);
 
   useEffect(() => {
     if (!mapDivRef.current) return;
     if (mapsLoading || !isGoogleReady()) return;
 
-    const map = new google.maps.Map(mapDivRef.current, {
-      center: { lat: 39.7392, lng: -104.9903 },
-      zoom: 19,
-      mapTypeId: "satellite",
-      tilt: 0,
-      streetViewControl: false,
-      fullscreenControl: false,
-      mapTypeControl: true,
-    });
-    mapRef.current = map;
+    try {
+      const map = new google.maps.Map(mapDivRef.current, {
+        center: { lat: 39.7392, lng: -104.9903 },
+        zoom: 19,
+        mapTypeId: "satellite",
+        tilt: 0,
+        streetViewControl: false,
+        fullscreenControl: false,
+        mapTypeControl: true,
+      });
+      mapRef.current = map;
 
-    const input = document.createElement("input");
-    input.placeholder = "Type address and select...";
-    input.style.width = "100%";
-    input.style.height = "42px";
-    input.style.borderRadius = "10px";
-    input.style.border = "1px solid rgba(0,0,0,0.2)";
-    input.style.padding = "0 12px";
-    input.style.fontSize = "14px";
+      const input = document.createElement("input");
+      input.placeholder = "Type address and select...";
+      input.style.width = "100%";
+      input.style.height = "42px";
+      input.style.borderRadius = "10px";
+      input.style.border = "1px solid rgba(0,0,0,0.2)";
+      input.style.padding = "0 12px";
+      input.style.fontSize = "14px";
 
-    if (autocompleteHostRef.current) {
-      autocompleteHostRef.current.innerHTML = "";
-      autocompleteHostRef.current.appendChild(input);
-    }
+      if (autocompleteHostRef.current) {
+        autocompleteHostRef.current.innerHTML = "";
+        autocompleteHostRef.current.appendChild(input);
+      }
 
-    const ac = new google.maps.places.Autocomplete(input, { types: ["address"] });
+      const ac = new google.maps.places.Autocomplete(input, { types: ["address"] });
     ac.addListener("place_changed", () => {
       const place = ac.getPlace();
       const loc = place.geometry?.location;
@@ -471,12 +484,16 @@ export default function Proposals() {
       }
     }
 
-    return () => {
-      drawing.setMap(null);
-      mapRef.current = null;
-      drawingRef.current = null;
-    };
-  }, [proposal, toolMode, roofPlanes.length, selectedRoofId]);
+      return () => {
+        drawing.setMap(null);
+        mapRef.current = null;
+        drawingRef.current = null;
+      };
+    } catch (error: any) {
+      console.error('Error initializing map:', error);
+      setMapsError(`Failed to initialize map: ${error.message || 'Unknown error'}`);
+    }
+  }, [proposal, toolMode, roofPlanes.length, selectedRoofId, mapsLoading]);
 
   useEffect(() => {
     const drawing = drawingRef.current;
