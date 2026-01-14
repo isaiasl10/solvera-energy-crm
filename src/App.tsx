@@ -6,6 +6,7 @@ import CustomerQueue from './components/CustomerQueue';
 import QueueDetailView from './components/QueueDetailView';
 import ServiceTicketsQueue from './components/ServiceTicketsQueue';
 import UserManagement from './components/UserManagement';
+import Proposals from './components/Proposals';
 import Analytics from './components/admin/Analytics';
 import Payroll from './components/admin/Payroll';
 import CustomAdders from './components/admin/CustomAdders';
@@ -120,6 +121,8 @@ function App() {
         return <Calendar onViewCustomerProject={handleViewCustomerProject} />;
       case 'customers':
         return <CustomerQueue initialCustomerId={selectedCustomerId} onCustomerChange={() => setSelectedCustomerId(null)} />;
+      case 'proposals':
+        return <Proposals />;
       case 'user-management':
         if (!isAdmin && !isManagement) {
           setCurrentView('calendar');
