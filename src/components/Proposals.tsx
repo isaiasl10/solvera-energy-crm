@@ -9,11 +9,21 @@ type SelectedAddress = {
 };
 
 export default function Proposals() {
-  const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || "";
+  const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY as string | undefined;
+
   if (!apiKey) {
     return (
-      <div style={{ padding: 24, color: "crimson" }}>
-        Missing VITE_GOOGLE_MAPS_API_KEY environment variable. Please add your Google Maps API key to .env file.
+      <div style={{ padding: 24 }}>
+        <h2 style={{ margin: 0 }}>Proposals</h2>
+        <p style={{ color: "crimson", marginTop: 12 }}>
+          Missing Google Maps API key. Add <code>VITE_GOOGLE_MAPS_API_KEY</code> to the environment variables
+          and redeploy.
+        </p>
+        <ol style={{ marginTop: 12 }}>
+          <li>Google Cloud → enable <b>Maps JavaScript API</b> and <b>Places API</b></li>
+          <li>Add referrers: <code>https://auric-core.io/*</code> and preview domains</li>
+          <li>Redeploy site so Vite can bake the env var into the build</li>
+        </ol>
       </div>
     );
   }
