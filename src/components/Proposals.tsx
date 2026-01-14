@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Loader } from "@googlemaps/js-api-loader";
 
 type SelectedAddress = {
@@ -38,21 +38,17 @@ export default function Proposals() {
   const [mapsReady, setMapsReady] = useState(false);
   const [mapsError, setMapsError] = useState<string | null>(null);
 
-  const loader = useMemo(
-    () =>
-      new Loader({
-        apiKey,
-        version: "weekly",
-        libraries: ["places"],
-      }),
-    []
-  );
-
   useEffect(() => {
     let cancelled = false;
 
     async function init() {
       try {
+        const loader = new Loader({
+          apiKey,
+          version: "weekly",
+          libraries: ["places"],
+        });
+
         await loader.load();
         if (cancelled) return;
 
@@ -122,7 +118,7 @@ export default function Proposals() {
     return () => {
       cancelled = true;
     };
-  }, [loader]);
+  }, [apiKey]);
 
   return (
     <div style={{ display: "flex", height: "calc(100vh - 64px)", gap: 16, padding: 16 }}>
