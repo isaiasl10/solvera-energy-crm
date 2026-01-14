@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Upload, FileText, Trash2, Download, Camera, Image, FolderOpen, ChevronDown } from 'lucide-react';
+import { Upload, FileText, Trash2, Download, Camera, Image, FolderOpen, ChevronDown, Eye, File } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 
 interface Document {
@@ -76,11 +76,38 @@ export default function DocumentUpload({
     const file = event.target.files?.[0];
     if (!file) return;
 
+    const maxSize = 50 * 1024 * 1024;
+    if (file.size > maxSize) {
+      setError('File size must be less than 50MB');
+      event.target.value = '';
+      return;
+    }
+
+    const allowedTypes = [
+      'image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp', 'image/bmp',
+      'application/pdf',
+      'application/msword',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'application/vnd.ms-excel',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'text/plain',
+      'text/csv',
+      'application/zip',
+      'application/x-zip-compressed',
+      'application/x-rar-compressed'
+    ];
+
+    if (file.type && !allowedTypes.includes(file.type)) {
+      setError(`File type "${file.type}" is not supported. Please upload an image, PDF, Word doc, Excel file, or archive.`);
+      event.target.value = '';
+      return;
+    }
+
     setUploading(true);
     setError(null);
 
     try {
-      const fileExt = file.name.split('.').pop();
+      const fileExt = file.name.split('.').pop()?.toLowerCase() || '';
       const fileName = `${customerId}/${documentType}${identificationType ? `_${identificationType}` : ''}_${Date.now()}.${fileExt}`;
 
       const { error: uploadError } = await supabase.storage
@@ -90,7 +117,12 @@ export default function DocumentUpload({
           upsert: false
         });
 
-      if (uploadError) throw uploadError;
+      if (uploadError) {
+        console.error('Storage upload error:', uploadError);
+        throw new Error(`Upload failed: ${uploadError.message}`);
+      }
+
+      const mimeType = file.type || `application/${fileExt}`;
 
       const { error: dbError } = await supabase
         .from('documents')
@@ -101,15 +133,20 @@ export default function DocumentUpload({
           file_name: file.name,
           file_path: fileName,
           file_size: file.size,
-          mime_type: file.type
+          mime_type: mimeType
         });
 
-      if (dbError) throw dbError;
+      if (dbError) {
+        console.error('Database insert error:', dbError);
+        await supabase.storage.from('customer-documents').remove([fileName]);
+        throw new Error(`Database error: ${dbError.message}`);
+      }
 
       await fetchDocuments();
       event.target.value = '';
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to upload file');
+      console.error('Upload error:', err);
+      setError(err instanceof Error ? err.message : 'Failed to upload file. Please try again.');
     } finally {
       setUploading(false);
     }
@@ -159,6 +196,30 @@ export default function DocumentUpload({
     }
   };
 
+  const handleView = async (doc: Document) => {
+    try {
+      const { data, error } = await supabase.storage
+        .from('customer-documents')
+        .createSignedUrl(doc.file_path, 3600);
+
+      if (error) throw error;
+
+      if (data?.signedUrl) {
+        window.open(data.signedUrl, '_blank');
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to view file');
+    }
+  };
+
+  const getFileIcon = (mimeType: string) => {
+    if (mimeType.startsWith('image/')) return <Image className="w-5 h-5 text-blue-500" />;
+    if (mimeType === 'application/pdf') return <FileText className="w-5 h-5 text-red-500" />;
+    if (mimeType.includes('word') || mimeType.includes('document')) return <FileText className="w-5 h-5 text-blue-600" />;
+    if (mimeType.includes('excel') || mimeType.includes('spreadsheet')) return <FileText className="w-5 h-5 text-green-600" />;
+    return <File className="w-5 h-5 text-gray-500" />;
+  };
+
   const formatFileSize = (bytes: number) => {
     if (bytes === 0) return '0 Bytes';
     const k = 1024;
@@ -197,7 +258,7 @@ export default function DocumentUpload({
             onChange={handleFileUpload}
             disabled={uploading}
             className="hidden"
-            accept="image/*,.pdf,.doc,.docx"
+            accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.txt,.csv,.zip,.rar"
           />
 
           {showMultipleOptions ? (
@@ -270,10 +331,12 @@ export default function DocumentUpload({
           {documents.map((doc) => (
             <div
               key={doc.id}
-              className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200"
+              className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200 hover:border-gray-300 transition-colors"
             >
               <div className="flex items-center gap-3 flex-1 min-w-0">
-                <FileText className="w-5 h-5 text-gray-400 flex-shrink-0" />
+                <div className="flex-shrink-0">
+                  {getFileIcon(doc.mime_type)}
+                </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-gray-900 truncate">
                     {doc.file_name}
@@ -283,10 +346,17 @@ export default function DocumentUpload({
                   </p>
                 </div>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={() => handleView(doc)}
+                  className="p-1.5 text-gray-600 hover:text-blue-600 transition-colors"
+                  title="View"
+                >
+                  <Eye className="w-4 h-4" />
+                </button>
                 <button
                   onClick={() => handleDownload(doc)}
-                  className="p-1.5 text-gray-600 hover:text-blue-600 transition-colors"
+                  className="p-1.5 text-gray-600 hover:text-green-600 transition-colors"
                   title="Download"
                 >
                   <Download className="w-4 h-4" />
