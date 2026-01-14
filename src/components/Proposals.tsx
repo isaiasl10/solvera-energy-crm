@@ -78,6 +78,7 @@ export default function Proposals() {
 
   const [mapsError, setMapsError] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
+  const [mapsLoading, setMapsLoading] = useState(true);
 
   const selectedRoof = useMemo(
     () => roofPlanes.find((r) => r.id === selectedRoofId) ?? null,
@@ -85,14 +86,32 @@ export default function Proposals() {
   );
 
   useEffect(() => {
-    if (!mapDivRef.current) return;
+    const checkGoogleMaps = () => {
+      if (isGoogleReady()) {
+        setMapsLoading(false);
+        setMapsError(null);
+      } else {
+        setTimeout(checkGoogleMaps, 100);
+      }
+    };
 
-    if (!isGoogleReady()) {
-      setMapsError(
-        "Google Maps is not loaded. Ensure the script loads with libraries=places,drawing,geometry."
-      );
-      return;
-    }
+    checkGoogleMaps();
+
+    const timeout = setTimeout(() => {
+      if (!isGoogleReady()) {
+        setMapsLoading(false);
+        setMapsError(
+          "Google Maps failed to load. Please check your API key configuration."
+        );
+      }
+    }, 10000);
+
+    return () => clearTimeout(timeout);
+  }, []);
+
+  useEffect(() => {
+    if (!mapDivRef.current) return;
+    if (mapsLoading || !isGoogleReady()) return;
 
     const map = new google.maps.Map(mapDivRef.current, {
       center: { lat: 39.7392, lng: -104.9903 },
@@ -694,6 +713,12 @@ export default function Proposals() {
           </div>
         </div>
 
+        {mapsLoading && (
+          <div style={{ fontSize: 13, opacity: 0.7 }}>
+            Loading Google Maps...
+          </div>
+        )}
+
         {mapsError && (
           <div style={{ color: "crimson", fontSize: 13 }}>
             <strong>Maps error:</strong> {mapsError}
@@ -863,7 +888,25 @@ export default function Proposals() {
         )}
       </div>
 
-      <div style={{ flex: 1, borderRadius: 14, overflow: "hidden", border: "1px solid rgba(0,0,0,0.12)" }}>
+      <div style={{ flex: 1, borderRadius: 14, overflow: "hidden", border: "1px solid rgba(0,0,0,0.12)", position: "relative" }}>
+        {mapsLoading && (
+          <div style={{
+            position: "absolute",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            background: "rgba(255,255,255,0.9)",
+            zIndex: 1000,
+            fontSize: 14,
+            fontWeight: 600
+          }}>
+            Loading Google Maps...
+          </div>
+        )}
         <div ref={mapDivRef} style={{ width: "100%", height: "100%" }} />
       </div>
     </div>
