@@ -75,6 +75,19 @@ type ProposalPanel = {
 const mToFt = (m: number) => m * 3.28084;
 const m2ToFt2 = (m2: number) => m2 * 10.7639104167097;
 
+// Safe number formatter - returns "—" for invalid numbers
+const fmt = (n?: number | null, opts?: Intl.NumberFormatOptions) =>
+  typeof n === "number" && Number.isFinite(n) ? n.toLocaleString(undefined, opts) : "—";
+
+// Normalize monthly usage JSON/object/array into a 12-number array
+const normalizeMonthly = (m: any) => {
+  const keys = ["jan","feb","mar","apr","may","jun","jul","aug","sep","oct","nov","dec"];
+  if (!m) return Array(12).fill(0);
+  if (Array.isArray(m)) return [...m, ...Array(12)].slice(0, 12).map(x => Number(x) || 0);
+  if (typeof m === "object") return keys.map(k => Number(m?.[k]) || 0);
+  return Array(12).fill(0);
+};
+
 function isGoogleReady() {
   return (
     typeof (window as any).google !== "undefined" &&
@@ -1516,92 +1529,57 @@ export default function Proposals() {
   );
 
   const systemSummary = useMemo(() => {
-    const defaults = {
+    // hard defaults so UI never crashes
+    const empty = {
+      hasProposal: false,
       panelCount: 0,
-      systemSizeKw: "0.00",
-      estimatedAnnualProduction: 0,
-      monthlyProduction: Array(12).fill(0),
-      offsetPercent: "0.0",
+      panelWatts: 0,
+      systemKw: 0,
+      annualProductionKwh: 0,
+      monthlyProductionKwh: Array(12).fill(0) as number[],
+      annualUsageKwh: 0,
+      offsetPercent: 0,
     };
 
-    if (!proposal) {
-      console.log("systemSummary: no proposal");
-      return defaults;
-    }
+    if (!proposal) return empty;
 
-    if (panelModels.length === 0) {
-      console.log("systemSummary: panel models not loaded yet");
-      return defaults;
-    }
+    const panelsArr = Array.isArray(panels) ? panels : [];
+    const panelCount = panelsArr.length;
 
-    const panelCount = panels.length;
-    if (panelCount === 0) {
-      console.log("systemSummary: no panels");
-      return defaults;
-    }
+    // panel watts fallback order: selected model -> proposal stored -> default 410
+    const panelWatts =
+      (selectedPanelModel && typeof selectedPanelModel.watts === "number" ? selectedPanelModel.watts : undefined) ??
+      (typeof (proposal as any)?.panel_watts === "number" ? (proposal as any).panel_watts : undefined) ??
+      410;
 
-    let panelModelToUse = selectedPanelModel;
-    if (!panelModelToUse && panels.length > 0) {
-      const firstPanel = panels[0];
-      panelModelToUse = panelModels.find(pm => pm.id === firstPanel.panel_model_id) || null;
-      console.log("systemSummary: trying to find panel model from panels", {
-        firstPanelModelId: firstPanel.panel_model_id,
-        panelModelsCount: panelModels.length,
-        panelModelsIds: panelModels.map(pm => pm.id),
-        found: !!panelModelToUse
-      });
-    }
+    const systemKw = (panelCount * panelWatts) / 1000;
 
-    if (!panelModelToUse) {
-      console.log("systemSummary: no panel model found", {
-        selectedPanelModel,
-        selectedPanelModelId,
-        panelModelsCount: panelModels.length,
-        panelsCount: panels.length,
-        firstPanelModelId: panels[0]?.panel_model_id
-      });
-      return defaults;
-    }
+    // v1 production estimate (no API): adjust later to PVWatts
+    const yieldKwhPerKw = 1550; // Texas-ish default
+    const derate = 0.82;
+    const annualProductionKwh = systemKw * yieldKwhPerKw * derate;
 
-    const systemSizeKw = (panelCount * panelModelToUse.watts) / 1000;
+    // usage
+    const usageMode = (proposal as any)?.usage_mode ?? "annual";
+    const annualUsageKwh =
+      usageMode === "annual"
+        ? Number((proposal as any)?.annual_kwh) || 0
+        : normalizeMonthly((proposal as any)?.monthly_kwh).reduce((a, b) => a + (Number(b) || 0), 0);
 
-    const yieldFactor = 1400;
-    const derateStdSun = 0.77;
-    const estimatedAnnualProduction = systemSizeKw * yieldFactor * derateStdSun;
-
-    const monthlyProduction = [
-      estimatedAnnualProduction * 0.07,
-      estimatedAnnualProduction * 0.075,
-      estimatedAnnualProduction * 0.09,
-      estimatedAnnualProduction * 0.095,
-      estimatedAnnualProduction * 0.10,
-      estimatedAnnualProduction * 0.095,
-      estimatedAnnualProduction * 0.09,
-      estimatedAnnualProduction * 0.085,
-      estimatedAnnualProduction * 0.08,
-      estimatedAnnualProduction * 0.075,
-      estimatedAnnualProduction * 0.07,
-      estimatedAnnualProduction * 0.065,
-    ];
-
-    let offsetPercent = 0;
-    if (proposal.usage_mode === "annual" && proposal.annual_kwh > 0) {
-      offsetPercent = (estimatedAnnualProduction / proposal.annual_kwh) * 100;
-    } else if (proposal.usage_mode === "monthly" && proposal.monthly_kwh?.length === 12) {
-      const totalMonthlyUsage = proposal.monthly_kwh.reduce((sum, val) => sum + (val || 0), 0);
-      if (totalMonthlyUsage > 0) {
-        offsetPercent = (estimatedAnnualProduction / totalMonthlyUsage) * 100;
-      }
-    }
+    const offsetPercent = annualUsageKwh > 0 ? (annualProductionKwh / annualUsageKwh) * 100 : 0;
 
     return {
+      hasProposal: true,
       panelCount,
-      systemSizeKw: systemSizeKw.toFixed(2),
-      estimatedAnnualProduction: Math.round(estimatedAnnualProduction),
-      monthlyProduction,
-      offsetPercent: offsetPercent.toFixed(1),
+      panelWatts,
+      systemKw,
+      annualProductionKwh,
+      monthlyProductionKwh: Array(12).fill(annualProductionKwh / 12),
+      annualUsageKwh,
+      offsetPercent,
     };
-  }, [proposal, selectedPanelModel, panels, panelModels]);
+    // IMPORTANT: deps are ONLY upstream inputs (no self-reference)
+  }, [proposal, panels, selectedPanelModel]);
 
   if (proposal && proposalStep === "pricing") {
     if (!systemSummary) {
@@ -1629,7 +1607,7 @@ export default function Proposals() {
       );
     }
 
-    const systemSizeKw = parseFloat(systemSummary.systemSizeKw);
+    const systemSizeKw = systemSummary.systemKw;
     const basePrice = customPrice || currentUserData?.ppw_redline || 2.5;
     const systemCost = systemSizeKw * 1000 * basePrice;
 
@@ -1672,15 +1650,15 @@ export default function Proposals() {
               </div>
               <div style={{ display: "flex", justifyContent: "space-between" }}>
                 <span style={{ opacity: 0.7 }}>System Size:</span>
-                <strong>{systemSummary.systemSizeKw} kW</strong>
+                <strong>{fmt(systemSummary.systemKw, { maximumFractionDigits: 2 })} kW</strong>
               </div>
               <div style={{ display: "flex", justifyContent: "space-between" }}>
                 <span style={{ opacity: 0.7 }}>Est. Annual Production:</span>
-                <strong>{fmt(systemSummary.estimatedAnnualProduction, { maximumFractionDigits: 0 })} kWh</strong>
+                <strong>{fmt(systemSummary.annualProductionKwh, { maximumFractionDigits: 0 })} kWh</strong>
               </div>
               <div style={{ display: "flex", justifyContent: "space-between" }}>
                 <span style={{ opacity: 0.7 }}>Energy Offset:</span>
-                <strong>{systemSummary.offsetPercent}%</strong>
+                <strong>{fmt(systemSummary.offsetPercent, { maximumFractionDigits: 1 })}%</strong>
               </div>
             </div>
           </div>
@@ -2499,7 +2477,7 @@ export default function Proposals() {
                   marginBottom: 12,
                 }}>
                   <div style={{ fontSize: 24, fontWeight: 800, marginBottom: 4 }}>
-                    {systemSummary.offsetPercent}%
+                    {fmt(systemSummary.offsetPercent, { maximumFractionDigits: 1 })}%
                   </div>
                   <div style={{ fontSize: 13, opacity: 0.9 }}>
                     Energy Offset
@@ -2524,7 +2502,7 @@ export default function Proposals() {
                     background: "rgba(0,0,0,0.02)",
                   }}>
                     <div style={{ fontSize: 11, opacity: 0.7, marginBottom: 2 }}>System Size</div>
-                    <div style={{ fontSize: 18, fontWeight: 700 }}>{systemSummary.systemSizeKw} kW</div>
+                    <div style={{ fontSize: 18, fontWeight: 700 }}>{fmt(systemSummary.systemKw, { maximumFractionDigits: 2 })} kW</div>
                   </div>
 
                   <div style={{
@@ -2535,7 +2513,7 @@ export default function Proposals() {
                   }}>
                     <div style={{ fontSize: 11, opacity: 0.7, marginBottom: 2 }}>Est. Annual Production</div>
                     <div style={{ fontSize: 18, fontWeight: 700 }}>
-                      {fmt(systemSummary.estimatedAnnualProduction, { maximumFractionDigits: 0 })} kWh
+                      {fmt(systemSummary.annualProductionKwh, { maximumFractionDigits: 0 })} kWh
                     </div>
                   </div>
 
