@@ -435,26 +435,30 @@ export default function SalesManagerDashboard() {
 
   if (selectedPeriod) {
     return (
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <button
-              onClick={() => setSelectedPeriod(null)}
-              className="text-sm text-blue-600 hover:text-blue-700 mb-2"
-            >
-              ← Back to all periods
-            </button>
-            <h3 className="text-lg font-semibold text-gray-900">
-              Pay Period: {formatDate(selectedPeriod.start_date)} - {formatDate(selectedPeriod.end_date)}
-            </h3>
-          </div>
-          <div className="text-right">
-            <p className="text-sm text-gray-600">Total Earnings</p>
-            <p className="text-2xl font-bold text-green-600">
-              {formatCurrency(selectedPeriod.total_earnings)}
-            </p>
+      <div className="flex-1 flex flex-col overflow-hidden bg-gray-50">
+        <div className="bg-white border-b border-gray-200 px-4 py-4 md:px-6 md:py-5 lg:px-8 lg:py-6">
+          <button
+            onClick={() => setSelectedPeriod(null)}
+            className="text-sm text-blue-600 hover:text-blue-700 mb-3 inline-flex items-center gap-1 min-h-[44px] items-center"
+          >
+            ← Back to all periods
+          </button>
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900 md:text-xl">
+                Pay Period: {formatDate(selectedPeriod.start_date)} - {formatDate(selectedPeriod.end_date)}
+              </h3>
+            </div>
+            <div className="text-left md:text-right">
+              <p className="text-sm text-gray-600">Total Earnings</p>
+              <p className="text-2xl font-bold text-green-600 md:text-3xl">
+                {formatCurrency(selectedPeriod.total_earnings)}
+              </p>
+            </div>
           </div>
         </div>
+
+        <div className="flex-1 overflow-y-auto px-4 py-4 md:px-6 md:py-6 lg:px-8 lg:py-6 space-y-4">
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <div className="bg-green-50 rounded-lg p-4">
@@ -527,27 +531,30 @@ export default function SalesManagerDashboard() {
             </div>
           </div>
         )}
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
-      <div className="bg-gradient-to-r from-blue-600 to-blue-700 rounded-lg p-6 text-white">
-        <h2 className="text-2xl font-bold mb-2">Sales Manager Dashboard</h2>
-        <p className="text-blue-100">Track your team's performance and commission overrides</p>
+    <div className="flex-1 flex flex-col overflow-hidden bg-gray-50">
+      <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-4 py-4 md:px-6 md:py-5 lg:px-8 lg:py-6 text-white">
+        <h2 className="text-xl font-bold mb-1 md:text-2xl md:mb-2">Sales Manager Dashboard</h2>
+        <p className="text-sm text-blue-100 md:text-base">Track your team's performance and commission overrides</p>
         {managerInfo && (
-          <div className="mt-4 inline-flex items-center gap-2 bg-white/20 backdrop-blur-sm rounded-lg px-4 py-2">
-            <DollarSign className="w-5 h-5" />
-            <span className="font-semibold">Your PPW Redline: ${managerInfo.ppw_redline.toFixed(2)}</span>
+          <div className="mt-3 inline-flex items-center gap-2 bg-white/20 backdrop-blur-sm rounded-lg px-3 py-2 md:mt-4 md:px-4">
+            <DollarSign className="w-4 h-4 md:w-5 md:h-5" />
+            <span className="text-sm font-semibold md:text-base">Your PPW Redline: ${managerInfo.ppw_redline.toFixed(2)}</span>
           </div>
         )}
       </div>
 
-      <div className="flex gap-2 border-b border-gray-200">
+      <div className="flex-1 overflow-y-auto px-4 py-4 md:px-6 md:py-6 lg:px-8 lg:py-6 space-y-4 md:space-y-6">
+
+      <div className="flex gap-1 border-b border-gray-200 bg-white rounded-t-lg overflow-x-auto">
         <button
           onClick={() => setActiveTab('overview')}
-          className={`px-4 py-2 font-medium text-sm transition-colors ${
+          className={`px-3 py-3 font-medium text-xs md:text-sm transition-colors whitespace-nowrap min-h-[44px] md:px-4 md:py-2 ${
             activeTab === 'overview'
               ? 'text-blue-600 border-b-2 border-blue-600'
               : 'text-gray-600 hover:text-gray-900'
@@ -557,7 +564,7 @@ export default function SalesManagerDashboard() {
         </button>
         <button
           onClick={() => setActiveTab('commissions')}
-          className={`px-4 py-2 font-medium text-sm transition-colors ${
+          className={`px-3 py-3 font-medium text-xs md:text-sm transition-colors whitespace-nowrap min-h-[44px] md:px-4 md:py-2 ${
             activeTab === 'commissions'
               ? 'text-blue-600 border-b-2 border-blue-600'
               : 'text-gray-600 hover:text-gray-900'
@@ -567,7 +574,7 @@ export default function SalesManagerDashboard() {
         </button>
         <button
           onClick={() => setActiveTab('payroll')}
-          className={`px-4 py-2 font-medium text-sm transition-colors ${
+          className={`px-3 py-3 font-medium text-xs md:text-sm transition-colors whitespace-nowrap min-h-[44px] md:px-4 md:py-2 ${
             activeTab === 'payroll'
               ? 'text-blue-600 border-b-2 border-blue-600'
               : 'text-gray-600 hover:text-gray-900'
@@ -731,7 +738,77 @@ export default function SalesManagerDashboard() {
               <p className="text-gray-600">No commission data available</p>
             </div>
           ) : (
-            <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+            <>
+              {/* Mobile Card View */}
+              <div className="lg:hidden space-y-3">
+                {commissionDetails.map((detail) => (
+                  <div key={detail.customer_id} className="bg-white rounded-xl border border-gray-200 p-4 space-y-3">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <h4 className="font-semibold text-gray-900">{detail.customer_name}</h4>
+                        <p className="text-sm text-gray-600">{detail.sales_rep_name}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-lg font-bold text-green-600">{formatCurrency(detail.total_override_amount)}</p>
+                        <p className="text-xs text-gray-500">Total Override</p>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3 text-sm">
+                      <div>
+                        <p className="text-xs text-gray-500">System Size</p>
+                        <p className="font-medium text-gray-900">{detail.system_size_kw.toFixed(2)} kW</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-500">Override/Watt</p>
+                        <p className={`font-semibold ${detail.override_per_watt >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                          ${Math.abs(detail.override_per_watt).toFixed(4)}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-500">Rep PPW</p>
+                        <p className="font-medium text-gray-900">${detail.sales_rep_ppw.toFixed(4)}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-500">Manager PPW</p>
+                        <p className="font-medium text-gray-900">${detail.manager_ppw.toFixed(4)}</p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2 pt-2 border-t border-gray-100">
+                      <div className="flex-1">
+                        <p className="text-xs text-gray-500">M1 Status</p>
+                        <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium mt-1 ${
+                          detail.m1_status === 'paid'
+                            ? 'bg-green-100 text-green-800'
+                            : detail.m1_status === 'eligible'
+                            ? 'bg-yellow-100 text-yellow-800'
+                            : 'bg-gray-100 text-gray-800'
+                        }`}>
+                          {detail.m1_status}
+                        </span>
+                        <p className="text-sm font-medium text-green-700 mt-1">{formatCurrency(detail.m1_override)}</p>
+                      </div>
+                      <div className="flex-1 text-right">
+                        <p className="text-xs text-gray-500">M2 Status</p>
+                        <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium mt-1 ${
+                          detail.m2_status === 'paid'
+                            ? 'bg-green-100 text-green-800'
+                            : detail.m2_status === 'eligible'
+                            ? 'bg-yellow-100 text-yellow-800'
+                            : 'bg-gray-100 text-gray-800'
+                        }`}>
+                          {detail.m2_status}
+                        </span>
+                        <p className="text-sm font-medium text-blue-700 mt-1">{formatCurrency(detail.m2_override)}</p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Desktop Table View */}
+              <div className="hidden lg:block bg-white rounded-lg border border-gray-200 overflow-hidden">
               <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead className="bg-gray-50 border-b border-gray-200">
@@ -824,6 +901,7 @@ export default function SalesManagerDashboard() {
                 </table>
               </div>
             </div>
+            </>
           )}
 
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
@@ -898,6 +976,7 @@ export default function SalesManagerDashboard() {
           )}
         </div>
       )}
+      </div>
     </div>
   );
 }
