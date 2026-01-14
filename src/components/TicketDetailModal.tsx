@@ -533,7 +533,7 @@ export default function TicketDetailModal({ ticketId, onClose, onUpdate, onViewP
                 ) : isPdfFile(doc.mime_type) ? (
                   <iframe
                     src={url}
-                    className="w-full h-[600px] rounded border border-gray-200"
+                    className="w-full h-[400px] sm:h-[600px] lg:h-[700px] rounded border border-gray-200"
                     title={doc.file_name}
                   />
                 ) : (
@@ -570,15 +570,15 @@ export default function TicketDetailModal({ ticketId, onClose, onUpdate, onViewP
 
     return (
       <div className="space-y-4">
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
           {allPhotos.map((photo, idx) => (
-            <div key={idx} className="space-y-1">
+            <div key={idx} className="space-y-2">
               <img
                 src={photo.url}
                 alt={photo.label}
-                className="w-full h-48 object-cover rounded-lg border border-gray-300"
+                className="w-full h-48 sm:h-56 object-cover rounded-lg border border-gray-300"
               />
-              <div className="text-xs text-gray-600 px-1">{photo.label}</div>
+              <div className="text-xs sm:text-sm text-gray-600 px-1">{photo.label}</div>
             </div>
           ))}
         </div>
@@ -597,11 +597,11 @@ export default function TicketDetailModal({ ticketId, onClose, onUpdate, onViewP
   }
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg w-full max-h-[90vh] flex flex-col" style={{ maxWidth: '329px' }}>
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4">
+      <div className="bg-white rounded-lg w-full max-h-[95vh] sm:max-h-[90vh] flex flex-col max-w-[95vw] sm:max-w-2xl lg:max-w-4xl">
         <div className="flex-shrink-0 bg-white border-b border-gray-200">
-          <div className="flex items-center justify-between p-3 border-b border-gray-200">
-            <div className="flex gap-2">
+          <div className="flex items-center justify-between p-3 sm:p-4 border-b border-gray-200">
+            <div className="flex gap-2 flex-wrap">
               <button
                 onClick={() => setActiveTab('customer')}
                 className={`px-4 py-1.5 rounded text-sm font-medium transition-colors ${
@@ -642,55 +642,55 @@ export default function TicketDetailModal({ ticketId, onClose, onUpdate, onViewP
           </div>
 
           {activeTab === 'customer' && (
-            <div className="p-3 bg-gray-50">
-              <div className="space-y-2">
+            <div className="p-3 sm:p-4 bg-gray-50">
+              <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <input type="checkbox" className="w-3 h-3 rounded" />
-                    <h2 className="text-lg font-bold text-gray-900">
+                    <input type="checkbox" className="w-4 h-4 rounded" />
+                    <h2 className="text-base sm:text-lg font-bold text-gray-900">
                       {customer.full_name} (#{customer.customer_id})
                     </h2>
                   </div>
                 </div>
 
                 <div className="flex items-start gap-2">
-                  <input type="checkbox" className="w-3 h-3 rounded mt-0.5" />
-                  <div className="flex items-center gap-2 text-orange-500 flex-1">
-                    <span className="text-sm">{customer.installation_address}</span>
-                    <button className="p-1.5 bg-orange-500 text-white rounded-full hover:bg-orange-600 transition-colors">
-                      <MapPin className="w-3 h-3" />
+                  <input type="checkbox" className="w-4 h-4 rounded mt-0.5" />
+                  <div className="flex items-center gap-2 text-orange-500 flex-1 flex-wrap">
+                    <span className="text-sm break-words">{customer.installation_address}</span>
+                    <button className="p-1.5 bg-orange-500 text-white rounded-full hover:bg-orange-600 transition-colors flex-shrink-0">
+                      <MapPin className="w-4 h-4" />
                     </button>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-3 text-gray-700 text-sm">
-                  <div className="flex items-center gap-1.5">
-                    <input type="checkbox" className="w-3 h-3 rounded" />
-                    <Phone className="w-3 h-3 text-orange-500" />
+                <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 text-gray-700 text-sm">
+                  <div className="flex items-center gap-2">
+                    <input type="checkbox" className="w-4 h-4 rounded" />
+                    <Phone className="w-4 h-4 text-orange-500" />
                     <span>{customer.phone_number}</span>
                   </div>
-                  <div className="flex items-center gap-1.5">
-                    <Mail className="w-3 h-3 text-orange-500" />
-                    <span className="text-xs">{customer.email}</span>
+                  <div className="flex items-center gap-2">
+                    <Mail className="w-4 h-4 text-orange-500" />
+                    <span className="text-sm break-all">{customer.email}</span>
                   </div>
                 </div>
 
-                <div className="text-xs font-medium text-gray-900">
+                <div className="text-sm font-medium text-gray-900">
                   {formatTimeRange(ticket.scheduled_date, ticket.time_window_start, ticket.time_window_end)}
                 </div>
 
-                <div className="grid grid-cols-3 gap-1.5">
-                  <div className="bg-gray-900 text-white rounded p-1.5 text-center">
+                <div className="grid grid-cols-3 gap-2 sm:gap-3">
+                  <div className="bg-gray-900 text-white rounded p-2 sm:p-3 text-center">
                     <div className="text-xs text-gray-400">Panels</div>
-                    <div className="text-sm font-bold text-orange-500">{customer.panel_quantity}</div>
+                    <div className="text-base sm:text-lg font-bold text-orange-500">{customer.panel_quantity}</div>
                   </div>
-                  <div className="bg-gray-900 text-white rounded p-1.5 text-center">
+                  <div className="bg-gray-900 text-white rounded p-2 sm:p-3 text-center">
                     <div className="text-xs text-gray-400">Size (kW)</div>
-                    <div className="text-sm font-bold text-orange-500">{(customer.system_size_kw / 1000).toFixed(2)}</div>
+                    <div className="text-base sm:text-lg font-bold text-orange-500">{(customer.system_size_kw / 1000).toFixed(2)}</div>
                   </div>
-                  <div className="bg-gray-900 text-white rounded p-1.5 text-center">
+                  <div className="bg-gray-900 text-white rounded p-2 sm:p-3 text-center">
                     <div className="text-xs text-gray-400">Roof</div>
-                    <div className="text-sm font-bold text-orange-500">{customer.roof_type || '-'}</div>
+                    <div className="text-base sm:text-lg font-bold text-orange-500">{customer.roof_type || '-'}</div>
                   </div>
                 </div>
               </div>
@@ -699,7 +699,7 @@ export default function TicketDetailModal({ ticketId, onClose, onUpdate, onViewP
         </div>
 
         <div className="flex-1 overflow-y-auto">
-          <div className="p-3">
+          <div className="p-3 sm:p-4">
             {activeTab === 'customer' && (
             <>
               <div className="flex gap-2 mb-3 border-b border-gray-200 pb-2 overflow-x-auto">
@@ -719,39 +719,39 @@ export default function TicketDetailModal({ ticketId, onClose, onUpdate, onViewP
               </div>
 
               {subTab === 'ticket' && (
-                <div className="space-y-3">
-                  <div className="bg-gray-900 text-white rounded-lg p-2.5">
-                    <h3 className="text-base font-bold mb-1.5">{formatLabel(ticket.ticket_type || 'service')}</h3>
-                    <div className="flex items-center gap-1.5 mb-2">
-                      <span className="text-xs text-gray-400">Assigned:</span>
-                      <span className="text-sm font-medium">
+                <div className="space-y-3 sm:space-y-4">
+                  <div className="bg-gray-900 text-white rounded-lg p-3 sm:p-4">
+                    <h3 className="text-base sm:text-lg font-bold mb-2">{formatLabel(ticket.ticket_type || 'service')}</h3>
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="text-sm text-gray-400">Assigned:</span>
+                      <span className="text-sm sm:text-base font-medium">
                         {ticket.assigned_technicians && ticket.assigned_technicians.length > 0
                           ? ticket.assigned_technicians.join('/')
                           : 'Unassigned'}
                       </span>
                     </div>
                     {ticket.notes && (
-                      <div className="text-xs whitespace-pre-wrap">{ticket.notes}</div>
+                      <div className="text-sm whitespace-pre-wrap">{ticket.notes}</div>
                     )}
                   </div>
 
-                  <div className="space-y-2">
+                  <div className="space-y-2 sm:space-y-3">
                     <div
                       onClick={() => handleProgressClick('in_transit')}
-                      className={`flex items-center justify-between p-2 rounded border-2 cursor-pointer transition-colors ${
+                      className={`flex items-center justify-between p-3 sm:p-4 rounded-lg border-2 cursor-pointer transition-colors ${
                         ticket.in_transit_at
                           ? 'bg-green-50 border-green-500'
                           : 'bg-white border-gray-300 hover:border-gray-400'
                       }`}
                     >
-                      <div className="flex items-center gap-2">
-                        <Truck className={`w-4 h-4 ${ticket.in_transit_at ? 'text-green-600' : 'text-gray-400'}`} />
+                      <div className="flex items-center gap-3">
+                        <Truck className={`w-5 h-5 ${ticket.in_transit_at ? 'text-green-600' : 'text-gray-400'}`} />
                         <div>
-                          <div className="text-sm font-medium">1. In Transit to Site</div>
+                          <div className="text-sm sm:text-base font-medium">1. In Transit to Site</div>
                         </div>
                       </div>
                       {ticket.in_transit_at && (
-                        <div className="text-xs font-medium text-green-600">
+                        <div className="text-xs sm:text-sm font-medium text-green-600 ml-2">
                           {formatDateTime(ticket.in_transit_at)}
                         </div>
                       )}
@@ -759,20 +759,20 @@ export default function TicketDetailModal({ ticketId, onClose, onUpdate, onViewP
 
                     <div
                       onClick={() => handleProgressClick('arrived')}
-                      className={`flex items-center justify-between p-2 rounded border-2 cursor-pointer transition-colors ${
+                      className={`flex items-center justify-between p-3 sm:p-4 rounded-lg border-2 cursor-pointer transition-colors ${
                         ticket.arrived_at
                           ? 'bg-green-50 border-green-500'
                           : 'bg-white border-gray-300 hover:border-gray-400'
                       }`}
                     >
-                      <div className="flex items-center gap-2">
-                        <Home className={`w-4 h-4 ${ticket.arrived_at ? 'text-green-600' : 'text-gray-400'}`} />
+                      <div className="flex items-center gap-3">
+                        <Home className={`w-5 h-5 ${ticket.arrived_at ? 'text-green-600' : 'text-gray-400'}`} />
                         <div>
-                          <div className="text-sm font-medium">2. Arrived on Site</div>
+                          <div className="text-sm sm:text-base font-medium">2. Arrived on Site</div>
                         </div>
                       </div>
                       {ticket.arrived_at && (
-                        <div className="text-xs font-medium text-green-600">
+                        <div className="text-xs sm:text-sm font-medium text-green-600 ml-2">
                           {formatDateTime(ticket.arrived_at)}
                         </div>
                       )}
@@ -780,54 +780,54 @@ export default function TicketDetailModal({ ticketId, onClose, onUpdate, onViewP
 
                     <div
                       onClick={() => handleProgressClick('begin')}
-                      className={`flex items-center justify-between p-2 rounded border-2 cursor-pointer transition-colors ${
+                      className={`flex items-center justify-between p-3 sm:p-4 rounded-lg border-2 cursor-pointer transition-colors ${
                         ticket.begin_ticket_at
                           ? 'bg-green-50 border-green-500'
                           : 'bg-white border-gray-300 hover:border-gray-400'
                       }`}
                     >
-                      <div className="flex items-center gap-2">
-                        <PlayCircle className={`w-4 h-4 ${ticket.begin_ticket_at ? 'text-green-600' : 'text-gray-400'}`} />
-                        <div className="text-sm font-medium">3. Begin Ticket</div>
+                      <div className="flex items-center gap-3">
+                        <PlayCircle className={`w-5 h-5 ${ticket.begin_ticket_at ? 'text-green-600' : 'text-gray-400'}`} />
+                        <div className="text-sm sm:text-base font-medium">3. Begin Ticket</div>
                       </div>
                       {ticket.begin_ticket_at && (
-                        <div className="text-xs font-medium text-green-600">
+                        <div className="text-xs sm:text-sm font-medium text-green-600 ml-2">
                           {formatDateTime(ticket.begin_ticket_at)}
                         </div>
                       )}
                     </div>
 
-                    <div className="p-2 rounded border-2 border-gray-300 bg-white">
-                      <div className="flex items-center gap-2 mb-1.5">
-                        <ClipboardList className="w-4 h-4 text-gray-600" />
-                        <div className="text-sm font-medium">4. Work Performed *</div>
+                    <div className="p-3 sm:p-4 rounded-lg border-2 border-gray-300 bg-white">
+                      <div className="flex items-center gap-3 mb-2">
+                        <ClipboardList className="w-5 h-5 text-gray-600" />
+                        <div className="text-sm sm:text-base font-medium">4. Work Performed *</div>
                       </div>
                       <textarea
                         value={workPerformed}
                         onChange={(e) => setWorkPerformed(e.target.value)}
                         onBlur={saveWorkPerformed}
                         placeholder="Describe the work performed..."
-                        rows={3}
-                        className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                        rows={4}
+                        className="w-full px-3 py-2 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
                       />
                     </div>
 
                     <div
                       onClick={() => handleProgressClick('departing')}
-                      className={`flex items-center justify-between p-2 rounded border-2 cursor-pointer transition-colors ${
+                      className={`flex items-center justify-between p-3 sm:p-4 rounded-lg border-2 cursor-pointer transition-colors ${
                         ticket.departing_at
                           ? 'bg-green-50 border-green-500'
                           : 'bg-white border-gray-300 hover:border-gray-400'
                       }`}
                     >
-                      <div className="flex items-center gap-2">
-                        <LogOut className={`w-4 h-4 ${ticket.departing_at ? 'text-green-600' : 'text-gray-400'}`} />
+                      <div className="flex items-center gap-3">
+                        <LogOut className={`w-5 h-5 ${ticket.departing_at ? 'text-green-600' : 'text-gray-400'}`} />
                         <div>
-                          <div className="text-sm font-medium">5. Departing Site</div>
+                          <div className="text-sm sm:text-base font-medium">5. Departing Site</div>
                         </div>
                       </div>
                       {ticket.departing_at && (
-                        <div className="text-xs font-medium text-green-600">
+                        <div className="text-xs sm:text-sm font-medium text-green-600 ml-2">
                           {formatDateTime(ticket.departing_at)}
                         </div>
                       )}
@@ -835,23 +835,23 @@ export default function TicketDetailModal({ ticketId, onClose, onUpdate, onViewP
 
                     <div
                       onClick={() => handleProgressClick('closed')}
-                      className={`flex items-center justify-between p-2 rounded border-2 cursor-pointer transition-colors ${
+                      className={`flex items-center justify-between p-3 sm:p-4 rounded-lg border-2 cursor-pointer transition-colors ${
                         ticket.closed_at
                           ? 'bg-green-50 border-green-500'
                           : 'bg-white border-gray-300 hover:border-gray-400'
                       }`}
                     >
-                      <div className="flex items-center gap-2">
-                        <CheckCircle className={`w-4 h-4 ${ticket.closed_at ? 'text-green-600' : 'text-gray-400'}`} />
+                      <div className="flex items-center gap-3">
+                        <CheckCircle className={`w-5 h-5 ${ticket.closed_at ? 'text-green-600' : 'text-gray-400'}`} />
                         <div>
-                          <div className="text-sm font-medium">6. Close Ticket</div>
+                          <div className="text-sm sm:text-base font-medium">6. Close Ticket</div>
                           {ticket.close_reason && (
-                            <div className="text-xs text-gray-600">{ticket.close_reason}</div>
+                            <div className="text-xs sm:text-sm text-gray-600">{ticket.close_reason}</div>
                           )}
                         </div>
                       </div>
                       {ticket.closed_at && (
-                        <div className="text-xs font-medium text-green-600">
+                        <div className="text-xs sm:text-sm font-medium text-green-600 ml-2">
                           {formatDateTime(ticket.closed_at)}
                         </div>
                       )}
@@ -871,9 +871,9 @@ export default function TicketDetailModal({ ticketId, onClose, onUpdate, onViewP
           )}
 
           {activeTab === 'equipment' && (
-            <div className="p-3">
-              <div className="space-y-2">
-                <div className="grid grid-cols-2 gap-3">
+            <div className="p-3 sm:p-4">
+              <div className="space-y-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                   <div>
                     <div className="text-xs text-gray-500">Panel Brand</div>
                     <div className="text-sm font-medium">{customer.panel_brand}</div>
@@ -896,8 +896,8 @@ export default function TicketDetailModal({ ticketId, onClose, onUpdate, onViewP
           )}
 
           {activeTab === 'adders' && (
-            <div className="p-3">
-              <div className="space-y-1">
+            <div className="p-3 sm:p-4">
+              <div className="space-y-2">
                 {customer.adder_steep_roof && <div className="text-sm">✓ Steep Roof</div>}
                 {customer.adder_metal_roof && <div className="text-sm">✓ Metal Roof</div>}
                 {customer.adder_tile_roof && <div className="text-sm">✓ Tile Roof</div>}
@@ -916,11 +916,11 @@ export default function TicketDetailModal({ ticketId, onClose, onUpdate, onViewP
           </div>
         </div>
 
-        <div className="flex-shrink-0 border-t border-gray-200 bg-white p-3 flex items-center justify-between">
+        <div className="flex-shrink-0 border-t border-gray-200 bg-white p-3 sm:p-4 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2">
           {onViewProject ? (
             <button
               onClick={onViewProject}
-              className="flex items-center gap-2 px-3 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors font-medium"
+              className="flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors font-medium"
             >
               <FolderOpen className="w-4 h-4" />
               Project
@@ -931,7 +931,7 @@ export default function TicketDetailModal({ ticketId, onClose, onUpdate, onViewP
           <div className="flex items-center gap-2">
             <button
               onClick={onClose}
-              className="px-4 py-2 bg-gray-200 text-gray-700 text-sm rounded-lg hover:bg-gray-300 transition-colors font-medium"
+              className="flex-1 sm:flex-none px-4 py-2 bg-gray-200 text-gray-700 text-sm rounded-lg hover:bg-gray-300 transition-colors font-medium"
             >
               Close
             </button>
@@ -957,7 +957,7 @@ export default function TicketDetailModal({ ticketId, onClose, onUpdate, onViewP
                 }
               }}
               disabled={saving}
-              className="px-4 py-2 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700 transition-colors font-medium disabled:opacity-50"
+              className="flex-1 sm:flex-none px-4 py-2 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700 transition-colors font-medium disabled:opacity-50"
             >
               {saving ? 'Saving...' : 'Save'}
             </button>
