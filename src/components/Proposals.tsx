@@ -192,7 +192,7 @@ export default function Proposals() {
   useEffect(() => {
     async function loadFinancingAndAdders() {
       const [financingRes, addersRes] = await Promise.all([
-        supabase.from("financing_providers").select("*").order("name", { ascending: true }),
+        supabase.from("financiers").select("*").order("name", { ascending: true }),
         supabase.from("custom_adders").select("*").order("name", { ascending: true }),
       ]);
 
