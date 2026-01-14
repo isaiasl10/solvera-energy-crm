@@ -184,7 +184,7 @@ export default function Sidebar({ currentView, onViewChange, isMobileOpen, onMob
         transform transition-transform duration-300 ease-in-out
         ${isMobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
       `}>
-        <div className="px-2 py-2 border-b border-gray-700 flex items-center justify-between">
+        <div className="px-2 py-2 border-b border-gray-700 flex items-center justify-between flex-shrink-0">
           <img
             src="/solvera_energy_logo_redesign.png"
             alt="Solvera Energy"
@@ -198,7 +198,7 @@ export default function Sidebar({ currentView, onViewChange, isMobileOpen, onMob
           </button>
         </div>
 
-      <nav className="flex-1 p-2 overflow-y-auto">
+      <nav className="flex-1 p-2 overflow-y-auto min-h-0">
         <ul className="space-y-1">
           <li>
             <button
@@ -368,7 +368,7 @@ export default function Sidebar({ currentView, onViewChange, isMobileOpen, onMob
         </ul>
       </nav>
 
-      <div className="p-2 border-t border-gray-700">
+      <div className="p-2 border-t border-gray-700 flex-shrink-0">
         <button
           onClick={logout}
           className="w-full flex items-center gap-2 px-3 py-2 rounded-lg transition-colors text-sm text-gray-300 hover:bg-gray-800"
