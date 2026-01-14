@@ -69,6 +69,7 @@ export default function Proposals() {
 
   const mapRef = useRef<google.maps.Map | null>(null);
   const drawingRef = useRef<google.maps.drawing.DrawingManager | null>(null);
+  const locationMarkerRef = useRef<google.maps.Marker | null>(null);
 
   const [selected, setSelected] = useState<SelectedAddress | null>(null);
   const [proposal, setProposal] = useState<Proposal | null>(null);
@@ -167,6 +168,25 @@ export default function Proposals() {
 
       map.setCenter({ lat: payload.lat, lng: payload.lng });
       map.setZoom(20);
+
+      if (locationMarkerRef.current) {
+        locationMarkerRef.current.setMap(null);
+      }
+
+      locationMarkerRef.current = new google.maps.Marker({
+        map,
+        position: { lat: payload.lat, lng: payload.lng },
+        title: payload.formattedAddress,
+        animation: google.maps.Animation.DROP,
+        icon: {
+          path: google.maps.SymbolPath.CIRCLE,
+          scale: 10,
+          fillOpacity: 1,
+          fillColor: "#ef4444",
+          strokeColor: "#ffffff",
+          strokeWeight: 3,
+        },
+      });
 
       setProposal(null);
       setRoofPlanes([]);
@@ -486,6 +506,9 @@ export default function Proposals() {
 
       return () => {
         drawing.setMap(null);
+        if (locationMarkerRef.current) {
+          locationMarkerRef.current.setMap(null);
+        }
         mapRef.current = null;
         drawingRef.current = null;
       };
@@ -555,6 +578,11 @@ export default function Proposals() {
         panel_watts: data.panel_watts,
         panel_orientation: data.panel_orientation,
       });
+
+      if (mapRef.current) {
+        mapRef.current.setCenter({ lat: data.lat, lng: data.lng });
+        mapRef.current.setZoom(20);
+      }
 
       await reloadProposalData(data.id);
     } catch (e: any) {
