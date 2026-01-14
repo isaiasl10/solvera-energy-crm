@@ -48,6 +48,26 @@ type ObstructionRow = {
   rotation_deg: number | null;
 };
 
+type PanelModel = {
+  id: string;
+  brand: string;
+  model: string;
+  watts: number;
+  length_mm: number;
+  width_mm: number;
+};
+
+type ProposalPanel = {
+  id: string;
+  proposal_id: string;
+  roof_plane_id: string | null;
+  panel_model_id: string;
+  center_lat: number;
+  center_lng: number;
+  rotation_deg: number;
+  is_portrait: boolean;
+};
+
 const mToFt = (m: number) => m * 3.28084;
 const m2ToFt2 = (m2: number) => m2 * 10.7639104167097;
 
@@ -61,7 +81,7 @@ function isGoogleReady() {
   );
 }
 
-type ToolMode = "none" | "roof" | "circle" | "rect" | "tree";
+type ToolMode = "none" | "roof" | "circle" | "rect" | "tree" | "add-panel" | "delete-panel";
 
 export default function Proposals() {
   const mapDivRef = useRef<HTMLDivElement | null>(null);
@@ -76,12 +96,21 @@ export default function Proposals() {
 
   const [roofPlanes, setRoofPlanes] = useState<RoofPlaneRow[]>([]);
   const [obstructions, setObstructions] = useState<ObstructionRow[]>([]);
+  const [panelModels, setPanelModels] = useState<PanelModel[]>([]);
+  const [panels, setPanels] = useState<ProposalPanel[]>([]);
 
   const roofPolysRef = useRef<Map<string, google.maps.Polygon>>(new Map());
   const obstructionShapesRef = useRef<Map<string, any>>(new Map());
+  const panelRectanglesRef = useRef<Map<string, google.maps.Rectangle>>(new Map());
 
   const [toolMode, setToolMode] = useState<ToolMode>("none");
   const [selectedRoofId, setSelectedRoofId] = useState<string | null>(null);
+
+  const [selectedPanelModelId, setSelectedPanelModelId] = useState<string | null>(null);
+  const [panelOrientation, setPanelOrientation] = useState<"portrait" | "landscape">("portrait");
+  const [panelRotation, setPanelRotation] = useState<number>(0);
+  const [rowSpacing, setRowSpacing] = useState<number>(0.5);
+  const [colSpacing, setColSpacing] = useState<number>(0.5);
 
   const [mapsError, setMapsError] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
@@ -120,6 +149,28 @@ export default function Proposals() {
     };
 
     checkGoogleMaps();
+  }, []);
+
+  useEffect(() => {
+    async function loadPanelModels() {
+      const { data, error } = await supabase
+        .from("panel_models")
+        .select("*")
+        .order("brand", { ascending: true })
+        .order("watts", { ascending: true });
+
+      if (error) {
+        console.error("Failed to load panel models:", error);
+        return;
+      }
+
+      setPanelModels(data || []);
+      if (data && data.length > 0 && !selectedPanelModelId) {
+        setSelectedPanelModelId(data[0].id);
+      }
+    }
+
+    loadPanelModels();
   }, []);
 
   useEffect(() => {
@@ -616,6 +667,14 @@ export default function Proposals() {
 
     if (obsErr) throw obsErr;
 
+    const { data: panelsData, error: panelsErr } = await supabase
+      .from("proposal_panels")
+      .select("*")
+      .eq("proposal_id", proposalId)
+      .order("created_at", { ascending: true });
+
+    if (panelsErr) throw panelsErr;
+
     setRoofPlanes(
       (roofs ?? []).map((r: any) => ({
         id: r.id,
@@ -642,10 +701,23 @@ export default function Proposals() {
       }))
     );
 
-    renderAllShapes(roofs ?? [], obs ?? []);
+    setPanels(
+      (panelsData ?? []).map((p: any) => ({
+        id: p.id,
+        proposal_id: p.proposal_id,
+        roof_plane_id: p.roof_plane_id,
+        panel_model_id: p.panel_model_id,
+        center_lat: p.center_lat,
+        center_lng: p.center_lng,
+        rotation_deg: p.rotation_deg,
+        is_portrait: p.is_portrait,
+      }))
+    );
+
+    renderAllShapes(roofs ?? [], obs ?? [], panelsData ?? []);
   }
 
-  function renderAllShapes(roofs: any[], obs: any[]) {
+  function renderAllShapes(roofs: any[], obs: any[], panelsData: any[]) {
     const map = mapRef.current;
     if (!map) return;
 
@@ -655,6 +727,8 @@ export default function Proposals() {
       if (s?.setMap) s.setMap(null);
     });
     obstructionShapesRef.current.clear();
+    panelRectanglesRef.current.forEach((r) => r.setMap(null));
+    panelRectanglesRef.current.clear();
 
     for (const r of roofs) {
       const poly = new google.maps.Polygon({
@@ -735,6 +809,55 @@ export default function Proposals() {
         obstructionShapesRef.current.set(`${o.id}:canopy`, canopy);
       }
     }
+
+    for (const p of panelsData) {
+      const panelModel = panelModels.find((pm) => pm.id === p.panel_model_id);
+      if (!panelModel) continue;
+
+      const lengthM = panelModel.length_mm / 1000;
+      const widthM = panelModel.width_mm / 1000;
+
+      const panelWidth = p.is_portrait ? widthM : lengthM;
+      const panelHeight = p.is_portrait ? lengthM : widthM;
+
+      const rect = createPanelRectangle(map, p.center_lat, p.center_lng, panelWidth, panelHeight, p.rotation_deg);
+      panelRectanglesRef.current.set(p.id, rect);
+    }
+  }
+
+  function createPanelRectangle(
+    map: google.maps.Map,
+    centerLat: number,
+    centerLng: number,
+    widthM: number,
+    heightM: number,
+    rotationDeg: number
+  ): google.maps.Rectangle {
+    const center = new google.maps.LatLng(centerLat, centerLng);
+
+    const latOffsetM = heightM / 2;
+    const lngOffsetM = widthM / 2;
+
+    const latDelta = latOffsetM / 111320;
+    const lngDelta = lngOffsetM / (111320 * Math.cos(centerLat * Math.PI / 180));
+
+    const bounds = new google.maps.LatLngBounds(
+      new google.maps.LatLng(centerLat - latDelta, centerLng - lngDelta),
+      new google.maps.LatLng(centerLat + latDelta, centerLng + lngDelta)
+    );
+
+    const rect = new google.maps.Rectangle({
+      map,
+      bounds,
+      fillColor: "#3b82f6",
+      fillOpacity: 0.4,
+      strokeColor: "#1e40af",
+      strokeWeight: 1,
+      clickable: false,
+      editable: false,
+    });
+
+    return rect;
   }
 
   async function updatePitchDegrees(newDeg: number) {
@@ -753,6 +876,250 @@ export default function Proposals() {
       alert(error.message);
     }
   }
+
+  async function autoFillPanels() {
+    if (!selectedRoof || !proposal || !selectedPanelModelId) {
+      alert("Please select a roof plane and panel model first.");
+      return;
+    }
+
+    const panelModel = panelModels.find((pm) => pm.id === selectedPanelModelId);
+    if (!panelModel) return;
+
+    try {
+      setBusy("Auto-filling panels...");
+
+      const lengthM = panelModel.length_mm / 1000;
+      const widthM = panelModel.width_mm / 1000;
+
+      const panelWidth = panelOrientation === "portrait" ? widthM : lengthM;
+      const panelHeight = panelOrientation === "portrait" ? lengthM : widthM;
+
+      const rowSpacingM = rowSpacing * 0.3048;
+      const colSpacingM = colSpacing * 0.3048;
+
+      const roofPoly = roofPolysRef.current.get(selectedRoof.id);
+      if (!roofPoly) return;
+
+      const bounds = new google.maps.LatLngBounds();
+      roofPoly.getPath().forEach((latLng) => bounds.extend(latLng));
+
+      const center = bounds.getCenter();
+      const ne = bounds.getNorthEast();
+      const sw = bounds.getSouthWest();
+
+      const latSpan = ne.lat() - sw.lat();
+      const lngSpan = ne.lng() - sw.lng();
+
+      const rowStep = (panelHeight + rowSpacingM) / 111320;
+      const colStep = (panelWidth + colSpacingM) / (111320 * Math.cos(center.lat() * Math.PI / 180));
+
+      const rows = Math.ceil(latSpan / rowStep) + 2;
+      const cols = Math.ceil(lngSpan / colStep) + 2;
+
+      const startLat = sw.lat() - rowStep;
+      const startLng = sw.lng() - colStep;
+
+      const newPanels: any[] = [];
+
+      for (let row = 0; row < rows; row++) {
+        for (let col = 0; col < cols; col++) {
+          const lat = startLat + row * rowStep;
+          const lng = startLng + col * colStep;
+
+          if (!isPointInPolygon({ lat, lng }, roofPoly)) continue;
+
+          const panelCorners = getPanelCorners(lat, lng, panelWidth, panelHeight, panelRotation);
+          const allCornersInside = panelCorners.every((corner) =>
+            isPointInPolygon(corner, roofPoly)
+          );
+
+          if (!allCornersInside) continue;
+
+          const obstructionsList = obstructions.filter(
+            (o) => !o.roof_plane_id || o.roof_plane_id === selectedRoof.id
+          );
+          const overlapsObstruction = obstructionsList.some((obs) =>
+            panelOverlapsObstruction(lat, lng, panelWidth, panelHeight, obs)
+          );
+
+          if (overlapsObstruction) continue;
+
+          newPanels.push({
+            proposal_id: proposal.id,
+            roof_plane_id: selectedRoof.id,
+            panel_model_id: selectedPanelModelId,
+            center_lat: lat,
+            center_lng: lng,
+            rotation_deg: panelRotation,
+            is_portrait: panelOrientation === "portrait",
+          });
+        }
+      }
+
+      if (newPanels.length === 0) {
+        alert("No valid panel positions found. Try adjusting spacing or roof plane.");
+        setBusy(null);
+        return;
+      }
+
+      const { error } = await supabase.from("proposal_panels").insert(newPanels);
+
+      if (error) throw error;
+
+      await reloadProposalData(proposal.id);
+      alert(`Successfully placed ${newPanels.length} panels!`);
+    } catch (e: any) {
+      console.error(e);
+      alert(e?.message ?? "Failed to auto-fill panels.");
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  function getPanelCorners(
+    centerLat: number,
+    centerLng: number,
+    widthM: number,
+    heightM: number,
+    rotationDeg: number
+  ): Array<{ lat: number; lng: number }> {
+    const latDelta = heightM / 2 / 111320;
+    const lngDelta = widthM / 2 / (111320 * Math.cos(centerLat * Math.PI / 180));
+
+    return [
+      { lat: centerLat - latDelta, lng: centerLng - lngDelta },
+      { lat: centerLat - latDelta, lng: centerLng + lngDelta },
+      { lat: centerLat + latDelta, lng: centerLng + lngDelta },
+      { lat: centerLat + latDelta, lng: centerLng - lngDelta },
+    ];
+  }
+
+  function isPointInPolygon(point: { lat: number; lng: number }, poly: google.maps.Polygon): boolean {
+    return google.maps.geometry.poly.containsLocation(
+      new google.maps.LatLng(point.lat, point.lng),
+      poly
+    );
+  }
+
+  function panelOverlapsObstruction(
+    panelLat: number,
+    panelLng: number,
+    panelWidthM: number,
+    panelHeightM: number,
+    obs: ObstructionRow
+  ): boolean {
+    const panelLatDelta = panelHeightM / 2 / 111320;
+    const panelLngDelta = panelWidthM / 2 / (111320 * Math.cos(panelLat * Math.PI / 180));
+
+    if (obs.type === "circle" || obs.type === "tree") {
+      const radiusM = (obs.radius_ft ?? 12) / 3.28084;
+      const distance = google.maps.geometry.spherical.computeDistanceBetween(
+        new google.maps.LatLng(panelLat, panelLng),
+        new google.maps.LatLng(obs.center_lat, obs.center_lng)
+      );
+      return distance < radiusM + Math.max(panelWidthM, panelHeightM) / 2;
+    } else if (obs.type === "rect") {
+      const obsWidthM = (obs.width_ft ?? 4) / 3.28084;
+      const obsHeightM = (obs.height_ft ?? 4) / 3.28084;
+      const obsLatDelta = obsHeightM / 2 / 111320;
+      const obsLngDelta = obsWidthM / 2 / (111320 * Math.cos(obs.center_lat * Math.PI / 180));
+
+      const panelLeft = panelLng - panelLngDelta;
+      const panelRight = panelLng + panelLngDelta;
+      const panelTop = panelLat + panelLatDelta;
+      const panelBottom = panelLat - panelLatDelta;
+
+      const obsLeft = obs.center_lng - obsLngDelta;
+      const obsRight = obs.center_lng + obsLngDelta;
+      const obsTop = obs.center_lat + obsLatDelta;
+      const obsBottom = obs.center_lat - obsLatDelta;
+
+      return !(panelRight < obsLeft || panelLeft > obsRight || panelTop < obsBottom || panelBottom > obsTop);
+    }
+
+    return false;
+  }
+
+  async function clearPanels() {
+    if (!proposal) return;
+    if (!confirm("Clear all panels from this proposal?")) return;
+
+    try {
+      setBusy("Clearing panels...");
+
+      const { error } = await supabase
+        .from("proposal_panels")
+        .delete()
+        .eq("proposal_id", proposal.id);
+
+      if (error) throw error;
+
+      await reloadProposalData(proposal.id);
+    } catch (e: any) {
+      console.error(e);
+      alert(e?.message ?? "Failed to clear panels.");
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function deleteRoofPlane(roofId: string) {
+    if (!confirm("Delete this roof plane and all its panels?")) return;
+
+    try {
+      setBusy("Deleting roof plane...");
+
+      const { error } = await supabase
+        .from("proposal_roof_planes")
+        .delete()
+        .eq("id", roofId);
+
+      if (error) throw error;
+
+      if (proposal) {
+        await reloadProposalData(proposal.id);
+      }
+
+      if (selectedRoofId === roofId) {
+        setSelectedRoofId(null);
+      }
+    } catch (e: any) {
+      console.error(e);
+      alert(e?.message ?? "Failed to delete roof plane.");
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function deleteObstruction(obsId: string) {
+    if (!confirm("Delete this obstruction?")) return;
+
+    try {
+      setBusy("Deleting obstruction...");
+
+      const { error } = await supabase
+        .from("proposal_obstructions")
+        .delete()
+        .eq("id", obsId);
+
+      if (error) throw error;
+
+      if (proposal) {
+        await reloadProposalData(proposal.id);
+      }
+    } catch (e: any) {
+      console.error(e);
+      alert(e?.message ?? "Failed to delete obstruction.");
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  const selectedPanelModel = useMemo(
+    () => panelModels.find((pm) => pm.id === selectedPanelModelId) ?? null,
+    [panelModels, selectedPanelModelId]
+  );
 
   return (
     <div style={{ display: "flex", height: "calc(100vh - 64px)", gap: 16, padding: 16 }}>
@@ -898,6 +1265,7 @@ export default function Proposals() {
                       step={0.1}
                       value={r.pitch_deg}
                       onChange={(e) => updatePitchDegrees(Number(e.target.value))}
+                      onClick={(e) => e.stopPropagation()}
                       style={{
                         width: 90,
                         height: 34,
@@ -906,6 +1274,25 @@ export default function Proposals() {
                         padding: "0 8px",
                       }}
                     />
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        deleteRoofPlane(r.id);
+                      }}
+                      style={{
+                        marginLeft: "auto",
+                        padding: "6px 12px",
+                        borderRadius: 6,
+                        border: "1px solid rgba(220, 38, 38, 0.3)",
+                        background: "white",
+                        color: "#dc2626",
+                        fontSize: 11,
+                        fontWeight: 600,
+                        cursor: "pointer",
+                      }}
+                    >
+                      Delete
+                    </button>
                   </div>
                 </div>
               ))}
@@ -918,10 +1305,199 @@ export default function Proposals() {
                   Use the obstruction tools to add vents, skylights, chimneys, trees, etc.
                 </div>
               ) : (
-                <div style={{ fontSize: 13, opacity: 0.85 }}>
-                  {obstructions.length} obstruction(s) placed
+                <div>
+                  <div style={{ fontSize: 13, opacity: 0.85, marginBottom: 8 }}>
+                    {obstructions.length} obstruction(s) placed
+                  </div>
+                  {obstructions.map((o) => (
+                    <div
+                      key={o.id}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        padding: "6px 10px",
+                        borderRadius: 8,
+                        border: "1px solid rgba(0,0,0,0.1)",
+                        marginBottom: 6,
+                        fontSize: 12,
+                      }}
+                    >
+                      <span>{o.type}</span>
+                      <button
+                        onClick={() => deleteObstruction(o.id)}
+                        style={{
+                          padding: "4px 10px",
+                          borderRadius: 6,
+                          border: "1px solid rgba(220, 38, 38, 0.3)",
+                          background: "white",
+                          color: "#dc2626",
+                          fontSize: 11,
+                          fontWeight: 600,
+                          cursor: "pointer",
+                        }}
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  ))}
                 </div>
               )}
+            </div>
+
+            <div style={{ borderTop: "1px solid rgba(0,0,0,0.08)", paddingTop: 12 }}>
+              <div style={{ fontWeight: 800, marginBottom: 6 }}>Panel Design</div>
+
+              <div style={{ fontSize: 12, marginBottom: 8 }}>
+                <label style={{ display: "block", marginBottom: 4, opacity: 0.7 }}>Panel Model</label>
+                <select
+                  value={selectedPanelModelId || ""}
+                  onChange={(e) => setSelectedPanelModelId(e.target.value)}
+                  style={{
+                    width: "100%",
+                    height: 38,
+                    borderRadius: 8,
+                    border: "1px solid rgba(0,0,0,0.2)",
+                    padding: "0 8px",
+                    fontSize: 13,
+                  }}
+                >
+                  {panelModels.map((pm) => (
+                    <option key={pm.id} value={pm.id}>
+                      {pm.brand} {pm.model} - {pm.watts}W
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {selectedPanelModel && (
+                <div style={{ fontSize: 12, marginBottom: 12, opacity: 0.75 }}>
+                  Dimensions: {selectedPanelModel.length_mm}mm x {selectedPanelModel.width_mm}mm
+                </div>
+              )}
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 12 }}>
+                <div>
+                  <label style={{ display: "block", marginBottom: 4, fontSize: 12, opacity: 0.7 }}>Orientation</label>
+                  <select
+                    value={panelOrientation}
+                    onChange={(e) => setPanelOrientation(e.target.value as "portrait" | "landscape")}
+                    style={{
+                      width: "100%",
+                      height: 38,
+                      borderRadius: 8,
+                      border: "1px solid rgba(0,0,0,0.2)",
+                      padding: "0 8px",
+                      fontSize: 13,
+                    }}
+                  >
+                    <option value="portrait">Portrait</option>
+                    <option value="landscape">Landscape</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label style={{ display: "block", marginBottom: 4, fontSize: 12, opacity: 0.7 }}>Rotation (deg)</label>
+                  <input
+                    type="number"
+                    min={0}
+                    max={359}
+                    value={panelRotation}
+                    onChange={(e) => setPanelRotation(Number(e.target.value))}
+                    style={{
+                      width: "100%",
+                      height: 38,
+                      borderRadius: 8,
+                      border: "1px solid rgba(0,0,0,0.2)",
+                      padding: "0 8px",
+                      fontSize: 13,
+                    }}
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 12 }}>
+                <div>
+                  <label style={{ display: "block", marginBottom: 4, fontSize: 12, opacity: 0.7 }}>Row Spacing (ft)</label>
+                  <input
+                    type="number"
+                    min={0}
+                    max={10}
+                    step={0.1}
+                    value={rowSpacing}
+                    onChange={(e) => setRowSpacing(Number(e.target.value))}
+                    style={{
+                      width: "100%",
+                      height: 38,
+                      borderRadius: 8,
+                      border: "1px solid rgba(0,0,0,0.2)",
+                      padding: "0 8px",
+                      fontSize: 13,
+                    }}
+                  />
+                </div>
+
+                <div>
+                  <label style={{ display: "block", marginBottom: 4, fontSize: 12, opacity: 0.7 }}>Col Spacing (ft)</label>
+                  <input
+                    type="number"
+                    min={0}
+                    max={10}
+                    step={0.1}
+                    value={colSpacing}
+                    onChange={(e) => setColSpacing(Number(e.target.value))}
+                    style={{
+                      width: "100%",
+                      height: 38,
+                      borderRadius: 8,
+                      border: "1px solid rgba(0,0,0,0.2)",
+                      padding: "0 8px",
+                      fontSize: 13,
+                    }}
+                  />
+                </div>
+              </div>
+
+              <button
+                onClick={autoFillPanels}
+                disabled={!selectedRoofId || !selectedPanelModelId || !!busy}
+                style={{
+                  width: "100%",
+                  height: 42,
+                  borderRadius: 10,
+                  border: "1px solid rgba(0,0,0,0.15)",
+                  background: selectedRoofId && selectedPanelModelId ? "#111827" : "#e5e7eb",
+                  color: selectedRoofId && selectedPanelModelId ? "white" : "#9ca3af",
+                  fontWeight: 700,
+                  cursor: selectedRoofId && selectedPanelModelId ? "pointer" : "not-allowed",
+                  marginBottom: 8,
+                }}
+              >
+                Auto-Fill Selected Roof
+              </button>
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 12 }}>
+                <button
+                  onClick={clearPanels}
+                  disabled={panels.length === 0 || !!busy}
+                  style={{
+                    height: 38,
+                    borderRadius: 8,
+                    border: "1px solid rgba(220, 38, 38, 0.3)",
+                    background: "white",
+                    color: panels.length > 0 ? "#dc2626" : "#9ca3af",
+                    fontWeight: 600,
+                    cursor: panels.length > 0 ? "pointer" : "not-allowed",
+                    fontSize: 13,
+                  }}
+                >
+                  Clear Panels
+                </button>
+              </div>
+
+              <div style={{ fontSize: 13, opacity: 0.75 }}>
+                {panels.length} panel(s) placed
+              </div>
             </div>
 
             {busy && (
