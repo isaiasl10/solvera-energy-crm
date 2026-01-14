@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from "react";
-import { Loader } from "@googlemaps/js-api-loader";
 
 type SelectedAddress = {
   placeId: string;
@@ -7,6 +6,22 @@ type SelectedAddress = {
   lat: number;
   lng: number;
 };
+
+async function loadGoogleMaps(apiKey: string) {
+  if ((window as any).google?.maps) return;
+
+  const script = document.createElement("script");
+  script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places&v=weekly`;
+  script.async = true;
+  script.defer = true;
+
+  document.head.appendChild(script);
+
+  await new Promise((resolve, reject) => {
+    script.onload = resolve;
+    script.onerror = reject;
+  });
+}
 
 export default function Proposals() {
   const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY as string | undefined;
@@ -43,13 +58,7 @@ export default function Proposals() {
 
     async function init() {
       try {
-        const loader = new Loader({
-          apiKey,
-          version: "weekly",
-          libraries: ["places"],
-        });
-
-        await loader.load();
+        await loadGoogleMaps(apiKey!);
         if (cancelled) return;
 
         mapRef.current = new google.maps.Map(mapDivRef.current as HTMLDivElement, {
