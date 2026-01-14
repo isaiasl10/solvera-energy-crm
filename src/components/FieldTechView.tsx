@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { Loader2, Calendar, MapPin, User } from 'lucide-react';
+import { Loader2, Calendar, MapPin, User, ChevronLeft, ChevronRight } from 'lucide-react';
 import TicketDetailModal from './TicketDetailModal';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -16,6 +16,8 @@ type Ticket = {
   customer_name: string;
 };
 
+type ViewMode = 'day' | 'week' | 'month';
+
 export default function FieldTechView() {
   const { user } = useAuth();
   const [tickets, setTickets] = useState<Ticket[]>([]);
@@ -23,6 +25,8 @@ export default function FieldTechView() {
   const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
   const [showModal, setShowModal] = useState(false);
   const [userFullName, setUserFullName] = useState<string>('');
+  const [viewMode, setViewMode] = useState<ViewMode>('day');
+  const [currentDate, setCurrentDate] = useState(new Date());
 
   useEffect(() => {
     loadUserProfile();
@@ -32,7 +36,7 @@ export default function FieldTechView() {
     if (userFullName) {
       loadTickets();
     }
-  }, [userFullName]);
+  }, [userFullName, currentDate, viewMode]);
 
   const loadUserProfile = async () => {
     if (!user) return;
@@ -58,6 +62,29 @@ export default function FieldTechView() {
     if (!userFullName) return;
 
     try {
+      let startDate = new Date(currentDate);
+      let endDate = new Date(currentDate);
+
+      if (viewMode === 'day') {
+        startDate.setHours(0, 0, 0, 0);
+        endDate.setHours(23, 59, 59, 999);
+      } else if (viewMode === 'week') {
+        const dayOfWeek = startDate.getDay();
+        const diff = startDate.getDate() - dayOfWeek;
+        startDate = new Date(startDate.setDate(diff));
+        startDate.setHours(0, 0, 0, 0);
+        endDate = new Date(startDate);
+        endDate.setDate(endDate.getDate() + 6);
+        endDate.setHours(23, 59, 59, 999);
+      } else if (viewMode === 'month') {
+        startDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
+        endDate = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);
+        endDate.setHours(23, 59, 59, 999);
+      }
+
+      const startDateStr = startDate.toISOString().split('T')[0];
+      const endDateStr = endDate.toISOString().split('T')[0];
+
       const { data, error } = await supabase
         .from('scheduling')
         .select(`
@@ -75,6 +102,8 @@ export default function FieldTechView() {
           )
         `)
         .in('ticket_status', ['open', 'scheduled', 'in_progress'])
+        .gte('scheduled_date', startDateStr)
+        .lte('scheduled_date', endDateStr)
         .order('scheduled_date', { ascending: true });
 
       if (error) throw error;
@@ -147,6 +176,50 @@ export default function FieldTechView() {
     }
   };
 
+  const navigatePrevious = () => {
+    const newDate = new Date(currentDate);
+    if (viewMode === 'day') {
+      newDate.setDate(newDate.getDate() - 1);
+    } else if (viewMode === 'week') {
+      newDate.setDate(newDate.getDate() - 7);
+    } else if (viewMode === 'month') {
+      newDate.setMonth(newDate.getMonth() - 1);
+    }
+    setCurrentDate(newDate);
+  };
+
+  const navigateNext = () => {
+    const newDate = new Date(currentDate);
+    if (viewMode === 'day') {
+      newDate.setDate(newDate.getDate() + 1);
+    } else if (viewMode === 'week') {
+      newDate.setDate(newDate.getDate() + 7);
+    } else if (viewMode === 'month') {
+      newDate.setMonth(newDate.getMonth() + 1);
+    }
+    setCurrentDate(newDate);
+  };
+
+  const goToToday = () => {
+    setCurrentDate(new Date());
+  };
+
+  const getDateRangeText = () => {
+    if (viewMode === 'day') {
+      return currentDate.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+    } else if (viewMode === 'week') {
+      const startDate = new Date(currentDate);
+      const dayOfWeek = startDate.getDay();
+      const diff = startDate.getDate() - dayOfWeek;
+      startDate.setDate(diff);
+      const endDate = new Date(startDate);
+      endDate.setDate(endDate.getDate() + 6);
+      return `${startDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - ${endDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`;
+    } else {
+      return currentDate.toLocaleDateString('en-US', { year: 'numeric', month: 'long' });
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-screen">
@@ -158,15 +231,76 @@ export default function FieldTechView() {
   return (
     <div className="flex-1 p-4 sm:p-6 bg-gray-50 pt-16 lg:pt-6">
       <div className="mb-4 sm:mb-6">
-        <h1 className="text-xl sm:text-2xl font-bold text-gray-900">My Tickets</h1>
+        <h1 className="text-xl sm:text-2xl font-bold text-gray-900">My Schedule</h1>
         <p className="text-xs sm:text-sm text-gray-600">View and manage your assigned work orders</p>
+      </div>
+
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-4">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-4">
+          <div className="flex items-center gap-2">
+            <button
+              onClick={navigatePrevious}
+              className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
+            >
+              <ChevronLeft className="w-5 h-5 text-gray-600" />
+            </button>
+            <div className="text-center min-w-[240px]">
+              <h2 className="text-lg font-semibold text-gray-900">{getDateRangeText()}</h2>
+            </div>
+            <button
+              onClick={navigateNext}
+              className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
+            >
+              <ChevronRight className="w-5 h-5 text-gray-600" />
+            </button>
+            <button
+              onClick={goToToday}
+              className="ml-2 px-3 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors text-sm font-medium"
+            >
+              Today
+            </button>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setViewMode('day')}
+              className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                viewMode === 'day'
+                  ? 'bg-orange-600 text-white'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+            >
+              Day
+            </button>
+            <button
+              onClick={() => setViewMode('week')}
+              className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                viewMode === 'week'
+                  ? 'bg-orange-600 text-white'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+            >
+              Week
+            </button>
+            <button
+              onClick={() => setViewMode('month')}
+              className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                viewMode === 'month'
+                  ? 'bg-orange-600 text-white'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+            >
+              Month
+            </button>
+          </div>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
         {tickets.length === 0 ? (
           <div className="col-span-full text-center py-12">
             <Calendar className="w-12 h-12 text-gray-400 mx-auto mb-3" />
-            <p className="text-gray-600">No tickets assigned</p>
+            <p className="text-gray-600">No tickets scheduled for this period</p>
           </div>
         ) : (
           tickets.map((ticket) => (

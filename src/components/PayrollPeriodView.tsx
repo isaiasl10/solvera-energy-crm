@@ -104,51 +104,66 @@ export default function PayrollPeriodView() {
         const totalHours = timeEntries?.reduce((sum, entry) => sum + (entry.total_hours || 0), 0) || 0;
         const hourlyEarnings = totalHours * (appUser.hourly_rate || 0);
 
-        const customerIds = [...new Set(timeEntries?.map(e => e.customer_id).filter(Boolean) || [])];
-
         const batteryJobs: Array<{ customer_name: string; battery_quantity: number; battery_pay: number }> = [];
         const perWattJobs: Array<{ customer_name: string; system_size: number; per_watt_pay: number }> = [];
         let totalBatteryEarnings = 0;
         let totalPerWattEarnings = 0;
 
-        if (customerIds.length > 0) {
-          const { data: customers, error: customerError } = await supabase
-            .from('customers')
-            .select('id, first_name, last_name, battery_quantity, system_size_kw')
-            .in('id', customerIds);
+        const { data: completedInstalls, error: installsError } = await supabase
+          .from('scheduling')
+          .select(`
+            id,
+            customer_id,
+            closed_at,
+            customers!inner (
+              id,
+              full_name,
+              battery_quantity,
+              system_size_kw
+            )
+          `)
+          .eq('pv_installer_id', appUser.id)
+          .eq('ticket_type', 'installation')
+          .not('closed_at', 'is', null)
+          .gte('closed_at', period.start_date.toISOString())
+          .lte('closed_at', period.end_date.toISOString());
 
-          if (customerError) throw customerError;
-
-          customers?.forEach(customer => {
-            if (customer.battery_quantity && customer.battery_quantity > 0) {
-              const batteryKey = Math.min(customer.battery_quantity, 4).toString();
-              const batteryPay = (appUser.battery_pay_rates?.[batteryKey] as number) || 0;
-
-              if (batteryPay > 0) {
-                batteryJobs.push({
-                  customer_name: `${customer.first_name} ${customer.last_name}`,
-                  battery_quantity: customer.battery_quantity,
-                  battery_pay: batteryPay
-                });
-                totalBatteryEarnings += batteryPay;
-              }
-            }
-
-            if (customer.system_size_kw && appUser.per_watt_rate > 0) {
-              const systemWatts = customer.system_size_kw * 1000;
-              const perWattPay = systemWatts * appUser.per_watt_rate;
-
-              if (perWattPay > 0) {
-                perWattJobs.push({
-                  customer_name: `${customer.first_name} ${customer.last_name}`,
-                  system_size: customer.system_size_kw,
-                  per_watt_pay: perWattPay
-                });
-                totalPerWattEarnings += perWattPay;
-              }
-            }
-          });
+        if (installsError) {
+          console.error('Error loading completed installs:', installsError);
         }
+
+        completedInstalls?.forEach(install => {
+          const customer = Array.isArray(install.customers) ? install.customers[0] : install.customers;
+          if (!customer) return;
+
+          if (customer.battery_quantity && customer.battery_quantity > 0) {
+            const batteryKey = Math.min(customer.battery_quantity, 4).toString();
+            const batteryPay = (appUser.battery_pay_rates?.[batteryKey] as number) || 0;
+
+            if (batteryPay > 0) {
+              batteryJobs.push({
+                customer_name: customer.full_name,
+                battery_quantity: customer.battery_quantity,
+                battery_pay: batteryPay
+              });
+              totalBatteryEarnings += batteryPay;
+            }
+          }
+
+          if (customer.system_size_kw && appUser.per_watt_rate > 0) {
+            const systemWatts = customer.system_size_kw * 1000;
+            const perWattPay = systemWatts * appUser.per_watt_rate;
+
+            if (perWattPay > 0) {
+              perWattJobs.push({
+                customer_name: customer.full_name,
+                system_size: customer.system_size_kw,
+                per_watt_pay: perWattPay
+              });
+              totalPerWattEarnings += perWattPay;
+            }
+          }
+        });
 
         periodData.push({
           start_date: period.start_date,
