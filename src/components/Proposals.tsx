@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { createClient } from "@supabase/supabase-js";
+import { useAuth } from "../contexts/AuthContext";
 
 const supabase = createClient(
   import.meta.env.VITE_SUPABASE_URL as string,
@@ -87,6 +88,8 @@ function isGoogleReady() {
 type ToolMode = "none" | "roof" | "circle" | "rect" | "tree" | "add-panel" | "delete-panel";
 
 export default function Proposals() {
+  const { user } = useAuth();
+
   const mapDivRef = useRef<HTMLDivElement | null>(null);
   const autocompleteHostRef = useRef<HTMLDivElement | null>(null);
 
@@ -96,6 +99,7 @@ export default function Proposals() {
 
   const [selected, setSelected] = useState<SelectedAddress | null>(null);
   const [proposal, setProposal] = useState<Proposal | null>(null);
+  const [currentUserData, setCurrentUserData] = useState<any>(null);
 
   const [roofPlanes, setRoofPlanes] = useState<RoofPlaneRow[]>([]);
   const [obstructions, setObstructions] = useState<ObstructionRow[]>([]);
@@ -118,6 +122,13 @@ export default function Proposals() {
   const [mapsError, setMapsError] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [mapsLoading, setMapsLoading] = useState(true);
+
+  const [proposalStep, setProposalStep] = useState<"design" | "pricing">("design");
+  const [selectedFinancingId, setSelectedFinancingId] = useState<string | null>(null);
+  const [selectedAdderIds, setSelectedAdderIds] = useState<string[]>([]);
+  const [customPrice, setCustomPrice] = useState<number>(0);
+  const [financingOptions, setFinancingOptions] = useState<any[]>([]);
+  const [customAdders, setCustomAdders] = useState<any[]>([]);
 
   const selectedRoof = useMemo(
     () => roofPlanes.find((r) => r.id === selectedRoofId) ?? null,
@@ -175,6 +186,46 @@ export default function Proposals() {
 
     loadPanelModels();
   }, []);
+
+  useEffect(() => {
+    async function loadFinancingAndAdders() {
+      const [financingRes, addersRes] = await Promise.all([
+        supabase.from("financing_providers").select("*").order("name", { ascending: true }),
+        supabase.from("custom_adders").select("*").order("name", { ascending: true }),
+      ]);
+
+      if (!financingRes.error && financingRes.data) {
+        setFinancingOptions(financingRes.data);
+      }
+
+      if (!addersRes.error && addersRes.data) {
+        setCustomAdders(addersRes.data);
+      }
+    }
+
+    loadFinancingAndAdders();
+  }, []);
+
+  useEffect(() => {
+    async function loadCurrentUser() {
+      if (!user?.id) return;
+
+      const { data, error } = await supabase
+        .from("app_users")
+        .select("*")
+        .eq("id", user.id)
+        .maybeSingle();
+
+      if (!error && data) {
+        setCurrentUserData(data);
+        if (data.ppw_redline && !customPrice) {
+          setCustomPrice(data.ppw_redline);
+        }
+      }
+    }
+
+    loadCurrentUser();
+  }, [user?.id]);
 
   useEffect(() => {
     if (!mapDivRef.current) return;
@@ -1129,135 +1180,71 @@ export default function Proposals() {
     if (!proposal || !mapRef.current) return;
 
     try {
-      setBusy("Generating starter roof plane...");
+      setBusy("Generating gable roof layout...");
 
       const center = { lat: proposal.lat, lng: proposal.lng };
-      const widthFt = 45;
-      const heightFt = 30;
+      const houseLengthFt = 50;
+      const houseWidthFt = 40;
+      const ridgeOffsetFt = 2;
 
-      const widthM = widthFt / 3.28084;
-      const heightM = heightFt / 3.28084;
+      const lengthM = houseLengthFt / 3.28084;
+      const widthM = houseWidthFt / 3.28084;
+      const ridgeM = ridgeOffsetFt / 3.28084;
 
-      const latDelta = heightM / 2 / 111320;
-      const lngDelta = widthM / 2 / (111320 * Math.cos(center.lat * Math.PI / 180));
+      const latPerM = 1 / 111320;
+      const lngPerM = 1 / (111320 * Math.cos(center.lat * Math.PI / 180));
 
-      const rectangleBounds = new google.maps.LatLngBounds(
-        new google.maps.LatLng(center.lat - latDelta, center.lng - lngDelta),
-        new google.maps.LatLng(center.lat + latDelta, center.lng + lngDelta)
-      );
+      const halfLength = lengthM / 2;
+      const halfWidth = widthM / 2;
+      const ridgeOffset = ridgeM;
 
-      const rectangle = new google.maps.Rectangle({
-        map: mapRef.current,
-        bounds: rectangleBounds,
-        editable: true,
-        draggable: true,
-        fillColor: "#3b82f6",
-        fillOpacity: 0.15,
-        strokeColor: "#1e40af",
-        strokeWeight: 2,
+      const roofPlanes = [
+        {
+          name: "Front Roof",
+          path: [
+            { lat: center.lat + halfLength * latPerM, lng: center.lng - halfWidth * lngPerM },
+            { lat: center.lat + halfLength * latPerM, lng: center.lng + halfWidth * lngPerM },
+            { lat: center.lat + ridgeOffset * latPerM, lng: center.lng + halfWidth * lngPerM },
+            { lat: center.lat + ridgeOffset * latPerM, lng: center.lng - halfWidth * lngPerM },
+          ],
+          pitch_deg: 18,
+        },
+        {
+          name: "Back Roof",
+          path: [
+            { lat: center.lat + ridgeOffset * latPerM, lng: center.lng + halfWidth * lngPerM },
+            { lat: center.lat + ridgeOffset * latPerM, lng: center.lng - halfWidth * lngPerM },
+            { lat: center.lat - halfLength * latPerM, lng: center.lng - halfWidth * lngPerM },
+            { lat: center.lat - halfLength * latPerM, lng: center.lng + halfWidth * lngPerM },
+          ],
+          pitch_deg: 18,
+        },
+      ];
+
+      const planesToInsert = roofPlanes.map((plane) => {
+        const latSpan = Math.abs(plane.path[0].lat - plane.path[2].lat);
+        const lngSpan = Math.abs(plane.path[0].lng - plane.path[2].lng);
+        const approxM2 = latSpan * 111320 * lngSpan * 111320 * Math.cos(center.lat * Math.PI / 180);
+        const areaSqft = m2ToFt2(approxM2);
+
+        return {
+          proposal_id: proposal.id,
+          name: plane.name,
+          pitch_deg: plane.pitch_deg,
+          path: plane.path,
+          area_sqft: areaSqft,
+        };
       });
 
-      const confirmBtn = document.createElement("button");
-      confirmBtn.textContent = "Confirm Roof Plane";
-      confirmBtn.style.cssText = `
-        position: absolute;
-        top: 20px;
-        left: 50%;
-        transform: translateX(-50%);
-        padding: 12px 24px;
-        background: #111827;
-        color: white;
-        border: none;
-        border-radius: 10px;
-        font-weight: 700;
-        cursor: pointer;
-        z-index: 1000;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-      `;
+      const { error } = await supabase.from("proposal_roof_planes").insert(planesToInsert);
 
-      const cancelBtn = document.createElement("button");
-      cancelBtn.textContent = "Cancel";
-      cancelBtn.style.cssText = `
-        position: absolute;
-        top: 20px;
-        left: 50%;
-        transform: translateX(calc(-50% + 180px));
-        padding: 12px 24px;
-        background: white;
-        color: #111827;
-        border: 1px solid rgba(0,0,0,0.15);
-        border-radius: 10px;
-        font-weight: 700;
-        cursor: pointer;
-        z-index: 1000;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-      `;
+      if (error) throw error;
 
-      const mapDiv = mapDivRef.current;
-      if (!mapDiv) return;
-
-      mapDiv.appendChild(confirmBtn);
-      mapDiv.appendChild(cancelBtn);
-
-      const cleanup = () => {
-        rectangle.setMap(null);
-        confirmBtn.remove();
-        cancelBtn.remove();
-      };
-
-      cancelBtn.onclick = () => {
-        cleanup();
-        setBusy(null);
-      };
-
-      confirmBtn.onclick = async () => {
-        try {
-          const bounds = rectangle.getBounds();
-          if (!bounds) return;
-
-          const ne = bounds.getNorthEast();
-          const sw = bounds.getSouthWest();
-          const nw = new google.maps.LatLng(ne.lat(), sw.lng());
-          const se = new google.maps.LatLng(sw.lat(), ne.lng());
-
-          const path = [
-            { lat: nw.lat(), lng: nw.lng() },
-            { lat: ne.lat(), lng: ne.lng() },
-            { lat: se.lat(), lng: se.lng() },
-            { lat: sw.lat(), lng: sw.lng() },
-          ];
-
-          const latSpan = ne.lat() - sw.lat();
-          const lngSpan = ne.lng() - sw.lng();
-          const approxM2 = latSpan * 111320 * lngSpan * 111320 * Math.cos(center.lat * Math.PI / 180);
-          const areaSqft = m2ToFt2(approxM2);
-
-          const roofCount = roofPlanes.length;
-          const name = `Roof Plane ${roofCount + 1}`;
-
-          const { error } = await supabase.from("proposal_roof_planes").insert({
-            proposal_id: proposal.id,
-            name,
-            pitch_deg: 18,
-            path,
-            area_sqft: areaSqft,
-          });
-
-          if (error) throw error;
-
-          cleanup();
-          await reloadProposalData(proposal.id);
-          setBusy(null);
-        } catch (e: any) {
-          console.error(e);
-          alert(e?.message ?? "Failed to save roof plane.");
-          cleanup();
-          setBusy(null);
-        }
-      };
+      await reloadProposalData(proposal.id);
+      setBusy(null);
     } catch (e: any) {
       console.error(e);
-      alert(e?.message ?? "Failed to generate starter roof plane.");
+      alert(e?.message ?? "Failed to generate roof layout.");
       setBusy(null);
     }
   }
@@ -1365,9 +1352,233 @@ export default function Proposals() {
     };
   }, [proposal, selectedPanelModel, panels]);
 
+  if (proposal && proposalStep === "pricing" && systemSummary) {
+    const systemSizeKw = parseFloat(systemSummary.systemSizeKw);
+    const basePrice = customPrice || currentUserData?.ppw_redline || 2.5;
+    const systemCost = systemSizeKw * 1000 * basePrice;
+
+    const selectedAddersTotal = customAdders
+      .filter((a) => selectedAdderIds.includes(a.id))
+      .reduce((sum, a) => sum + a.price, 0);
+
+    const totalCost = systemCost + selectedAddersTotal;
+
+    return (
+      <div style={{ display: "flex", height: "calc(100vh - 64px)", gap: 16, padding: 16 }}>
+        <div style={{ width: 420, display: "flex", flexDirection: "column", gap: 16, overflowY: "auto", paddingRight: 8 }}>
+          <div>
+            <button
+              onClick={() => setProposalStep("design")}
+              style={{
+                padding: "8px 16px",
+                borderRadius: 8,
+                border: "1px solid rgba(0,0,0,0.15)",
+                background: "white",
+                fontWeight: 600,
+                cursor: "pointer",
+                marginBottom: 12,
+              }}
+            >
+              ← Back to Design
+            </button>
+            <div style={{ fontSize: 22, fontWeight: 800 }}>Pricing & Details</div>
+            <div style={{ fontSize: 13, opacity: 0.75 }}>
+              Configure customer info, financing, and pricing
+            </div>
+          </div>
+
+          <div style={{ borderTop: "1px solid rgba(0,0,0,0.08)", paddingTop: 12 }}>
+            <div style={{ fontWeight: 800, marginBottom: 8 }}>System Summary</div>
+            <div style={{ display: "grid", gap: 8, fontSize: 13 }}>
+              <div style={{ display: "flex", justifyContent: "space-between" }}>
+                <span style={{ opacity: 0.7 }}>Panel Count:</span>
+                <strong>{systemSummary.panelCount}</strong>
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between" }}>
+                <span style={{ opacity: 0.7 }}>System Size:</span>
+                <strong>{systemSummary.systemSizeKw} kW</strong>
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between" }}>
+                <span style={{ opacity: 0.7 }}>Est. Annual Production:</span>
+                <strong>{systemSummary.estimatedAnnualProduction.toLocaleString()} kWh</strong>
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between" }}>
+                <span style={{ opacity: 0.7 }}>Energy Offset:</span>
+                <strong>{systemSummary.offsetPercent}%</strong>
+              </div>
+            </div>
+          </div>
+
+          <div style={{ borderTop: "1px solid rgba(0,0,0,0.08)", paddingTop: 12 }}>
+            <div style={{ fontWeight: 800, marginBottom: 8 }}>Sales Representative</div>
+            <div style={{ display: "grid", gap: 8, fontSize: 13 }}>
+              <div style={{ display: "flex", justifyContent: "space-between" }}>
+                <span style={{ opacity: 0.7 }}>Name:</span>
+                <strong>{currentUserData?.name || "Loading..."}</strong>
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between" }}>
+                <span style={{ opacity: 0.7 }}>Email:</span>
+                <strong style={{ fontSize: 12 }}>{currentUserData?.email || "Loading..."}</strong>
+              </div>
+              {currentUserData?.phone && (
+                <div style={{ display: "flex", justifyContent: "space-between" }}>
+                  <span style={{ opacity: 0.7 }}>Phone:</span>
+                  <strong>{currentUserData.phone}</strong>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div style={{ borderTop: "1px solid rgba(0,0,0,0.08)", paddingTop: 12 }}>
+            <div style={{ fontWeight: 800, marginBottom: 8 }}>Pricing</div>
+            <div>
+              <label style={{ display: "block", marginBottom: 4, fontSize: 12, opacity: 0.7 }}>
+                Price per Watt ($)
+              </label>
+              <input
+                type="number"
+                min={0}
+                step={0.01}
+                value={customPrice}
+                onChange={(e) => setCustomPrice(Number(e.target.value))}
+                style={{
+                  width: "100%",
+                  height: 42,
+                  borderRadius: 8,
+                  border: "1px solid rgba(0,0,0,0.2)",
+                  padding: "0 12px",
+                  fontSize: 14,
+                  fontWeight: 600,
+                }}
+              />
+              <div style={{ fontSize: 11, opacity: 0.6, marginTop: 4 }}>
+                Your redline: ${currentUserData?.ppw_redline?.toFixed(2) || "2.50"}/W
+              </div>
+            </div>
+
+            <div style={{ marginTop: 12, padding: 12, background: "rgba(0,0,0,0.02)", borderRadius: 10 }}>
+              <div style={{ fontSize: 12, opacity: 0.7, marginBottom: 4 }}>Base System Cost</div>
+              <div style={{ fontSize: 20, fontWeight: 800 }}>${systemCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+            </div>
+          </div>
+
+          <div style={{ borderTop: "1px solid rgba(0,0,0,0.08)", paddingTop: 12 }}>
+            <div style={{ fontWeight: 800, marginBottom: 8 }}>Adders</div>
+            {customAdders.length === 0 ? (
+              <div style={{ fontSize: 13, opacity: 0.7 }}>No adders available</div>
+            ) : (
+              <div style={{ display: "grid", gap: 8 }}>
+                {customAdders.map((adder) => (
+                  <label
+                    key={adder.id}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 10,
+                      padding: 10,
+                      borderRadius: 8,
+                      border: selectedAdderIds.includes(adder.id) ? "2px solid #111827" : "1px solid rgba(0,0,0,0.12)",
+                      cursor: "pointer",
+                      background: selectedAdderIds.includes(adder.id) ? "rgba(17,24,39,0.04)" : "white",
+                    }}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={selectedAdderIds.includes(adder.id)}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setSelectedAdderIds([...selectedAdderIds, adder.id]);
+                        } else {
+                          setSelectedAdderIds(selectedAdderIds.filter((id) => id !== adder.id));
+                        }
+                      }}
+                      style={{ width: 18, height: 18, cursor: "pointer" }}
+                    />
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontWeight: 600, fontSize: 13 }}>{adder.name}</div>
+                      {adder.description && (
+                        <div style={{ fontSize: 11, opacity: 0.7, marginTop: 2 }}>{adder.description}</div>
+                      )}
+                    </div>
+                    <div style={{ fontWeight: 700, fontSize: 14 }}>
+                      ${adder.price.toLocaleString()}
+                    </div>
+                  </label>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div style={{ borderTop: "1px solid rgba(0,0,0,0.08)", paddingTop: 12 }}>
+            <div style={{ fontWeight: 800, marginBottom: 8 }}>Financing</div>
+            {financingOptions.length === 0 ? (
+              <div style={{ fontSize: 13, opacity: 0.7 }}>No financing options available</div>
+            ) : (
+              <div style={{ display: "grid", gap: 8 }}>
+                {financingOptions.map((option) => (
+                  <label
+                    key={option.id}
+                    style={{
+                      display: "flex",
+                      alignItems: "flex-start",
+                      gap: 10,
+                      padding: 12,
+                      borderRadius: 8,
+                      border: selectedFinancingId === option.id ? "2px solid #111827" : "1px solid rgba(0,0,0,0.12)",
+                      cursor: "pointer",
+                      background: selectedFinancingId === option.id ? "rgba(17,24,39,0.04)" : "white",
+                    }}
+                  >
+                    <input
+                      type="radio"
+                      name="financing"
+                      checked={selectedFinancingId === option.id}
+                      onChange={() => setSelectedFinancingId(option.id)}
+                      style={{ width: 18, height: 18, cursor: "pointer", marginTop: 2 }}
+                    />
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontWeight: 700, fontSize: 14 }}>{option.name}</div>
+                      <div style={{ fontSize: 12, opacity: 0.75, marginTop: 4 }}>
+                        {option.term_months} months • {option.apr}% APR • ${option.dealer_fee} dealer fee
+                      </div>
+                    </div>
+                  </label>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div style={{ borderTop: "1px solid rgba(0,0,0,0.08)", paddingTop: 12 }}>
+            <div style={{ fontWeight: 800, marginBottom: 8 }}>Total</div>
+            <div style={{
+              background: "linear-gradient(135deg, #059669 0%, #047857 100%)",
+              padding: 16,
+              borderRadius: 12,
+              color: "white",
+            }}>
+              <div style={{ fontSize: 28, fontWeight: 800 }}>
+                ${totalCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </div>
+              <div style={{ fontSize: 13, opacity: 0.9, marginTop: 4 }}>
+                Total Project Cost
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(0,0,0,0.02)", borderRadius: 14 }}>
+          <div style={{ textAlign: "center", opacity: 0.5 }}>
+            <div style={{ fontSize: 18, fontWeight: 700, marginBottom: 8 }}>Proposal Preview</div>
+            <div style={{ fontSize: 13 }}>Preview generation coming soon</div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div style={{ display: "flex", height: "calc(100vh - 64px)", gap: 16, padding: 16 }}>
-      <div style={{ width: 440, display: "flex", flexDirection: "column", gap: 12 }}>
+      <div style={{ width: 380, display: "flex", flexDirection: "column", gap: 12, overflowY: "auto", paddingRight: 8 }}>
         <div>
           <div style={{ fontSize: 22, fontWeight: 800 }}>Proposals</div>
           <div style={{ fontSize: 13, opacity: 0.75 }}>
@@ -1939,6 +2150,27 @@ export default function Proposals() {
                   Production estimate uses local yield factor (1400 kWh/kW/yr) with 77% derate.
                 </div>
               </div>
+            )}
+
+            {systemSummary && proposalStep === "design" && (
+              <button
+                onClick={() => setProposalStep("pricing")}
+                style={{
+                  width: "100%",
+                  height: 48,
+                  borderRadius: 12,
+                  border: "none",
+                  background: "linear-gradient(135deg, #111827 0%, #1f2937 100%)",
+                  color: "white",
+                  fontWeight: 800,
+                  fontSize: 15,
+                  cursor: "pointer",
+                  marginTop: 12,
+                  boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
+                }}
+              >
+                Next: Customer & Pricing →
+              </button>
             )}
 
             {busy && (
