@@ -1,6 +1,10 @@
-import { useEffect, useRef, useState } from "react";
-import { supabase } from "../lib/supabase";
-import { useAuth } from "../contexts/AuthContext";
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import { createClient } from "@supabase/supabase-js";
+
+const supabase = createClient(
+  import.meta.env.VITE_SUPABASE_URL as string,
+  import.meta.env.VITE_SUPABASE_ANON_KEY as string
+);
 
 type SelectedAddress = {
   placeId: string;
@@ -11,489 +15,869 @@ type SelectedAddress = {
 
 type Proposal = {
   id: string;
+  status: string;
   place_id: string;
   formatted_address: string;
   lat: number;
   lng: number;
-  status: string;
-  created_at: string;
+  panel_make: string;
+  panel_model: string;
+  panel_watts: number;
+  panel_orientation: "portrait" | "landscape";
 };
 
-type RoofPlane = {
+type RoofPlaneRow = {
   id: string;
   proposal_id: string;
+  name: string;
+  pitch_deg: number;
   path: Array<{ lat: number; lng: number }>;
-  area_sqft: number;
-  tilt: number | null;
-  azimuth: number | null;
+  area_sqft: number | null;
 };
 
-async function loadGoogleMaps(apiKey: string) {
-  if ((window as any).google?.maps) return;
+type ObstructionRow = {
+  id: string;
+  proposal_id: string;
+  type: "rect" | "circle" | "tree";
+  roof_plane_id: string | null;
+  center_lat: number;
+  center_lng: number;
+  radius_ft: number | null;
+  width_ft: number | null;
+  height_ft: number | null;
+  rotation_deg: number | null;
+};
 
-  const script = document.createElement("script");
-  script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places,geometry&v=weekly`;
-  script.async = true;
-  script.defer = true;
+const mToFt = (m: number) => m * 3.28084;
+const m2ToFt2 = (m2: number) => m2 * 10.7639104167097;
 
-  document.head.appendChild(script);
-
-  await new Promise((resolve, reject) => {
-    script.onload = resolve;
-    script.onerror = reject;
-  });
+function isGoogleReady() {
+  return typeof (window as any).google !== "undefined" && !!(window as any).google.maps;
 }
 
+type ToolMode = "none" | "roof" | "circle" | "rect" | "tree";
+
 export default function Proposals() {
-  const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY as string | undefined;
-  const { user } = useAuth();
-
-  if (!apiKey) {
-    return (
-      <div style={{ padding: 24 }}>
-        <h2 style={{ margin: 0 }}>Proposals</h2>
-        <p style={{ color: "crimson", marginTop: 12 }}>
-          Missing Google Maps API key. Add <code>VITE_GOOGLE_MAPS_API_KEY</code> to the environment variables
-          and redeploy.
-        </p>
-        <ol style={{ marginTop: 12 }}>
-          <li>Google Cloud → enable <b>Maps JavaScript API</b> and <b>Places API</b></li>
-          <li>Add referrers: <code>https://auric-core.io/*</code> and preview domains</li>
-          <li>Redeploy site so Vite can bake the env var into the build</li>
-        </ol>
-      </div>
-    );
-  }
-
   const mapDivRef = useRef<HTMLDivElement | null>(null);
-  const autocompleteInputRef = useRef<HTMLInputElement | null>(null);
+  const autocompleteHostRef = useRef<HTMLDivElement | null>(null);
 
   const mapRef = useRef<google.maps.Map | null>(null);
-  const markerRef = useRef<google.maps.Marker | null>(null);
-  const drawingPolygonRef = useRef<google.maps.Polygon | null>(null);
-  const roofPlanesRef = useRef<google.maps.Polygon[]>([]);
+  const drawingRef = useRef<google.maps.drawing.DrawingManager | null>(null);
 
   const [selected, setSelected] = useState<SelectedAddress | null>(null);
-  const [mapsReady, setMapsReady] = useState(false);
-  const [mapsError, setMapsError] = useState<string | null>(null);
+  const [proposal, setProposal] = useState<Proposal | null>(null);
 
-  const [currentProposal, setCurrentProposal] = useState<Proposal | null>(null);
-  const [roofPlanes, setRoofPlanes] = useState<RoofPlane[]>([]);
-  const [isDrawing, setIsDrawing] = useState(false);
-  const [drawingPoints, setDrawingPoints] = useState<google.maps.LatLng[]>([]);
-  const [isSaving, setIsSaving] = useState(false);
+  const [roofPlanes, setRoofPlanes] = useState<RoofPlaneRow[]>([]);
+  const [obstructions, setObstructions] = useState<ObstructionRow[]>([]);
+
+  const roofPolysRef = useRef<Map<string, google.maps.Polygon>>(new Map());
+  const obstructionShapesRef = useRef<Map<string, any>>(new Map());
+
+  const [toolMode, setToolMode] = useState<ToolMode>("none");
+  const [selectedRoofId, setSelectedRoofId] = useState<string | null>(null);
+
+  const [mapsError, setMapsError] = useState<string | null>(null);
+  const [busy, setBusy] = useState<string | null>(null);
+
+  const selectedRoof = useMemo(
+    () => roofPlanes.find((r) => r.id === selectedRoofId) ?? null,
+    [roofPlanes, selectedRoofId]
+  );
 
   useEffect(() => {
-    let cancelled = false;
+    if (!mapDivRef.current) return;
 
-    async function init() {
+    if (!isGoogleReady()) {
+      setMapsError(
+        "Google Maps is not loaded. Ensure the script loads with libraries=places,drawing,geometry."
+      );
+      return;
+    }
+
+    const map = new google.maps.Map(mapDivRef.current, {
+      center: { lat: 39.7392, lng: -104.9903 },
+      zoom: 19,
+      mapTypeId: "satellite",
+      tilt: 0,
+      streetViewControl: false,
+      fullscreenControl: false,
+      mapTypeControl: true,
+    });
+    mapRef.current = map;
+
+    const input = document.createElement("input");
+    input.placeholder = "Type address and select...";
+    input.style.width = "100%";
+    input.style.height = "42px";
+    input.style.borderRadius = "10px";
+    input.style.border = "1px solid rgba(0,0,0,0.2)";
+    input.style.padding = "0 12px";
+    input.style.fontSize = "14px";
+
+    if (autocompleteHostRef.current) {
+      autocompleteHostRef.current.innerHTML = "";
+      autocompleteHostRef.current.appendChild(input);
+    }
+
+    const ac = new google.maps.places.Autocomplete(input, { types: ["address"] });
+    ac.addListener("place_changed", () => {
+      const place = ac.getPlace();
+      const loc = place.geometry?.location;
+      if (!loc) return;
+
+      const payload: SelectedAddress = {
+        placeId: place.place_id || "",
+        formattedAddress: place.formatted_address || place.name || "",
+        lat: loc.lat(),
+        lng: loc.lng(),
+      };
+      setSelected(payload);
+
+      map.setCenter({ lat: payload.lat, lng: payload.lng });
+      map.setZoom(20);
+
+      setProposal(null);
+      setRoofPlanes([]);
+      setObstructions([]);
+      setSelectedRoofId(null);
+      setToolMode("none");
+
+      roofPolysRef.current.forEach((p) => p.setMap(null));
+      roofPolysRef.current.clear();
+      obstructionShapesRef.current.forEach((s) => {
+        if (s?.setMap) s.setMap(null);
+      });
+      obstructionShapesRef.current.clear();
+    });
+
+    const drawing = new google.maps.drawing.DrawingManager({
+      drawingMode: null,
+      drawingControl: false,
+      polygonOptions: {
+        clickable: true,
+        editable: false,
+        fillOpacity: 0.18,
+        strokeWeight: 2,
+      },
+      rectangleOptions: {
+        clickable: true,
+        editable: true,
+        fillOpacity: 0.18,
+        strokeWeight: 2,
+      },
+      circleOptions: {
+        clickable: true,
+        editable: true,
+        fillOpacity: 0.18,
+        strokeWeight: 2,
+      },
+    });
+    drawing.setMap(map);
+    drawingRef.current = drawing;
+
+    google.maps.event.addListener(drawing, "polygoncomplete", async (poly: google.maps.Polygon) => {
+      if (!proposal) {
+        poly.setMap(null);
+        return;
+      }
       try {
-        await loadGoogleMaps(apiKey!);
-        if (cancelled) return;
+        setBusy("Saving roof plane...");
 
-        const map = new google.maps.Map(mapDivRef.current!, {
-          center: { lat: 39.7392, lng: -104.9903 },
-          zoom: 19,
-          mapTypeId: "satellite",
-          tilt: 0,
-          streetViewControl: false,
-          fullscreenControl: false,
-          mapTypeControl: true,
-        });
+        const path = poly
+          .getPath()
+          .getArray()
+          .map((p) => ({ lat: p.lat(), lng: p.lng() }));
 
-        mapRef.current = map;
+        const m2 = (google.maps as any).geometry?.spherical?.computeArea(poly.getPath());
+        const areaSqft = typeof m2 === "number" ? m2ToFt2(m2) : null;
 
-        const autocomplete = new google.maps.places.Autocomplete(
-          autocompleteInputRef.current!,
-          { types: ["address"] }
-        );
+        const name = `Roof Plane ${roofPlanes.length + 1}`;
 
-        autocomplete.addListener("place_changed", () => {
-          const place = autocomplete.getPlace();
-          if (!place.geometry?.location) return;
+        const { data, error } = await supabase
+          .from("proposal_roof_planes")
+          .insert({
+            proposal_id: proposal.id,
+            name,
+            pitch_deg: 0,
+            path,
+            area_sqft: areaSqft,
+          })
+          .select()
+          .single();
 
-          const loc = place.geometry.location;
-          const lat = loc.lat();
-          const lng = loc.lng();
-          const center = { lat, lng };
+        if (error) throw error;
 
-          const payload: SelectedAddress = {
-            placeId: place.place_id ?? "",
-            formattedAddress: place.formatted_address ?? "",
-            lat,
-            lng,
-          };
+        poly.setEditable(false);
 
-          setSelected(payload);
-          setCurrentProposal(null);
-          setRoofPlanes([]);
+        const row: RoofPlaneRow = {
+          id: data.id,
+          proposal_id: data.proposal_id,
+          name: data.name,
+          pitch_deg: data.pitch_deg,
+          path: data.path,
+          area_sqft: data.area_sqft,
+        };
 
-          map.setCenter(center);
-          map.setZoom(20);
+        roofPolysRef.current.set(row.id, poly);
+        bindRoofPolyEvents(row.id, poly);
 
-          if (!markerRef.current) {
-            markerRef.current = new google.maps.Marker({
-              map,
-              position: center,
-              draggable: false,
-            });
-          } else {
-            markerRef.current.setPosition(center);
-          }
-        });
-
-        setMapsReady(true);
+        setRoofPlanes((prev) => [...prev, row]);
+        setSelectedRoofId(row.id);
       } catch (e: any) {
-        setMapsError(e?.message ?? "Failed to load Google Maps.");
+        console.error(e);
+        alert(e?.message ?? "Failed to save roof plane.");
+        poly.setMap(null);
+      } finally {
+        setBusy(null);
+      }
+    });
+
+    google.maps.event.addListener(
+      drawing,
+      "rectanglecomplete",
+      async (rect: google.maps.Rectangle) => {
+        if (!proposal) {
+          rect.setMap(null);
+          return;
+        }
+        try {
+          setBusy("Saving rectangle obstruction...");
+
+          const bounds = rect.getBounds();
+          if (!bounds) throw new Error("Missing bounds");
+
+          const ne = bounds.getNorthEast();
+          const sw = bounds.getSouthWest();
+          const center = bounds.getCenter();
+
+          const north = new google.maps.LatLng(ne.lat(), center.lng());
+          const south = new google.maps.LatLng(sw.lat(), center.lng());
+          const east = new google.maps.LatLng(center.lat(), ne.lng());
+          const west = new google.maps.LatLng(center.lat(), sw.lng());
+
+          const mNS = (google.maps as any).geometry?.spherical?.computeDistanceBetween(north, south);
+          const mEW = (google.maps as any).geometry?.spherical?.computeDistanceBetween(east, west);
+
+          const widthFt = typeof mEW === "number" ? mToFt(mEW) : null;
+          const heightFt = typeof mNS === "number" ? mToFt(mNS) : null;
+
+          const { data, error } = await supabase
+            .from("proposal_obstructions")
+            .insert({
+              proposal_id: proposal.id,
+              type: "rect",
+              roof_plane_id: selectedRoofId,
+              center_lat: center.lat(),
+              center_lng: center.lng(),
+              width_ft: widthFt,
+              height_ft: heightFt,
+              rotation_deg: 0,
+            })
+            .select()
+            .single();
+
+          if (error) throw error;
+
+          obstructionShapesRef.current.set(data.id, rect);
+          bindObstructionEvents(data.id, rect);
+
+          setObstructions((prev) => [
+            ...prev,
+            {
+              id: data.id,
+              proposal_id: data.proposal_id,
+              type: data.type,
+              roof_plane_id: data.roof_plane_id,
+              center_lat: data.center_lat,
+              center_lng: data.center_lng,
+              radius_ft: data.radius_ft,
+              width_ft: data.width_ft,
+              height_ft: data.height_ft,
+              rotation_deg: data.rotation_deg,
+            },
+          ]);
+        } catch (e: any) {
+          console.error(e);
+          alert(e?.message ?? "Failed to save rectangle obstruction.");
+          rect.setMap(null);
+        } finally {
+          setBusy(null);
+        }
+      }
+    );
+
+    google.maps.event.addListener(drawing, "circlecomplete", async (circle: google.maps.Circle) => {
+      if (!proposal) {
+        circle.setMap(null);
+        return;
+      }
+      try {
+        setBusy("Saving circle obstruction...");
+
+        const center = circle.getCenter();
+        if (!center) throw new Error("Missing center");
+
+        const radiusM = circle.getRadius();
+        const radiusFt = mToFt(radiusM);
+
+        const { data, error } = await supabase
+          .from("proposal_obstructions")
+          .insert({
+            proposal_id: proposal.id,
+            type: toolMode === "tree" ? "tree" : "circle",
+            roof_plane_id: selectedRoofId,
+            center_lat: center.lat(),
+            center_lng: center.lng(),
+            radius_ft: radiusFt,
+          })
+          .select()
+          .single();
+
+        if (error) throw error;
+
+        obstructionShapesRef.current.set(data.id, circle);
+        bindObstructionEvents(data.id, circle);
+
+        setObstructions((prev) => [
+          ...prev,
+          {
+            id: data.id,
+            proposal_id: data.proposal_id,
+            type: data.type,
+            roof_plane_id: data.roof_plane_id,
+            center_lat: data.center_lat,
+            center_lng: data.center_lng,
+            radius_ft: data.radius_ft,
+            width_ft: data.width_ft,
+            height_ft: data.height_ft,
+            rotation_deg: data.rotation_deg,
+          },
+        ]);
+      } catch (e: any) {
+        console.error(e);
+        alert(e?.message ?? "Failed to save circle obstruction.");
+        circle.setMap(null);
+      } finally {
+        setBusy(null);
+      }
+    });
+
+    map.addListener("click", async (e: google.maps.MapMouseEvent) => {
+      if (!proposal) return;
+      if (toolMode !== "tree") return;
+      if (!e.latLng) return;
+
+      try {
+        setBusy("Saving tree...");
+
+        const center = e.latLng;
+
+        const { data, error } = await supabase
+          .from("proposal_obstructions")
+          .insert({
+            proposal_id: proposal.id,
+            type: "tree",
+            roof_plane_id: selectedRoofId,
+            center_lat: center.lat(),
+            center_lng: center.lng(),
+            radius_ft: 12,
+          })
+          .select()
+          .single();
+
+        if (error) throw error;
+
+        const marker = new google.maps.Marker({
+          map,
+          position: center,
+          title: "Tree",
+          icon: {
+            path: google.maps.SymbolPath.CIRCLE,
+            scale: 7,
+            fillOpacity: 1,
+            fillColor: "#16a34a",
+            strokeColor: "#065f46",
+            strokeWeight: 2,
+          },
+        });
+
+        const canopy = new google.maps.Circle({
+          map,
+          center,
+          radius: (data.radius_ft ?? 12) / 3.28084,
+          fillOpacity: 0.08,
+          strokeOpacity: 0.35,
+          strokeWeight: 2,
+        });
+
+        obstructionShapesRef.current.set(`${data.id}:marker`, marker);
+        obstructionShapesRef.current.set(`${data.id}:canopy`, canopy);
+
+        bindObstructionEvents(data.id, marker);
+        bindObstructionEvents(data.id, canopy);
+
+        setObstructions((prev) => [
+          ...prev,
+          {
+            id: data.id,
+            proposal_id: data.proposal_id,
+            type: data.type,
+            roof_plane_id: data.roof_plane_id,
+            center_lat: data.center_lat,
+            center_lng: data.center_lng,
+            radius_ft: data.radius_ft,
+            width_ft: data.width_ft,
+            height_ft: data.height_ft,
+            rotation_deg: data.rotation_deg,
+          },
+        ]);
+      } catch (err: any) {
+        console.error(err);
+        alert(err?.message ?? "Failed to save tree.");
+      } finally {
+        setBusy(null);
+      }
+    });
+
+    function bindRoofPolyEvents(id: string, poly: google.maps.Polygon) {
+      poly.addListener("click", () => {
+        setSelectedRoofId(id);
+      });
+    }
+
+    function bindObstructionEvents(id: string, shape: any) {
+      if (shape?.addListener) {
+        shape.addListener("click", () => {
+        });
       }
     }
 
-    init();
     return () => {
-      cancelled = true;
+      drawing.setMap(null);
+      mapRef.current = null;
+      drawingRef.current = null;
     };
-  }, [apiKey]);
+  }, [proposal, toolMode, roofPlanes.length, selectedRoofId]);
 
-  const createProposal = async () => {
-    if (!selected || !user) return;
+  useEffect(() => {
+    const drawing = drawingRef.current;
+    if (!drawing) return;
 
-    setIsSaving(true);
+    if (!proposal) {
+      drawing.setDrawingMode(null);
+      return;
+    }
+
+    if (toolMode === "roof") drawing.setDrawingMode(google.maps.drawing.OverlayType.POLYGON);
+    else if (toolMode === "rect") drawing.setDrawingMode(google.maps.drawing.OverlayType.RECTANGLE);
+    else if (toolMode === "circle") drawing.setDrawingMode(google.maps.drawing.OverlayType.CIRCLE);
+    else if (toolMode === "tree") drawing.setDrawingMode(null);
+    else drawing.setDrawingMode(null);
+  }, [toolMode, proposal]);
+
+  async function createProposal() {
+    if (!selected) return;
+
     try {
+      setBusy("Creating proposal...");
+
+      const {
+        data: { user },
+        error: userError,
+      } = await supabase.auth.getUser();
+      if (userError) throw userError;
+      if (!user) throw new Error("Not authenticated");
+
       const { data, error } = await supabase
         .from("proposals")
         .insert({
+          created_by: user.id,
+          status: "draft",
           place_id: selected.placeId,
           formatted_address: selected.formattedAddress,
           lat: selected.lat,
           lng: selected.lng,
-          status: "draft",
-          created_by: user.id,
+          panel_make: "Aptos",
+          panel_model: "410W",
+          panel_watts: 410,
+          panel_orientation: "portrait",
         })
         .select()
         .single();
 
       if (error) throw error;
 
-      setCurrentProposal(data);
-    } catch (error: any) {
-      alert(`Error creating proposal: ${error.message}`);
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  const startDrawing = () => {
-    if (!mapRef.current) return;
-
-    setIsDrawing(true);
-    setDrawingPoints([]);
-
-    if (drawingPolygonRef.current) {
-      drawingPolygonRef.current.setMap(null);
-    }
-
-    const clickListener = mapRef.current.addListener("click", (e: google.maps.MapMouseEvent) => {
-      if (!e.latLng) return;
-
-      const newPoints = [...drawingPoints, e.latLng];
-      setDrawingPoints(newPoints);
-
-      if (drawingPolygonRef.current) {
-        drawingPolygonRef.current.setMap(null);
-      }
-
-      drawingPolygonRef.current = new google.maps.Polygon({
-        map: mapRef.current!,
-        paths: newPoints,
-        strokeColor: "#FF0000",
-        strokeOpacity: 0.8,
-        strokeWeight: 2,
-        fillColor: "#FF0000",
-        fillOpacity: 0.35,
-        editable: false,
+      setProposal({
+        id: data.id,
+        status: data.status,
+        place_id: data.place_id,
+        formatted_address: data.formatted_address,
+        lat: data.lat,
+        lng: data.lng,
+        panel_make: data.panel_make,
+        panel_model: data.panel_model,
+        panel_watts: data.panel_watts,
+        panel_orientation: data.panel_orientation,
       });
+
+      await reloadProposalData(data.id);
+    } catch (e: any) {
+      console.error(e);
+      alert(e?.message ?? "Failed to create proposal.");
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function reloadProposalData(proposalId: string) {
+    const { data: roofs, error: roofErr } = await supabase
+      .from("proposal_roof_planes")
+      .select("*")
+      .eq("proposal_id", proposalId)
+      .order("created_at", { ascending: true });
+
+    if (roofErr) throw roofErr;
+
+    const { data: obs, error: obsErr } = await supabase
+      .from("proposal_obstructions")
+      .select("*")
+      .eq("proposal_id", proposalId)
+      .order("created_at", { ascending: true });
+
+    if (obsErr) throw obsErr;
+
+    setRoofPlanes(
+      (roofs ?? []).map((r: any) => ({
+        id: r.id,
+        proposal_id: r.proposal_id,
+        name: r.name,
+        pitch_deg: r.pitch_deg,
+        path: r.path,
+        area_sqft: r.area_sqft,
+      }))
+    );
+
+    setObstructions(
+      (obs ?? []).map((o: any) => ({
+        id: o.id,
+        proposal_id: o.proposal_id,
+        type: o.type,
+        roof_plane_id: o.roof_plane_id,
+        center_lat: o.center_lat,
+        center_lng: o.center_lng,
+        radius_ft: o.radius_ft,
+        width_ft: o.width_ft,
+        height_ft: o.height_ft,
+        rotation_deg: o.rotation_deg,
+      }))
+    );
+
+    renderAllShapes(roofs ?? [], obs ?? []);
+  }
+
+  function renderAllShapes(roofs: any[], obs: any[]) {
+    const map = mapRef.current;
+    if (!map) return;
+
+    roofPolysRef.current.forEach((p) => p.setMap(null));
+    roofPolysRef.current.clear();
+    obstructionShapesRef.current.forEach((s) => {
+      if (s?.setMap) s.setMap(null);
     });
+    obstructionShapesRef.current.clear();
 
-    (mapRef.current as any)._drawingListener = clickListener;
-  };
-
-  const finishPlane = async () => {
-    if (!currentProposal || drawingPoints.length < 3) {
-      alert("You need at least 3 points to create a roof plane");
-      return;
-    }
-
-    setIsSaving(true);
-    try {
-      const path = drawingPoints.map((p) => ({ lat: p.lat(), lng: p.lng() }));
-
-      const area = google.maps.geometry.spherical.computeArea(drawingPoints);
-      const areaSqFt = area * 10.7639;
-
-      const { data, error } = await supabase
-        .from("proposal_roof_planes")
-        .insert({
-          proposal_id: currentProposal.id,
-          path: path,
-          area_sqft: areaSqFt,
-        })
-        .select()
-        .single();
-
-      if (error) throw error;
-
-      setRoofPlanes([...roofPlanes, data]);
-      cancelDrawing();
-      loadRoofPlanes(currentProposal.id);
-    } catch (error: any) {
-      alert(`Error saving roof plane: ${error.message}`);
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  const cancelDrawing = () => {
-    setIsDrawing(false);
-    setDrawingPoints([]);
-
-    if (drawingPolygonRef.current) {
-      drawingPolygonRef.current.setMap(null);
-      drawingPolygonRef.current = null;
-    }
-
-    if (mapRef.current && (mapRef.current as any)._drawingListener) {
-      google.maps.event.removeListener((mapRef.current as any)._drawingListener);
-      (mapRef.current as any)._drawingListener = null;
-    }
-  };
-
-  const loadRoofPlanes = async (proposalId: string) => {
-    try {
-      const { data, error } = await supabase
-        .from("proposal_roof_planes")
-        .select("*")
-        .eq("proposal_id", proposalId);
-
-      if (error) throw error;
-
-      setRoofPlanes(data || []);
-
-      roofPlanesRef.current.forEach((p) => p.setMap(null));
-      roofPlanesRef.current = [];
-
-      (data || []).forEach((plane: RoofPlane) => {
-        const polygon = new google.maps.Polygon({
-          map: mapRef.current!,
-          paths: plane.path,
-          strokeColor: "#00FF00",
-          strokeOpacity: 0.8,
-          strokeWeight: 2,
-          fillColor: "#00FF00",
-          fillOpacity: 0.35,
-          editable: false,
-        });
-        roofPlanesRef.current.push(polygon);
+    for (const r of roofs) {
+      const poly = new google.maps.Polygon({
+        map,
+        paths: r.path,
+        clickable: true,
+        editable: false,
+        fillOpacity: 0.18,
+        strokeWeight: 2,
       });
-    } catch (error: any) {
-      console.error("Error loading roof planes:", error);
+      roofPolysRef.current.set(r.id, poly);
+      poly.addListener("click", () => setSelectedRoofId(r.id));
     }
-  };
 
-  useEffect(() => {
-    if (currentProposal) {
-      loadRoofPlanes(currentProposal.id);
+    for (const o of obs) {
+      const center = { lat: o.center_lat, lng: o.center_lng };
+
+      if (o.type === "circle") {
+        const circle = new google.maps.Circle({
+          map,
+          center,
+          radius: ((o.radius_ft ?? 6) / 3.28084),
+          editable: true,
+          fillOpacity: 0.12,
+          strokeOpacity: 0.45,
+          strokeWeight: 2,
+        });
+        obstructionShapesRef.current.set(o.id, circle);
+      } else if (o.type === "rect") {
+        const latLng = new google.maps.LatLng(center.lat, center.lng);
+        const d = (o.width_ft ?? 8) / 3.28084;
+        const e = (o.height_ft ?? 8) / 3.28084;
+
+        const north = (google.maps as any).geometry?.spherical?.computeOffset(latLng, e / 2, 0);
+        const south = (google.maps as any).geometry?.spherical?.computeOffset(latLng, e / 2, 180);
+        const east = (google.maps as any).geometry?.spherical?.computeOffset(latLng, d / 2, 90);
+        const west = (google.maps as any).geometry?.spherical?.computeOffset(latLng, d / 2, 270);
+
+        const bounds = new google.maps.LatLngBounds(
+          new google.maps.LatLng(south.lat(), west.lng()),
+          new google.maps.LatLng(north.lat(), east.lng())
+        );
+
+        const rect = new google.maps.Rectangle({
+          map,
+          bounds,
+          editable: true,
+          fillOpacity: 0.12,
+          strokeOpacity: 0.45,
+          strokeWeight: 2,
+        });
+        obstructionShapesRef.current.set(o.id, rect);
+      } else if (o.type === "tree") {
+        const marker = new google.maps.Marker({
+          map,
+          position: center,
+          title: "Tree",
+          icon: {
+            path: google.maps.SymbolPath.CIRCLE,
+            scale: 7,
+            fillOpacity: 1,
+            fillColor: "#16a34a",
+            strokeColor: "#065f46",
+            strokeWeight: 2,
+          },
+        });
+
+        const canopy = new google.maps.Circle({
+          map,
+          center,
+          radius: ((o.radius_ft ?? 12) / 3.28084),
+          fillOpacity: 0.08,
+          strokeOpacity: 0.35,
+          strokeWeight: 2,
+        });
+
+        obstructionShapesRef.current.set(`${o.id}:marker`, marker);
+        obstructionShapesRef.current.set(`${o.id}:canopy`, canopy);
+      }
     }
-  }, [currentProposal]);
+  }
+
+  async function updatePitchDegrees(newDeg: number) {
+    if (!selectedRoof) return;
+
+    setRoofPlanes((prev) =>
+      prev.map((r) => (r.id === selectedRoof.id ? { ...r, pitch_deg: newDeg } : r))
+    );
+
+    const { error } = await supabase
+      .from("proposal_roof_planes")
+      .update({ pitch_deg: newDeg })
+      .eq("id", selectedRoof.id);
+
+    if (error) {
+      alert(error.message);
+    }
+  }
 
   return (
     <div style={{ display: "flex", height: "calc(100vh - 64px)", gap: 16, padding: 16 }}>
-      <div style={{ width: 420, display: "flex", flexDirection: "column", gap: 12 }}>
+      <div style={{ width: 440, display: "flex", flexDirection: "column", gap: 12 }}>
         <div>
-          <div style={{ fontSize: 22, fontWeight: 700 }}>Proposals</div>
-          <div style={{ fontSize: 13, opacity: 0.7 }}>
-            Search an address, create a proposal, then draw roof planes.
+          <div style={{ fontSize: 22, fontWeight: 800 }}>Proposals</div>
+          <div style={{ fontSize: 13, opacity: 0.75 }}>
+            Aptos 410W • Portrait (default). Draw roof planes + add obstructions.
           </div>
         </div>
+
+        {mapsError && (
+          <div style={{ color: "crimson", fontSize: 13 }}>
+            <strong>Maps error:</strong> {mapsError}
+          </div>
+        )}
 
         <div>
           <div style={{ fontSize: 12, marginBottom: 6, opacity: 0.7 }}>
             Address search (select from dropdown)
           </div>
-
-          <input
-            ref={autocompleteInputRef}
-            type="text"
-            placeholder="Enter an address..."
-            style={{
-              width: "100%",
-              border: "1px solid rgba(0,0,0,0.15)",
-              borderRadius: 10,
-              padding: "12px 16px",
-              background: "white",
-              fontSize: 14,
-              outline: "none",
-            }}
-          />
+          <div ref={autocompleteHostRef} />
         </div>
 
-        {!mapsReady && !mapsError && (
-          <div style={{ fontSize: 13, opacity: 0.75 }}>Loading Google Maps…</div>
-        )}
-
-        {mapsError && (
-          <div style={{ fontSize: 13, color: "crimson" }}>
-            <strong>Maps error:</strong> {mapsError}
-            <div style={{ marginTop: 6, opacity: 0.75 }}>
-              Check your API key, enabled APIs (Maps JavaScript + Places), and HTTP referrer restrictions.
+        {selected && (
+          <div style={{ fontSize: 13, lineHeight: 1.35 }}>
+            <div><strong>Selected:</strong></div>
+            <div>{selected.formattedAddress}</div>
+            <div style={{ opacity: 0.75 }}>
+              {selected.lat.toFixed(6)}, {selected.lng.toFixed(6)}
             </div>
           </div>
         )}
 
-        {selected && !currentProposal && (
-          <div>
-            <div style={{ fontSize: 13, lineHeight: 1.4, marginBottom: 12 }}>
-              <div style={{ marginTop: 8 }}>
-                <strong>Selected:</strong>
-              </div>
-              <div>{selected.formattedAddress}</div>
-            </div>
-            <button
-              onClick={createProposal}
-              disabled={isSaving}
-              style={{
-                width: "100%",
-                padding: "12px 16px",
-                background: "#10B981",
-                color: "white",
-                border: "none",
-                borderRadius: 8,
-                fontSize: 14,
-                fontWeight: 600,
-                cursor: isSaving ? "not-allowed" : "pointer",
-                opacity: isSaving ? 0.6 : 1,
-              }}
-            >
-              {isSaving ? "Creating..." : "Create Proposal"}
-            </button>
-          </div>
+        {!proposal && selected && (
+          <button
+            onClick={createProposal}
+            disabled={!!busy}
+            style={{
+              height: 44,
+              borderRadius: 10,
+              border: "1px solid rgba(0,0,0,0.15)",
+              background: "#111827",
+              color: "white",
+              fontWeight: 700,
+              cursor: "pointer",
+            }}
+          >
+            {busy ? busy : "Create Proposal"}
+          </button>
         )}
 
-        {currentProposal && (
-          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-            <div style={{ fontSize: 13, lineHeight: 1.4 }}>
-              <div style={{ marginTop: 8 }}>
-                <strong>Active Proposal:</strong>
-              </div>
-              <div>{currentProposal.formatted_address}</div>
-              <div style={{ opacity: 0.75, fontSize: 12, marginTop: 4 }}>
-                Status: {currentProposal.status}
-              </div>
+        {proposal && (
+          <>
+            <div style={{ fontSize: 13 }}>
+              <strong>Proposal:</strong> {proposal.id.slice(0, 8)}… • <span style={{ opacity: 0.75 }}>{proposal.status}</span>
             </div>
 
-            {!isDrawing ? (
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
               <button
-                onClick={startDrawing}
-                style={{
-                  width: "100%",
-                  padding: "12px 16px",
-                  background: "#3B82F6",
-                  color: "white",
-                  border: "none",
-                  borderRadius: 8,
-                  fontSize: 14,
-                  fontWeight: 600,
-                  cursor: "pointer",
-                }}
+                onClick={() => setToolMode(toolMode === "roof" ? "none" : "roof")}
+                style={toolButtonStyle(toolMode === "roof")}
               >
                 Draw Roof Plane
               </button>
-            ) : (
-              <div style={{ display: "flex", gap: 8 }}>
-                <button
-                  onClick={finishPlane}
-                  disabled={drawingPoints.length < 3 || isSaving}
-                  style={{
-                    flex: 1,
-                    padding: "12px 16px",
-                    background: drawingPoints.length < 3 ? "#9CA3AF" : "#10B981",
-                    color: "white",
-                    border: "none",
-                    borderRadius: 8,
-                    fontSize: 14,
-                    fontWeight: 600,
-                    cursor: drawingPoints.length < 3 || isSaving ? "not-allowed" : "pointer",
-                  }}
-                >
-                  {isSaving ? "Saving..." : `Finish (${drawingPoints.length} pts)`}
-                </button>
-                <button
-                  onClick={cancelDrawing}
-                  disabled={isSaving}
-                  style={{
-                    flex: 1,
-                    padding: "12px 16px",
-                    background: "#EF4444",
-                    color: "white",
-                    border: "none",
-                    borderRadius: 8,
-                    fontSize: 14,
-                    fontWeight: 600,
-                    cursor: isSaving ? "not-allowed" : "pointer",
-                  }}
-                >
-                  Cancel
-                </button>
-              </div>
-            )}
+              <button
+                onClick={() => setToolMode("none")}
+                style={toolButtonStyle(toolMode === "none")}
+              >
+                Stop Tool
+              </button>
 
-            {isDrawing && (
-              <div style={{ fontSize: 12, opacity: 0.75, lineHeight: 1.4 }}>
-                Click on the map to add points for the roof plane. Need at least 3 points to finish.
-              </div>
-            )}
+              <button
+                onClick={() => setToolMode(toolMode === "rect" ? "none" : "rect")}
+                style={toolButtonStyle(toolMode === "rect")}
+                disabled={!proposal}
+              >
+                Square/Rect Obstruction
+              </button>
 
-            {roofPlanes.length > 0 && (
-              <div style={{ fontSize: 13, marginTop: 8 }}>
-                <strong>Roof Planes ({roofPlanes.length}):</strong>
-                <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 6 }}>
-                  {roofPlanes.map((plane, idx) => (
-                    <div
-                      key={plane.id}
-                      style={{
-                        padding: 8,
-                        background: "#F3F4F6",
-                        borderRadius: 6,
-                        fontSize: 12,
-                      }}
-                    >
-                      <div style={{ fontWeight: 600 }}>Plane {idx + 1}</div>
-                      <div style={{ opacity: 0.75 }}>
-                        Area: {plane.area_sqft.toFixed(2)} sqft
-                      </div>
-                    </div>
-                  ))}
+              <button
+                onClick={() => setToolMode(toolMode === "circle" ? "none" : "circle")}
+                style={toolButtonStyle(toolMode === "circle")}
+                disabled={!proposal}
+              >
+                Circle Obstruction
+              </button>
+
+              <button
+                onClick={() => setToolMode(toolMode === "tree" ? "none" : "tree")}
+                style={toolButtonStyle(toolMode === "tree")}
+                disabled={!proposal}
+              >
+                Tree (click to place)
+              </button>
+
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <span style={{ fontSize: 12, opacity: 0.7 }}>Active:</span>
+                <span style={{ fontSize: 12, fontWeight: 700 }}>{toolMode}</span>
+              </div>
+            </div>
+
+            <div style={{ borderTop: "1px solid rgba(0,0,0,0.08)", paddingTop: 12 }}>
+              <div style={{ fontWeight: 800, marginBottom: 6 }}>Roof Planes</div>
+
+              {roofPlanes.length === 0 && (
+                <div style={{ fontSize: 13, opacity: 0.7 }}>
+                  Click <strong>Draw Roof Plane</strong> then draw on the roof. Double-click to finish.
                 </div>
+              )}
+
+              {roofPlanes.map((r) => (
+                <div
+                  key={r.id}
+                  onClick={() => setSelectedRoofId(r.id)}
+                  style={{
+                    padding: 10,
+                    borderRadius: 10,
+                    border: r.id === selectedRoofId ? "2px solid #111827" : "1px solid rgba(0,0,0,0.12)",
+                    marginTop: 8,
+                    cursor: "pointer",
+                  }}
+                >
+                  <div style={{ display: "flex", justifyContent: "space-between", gap: 10 }}>
+                    <div style={{ fontWeight: 700 }}>{r.name}</div>
+                    <div style={{ fontSize: 12, opacity: 0.75 }}>
+                      {r.area_sqft ? `${Math.round(r.area_sqft)} sqft` : "—"}
+                    </div>
+                  </div>
+
+                  <div style={{ marginTop: 8, display: "flex", alignItems: "center", gap: 10 }}>
+                    <div style={{ fontSize: 12, opacity: 0.7 }}>Pitch (deg):</div>
+                    <input
+                      type="number"
+                      min={0}
+                      max={89}
+                      step={0.1}
+                      value={r.pitch_deg}
+                      onChange={(e) => updatePitchDegrees(Number(e.target.value))}
+                      style={{
+                        width: 90,
+                        height: 34,
+                        borderRadius: 8,
+                        border: "1px solid rgba(0,0,0,0.2)",
+                        padding: "0 8px",
+                      }}
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div style={{ borderTop: "1px solid rgba(0,0,0,0.08)", paddingTop: 12 }}>
+              <div style={{ fontWeight: 800, marginBottom: 6 }}>Obstructions</div>
+              {obstructions.length === 0 ? (
+                <div style={{ fontSize: 13, opacity: 0.7 }}>
+                  Use the obstruction tools to add vents, skylights, chimneys, trees, etc.
+                </div>
+              ) : (
+                <div style={{ fontSize: 13, opacity: 0.85 }}>
+                  {obstructions.length} obstruction(s) placed
+                </div>
+              )}
+            </div>
+
+            {busy && (
+              <div style={{ fontSize: 12, opacity: 0.75, marginTop: 8 }}>
+                {busy}
               </div>
             )}
-          </div>
+          </>
         )}
 
-        <div style={{ marginTop: "auto", fontSize: 12, opacity: 0.65 }}>
-          Next step: setbacks + panel layout + production estimate.
-        </div>
+        {!selected && (
+          <div style={{ fontSize: 13, opacity: 0.7 }}>
+            Start by typing an address above.
+          </div>
+        )}
       </div>
 
-      <div
-        style={{
-          flex: 1,
-          borderRadius: 14,
-          overflow: "hidden",
-          border: "1px solid rgba(0,0,0,0.12)",
-          background: "#f5f5f5",
-        }}
-      >
+      <div style={{ flex: 1, borderRadius: 14, overflow: "hidden", border: "1px solid rgba(0,0,0,0.12)" }}>
         <div ref={mapDivRef} style={{ width: "100%", height: "100%" }} />
       </div>
     </div>
   );
+}
+
+function toolButtonStyle(active: boolean): React.CSSProperties {
+  return {
+    height: 42,
+    borderRadius: 10,
+    border: active ? "2px solid #111827" : "1px solid rgba(0,0,0,0.15)",
+    background: active ? "#111827" : "white",
+    color: active ? "white" : "#111827",
+    fontWeight: 800,
+    cursor: "pointer",
+  };
 }
