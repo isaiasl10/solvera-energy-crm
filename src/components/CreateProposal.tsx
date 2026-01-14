@@ -108,6 +108,34 @@ export default function CreateProposal({ proposalId, onBack }: CreateProposalPro
     window.location.href = `mailto:${customer?.email ?? ""}?subject=${subject}&body=${body}`;
   };
 
+  if (!proposalId) {
+    return (
+      <div style={{ padding: 24, display: "flex", alignItems: "center", justifyContent: "center", height: "calc(100vh - 64px)" }}>
+        <div style={{ textAlign: "center" }}>
+          <div style={{ fontSize: 20, fontWeight: 700, marginBottom: 12 }}>No Proposal Selected</div>
+          <div style={{ fontSize: 14, opacity: 0.7, marginBottom: 20 }}>
+            Please select a proposal from the Proposals view to generate a PDF.
+          </div>
+          {onBack && (
+            <button
+              onClick={onBack}
+              style={{
+                padding: "12px 24px",
+                borderRadius: 8,
+                border: "1px solid #d1d5db",
+                background: "white",
+                fontWeight: 600,
+                cursor: "pointer",
+              }}
+            >
+              ← Back to Proposals
+            </button>
+          )}
+        </div>
+      </div>
+    );
+  }
+
   if (loading || !proposal) {
     return (
       <div style={{ padding: 24, display: "flex", alignItems: "center", justifyContent: "center", height: "calc(100vh - 64px)" }}>

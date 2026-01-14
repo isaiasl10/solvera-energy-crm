@@ -100,7 +100,11 @@ function isGoogleReady() {
 
 type ToolMode = "none" | "roof" | "circle" | "rect" | "tree" | "add-panel" | "delete-panel";
 
-export default function Proposals() {
+type ProposalsProps = {
+  onOpenCreateProposal?: (proposalId: string) => void;
+};
+
+export default function Proposals({ onOpenCreateProposal }: ProposalsProps = {}) {
   const { user } = useAuth();
 
   const mapDivRef = useRef<HTMLDivElement | null>(null);
@@ -1818,6 +1822,32 @@ export default function Proposals() {
               </div>
             </div>
           </div>
+
+          {onOpenCreateProposal && (
+            <div style={{ borderTop: "1px solid rgba(0,0,0,0.08)", paddingTop: 12 }}>
+              <button
+                onClick={() => onOpenCreateProposal(proposal.id)}
+                style={{
+                  width: "100%",
+                  padding: 16,
+                  borderRadius: 10,
+                  border: "1px solid rgba(0,0,0,0.15)",
+                  background: "#111827",
+                  color: "white",
+                  fontWeight: 700,
+                  fontSize: 15,
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: 8,
+                }}
+              >
+                <FileText size={18} />
+                Create Proposal (PDF)
+              </button>
+            </div>
+          )}
         </div>
 
         <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(0,0,0,0.02)", borderRadius: 14 }}>

@@ -3,7 +3,7 @@ import { Calendar, Users, Settings, ChevronDown, ChevronRight, UserCog, LogOut, 
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 
-export type ViewType = 'calendar' | 'customers' | 'proposals' | 'user-management' | 'employee-profile' | 'sales-manager-dashboard' | 'role-previews' | 'admin-analytics' | 'admin-custom-adders' | 'admin-inverters' | 'admin-optimizers' | 'admin-batteries' | 'admin-racking' | 'admin-panels' | 'admin-financing' | 'admin-payroll' | 'queue-new-project' | 'queue-site-survey' | 'queue-engineering' | 'queue-utility-permits' | 'queue-ready-to-order' | 'queue-coordinate-install' | 'queue-install-scheduled' | 'queue-ready-inspection' | 'queue-pending-pto' | 'queue-pending-activation' | 'queue-system-activated' | 'queue-service-tickets';
+export type ViewType = 'calendar' | 'customers' | 'proposals' | 'createProposal' | 'user-management' | 'employee-profile' | 'sales-manager-dashboard' | 'role-previews' | 'admin-analytics' | 'admin-custom-adders' | 'admin-inverters' | 'admin-optimizers' | 'admin-batteries' | 'admin-racking' | 'admin-panels' | 'admin-financing' | 'admin-payroll' | 'queue-new-project' | 'queue-site-survey' | 'queue-engineering' | 'queue-utility-permits' | 'queue-ready-to-order' | 'queue-coordinate-install' | 'queue-install-scheduled' | 'queue-ready-inspection' | 'queue-pending-pto' | 'queue-pending-activation' | 'queue-system-activated' | 'queue-service-tickets';
 
 interface SidebarProps {
   currentView: ViewType;
