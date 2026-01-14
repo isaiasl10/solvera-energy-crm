@@ -1012,13 +1012,14 @@ export default function Proposals() {
       const panelWidth = p.is_portrait ? widthM : lengthM;
       const panelHeight = p.is_portrait ? lengthM : widthM;
 
-      const rect = createPanelRectangle(map, p.center_lat, p.center_lng, panelWidth, panelHeight, p.rotation_deg);
+      const rect = createPanelRectangle(map, p.id, p.center_lat, p.center_lng, panelWidth, panelHeight, p.rotation_deg);
       panelRectanglesRef.current.set(p.id, rect);
     }
   }
 
   function createPanelRectangle(
     map: google.maps.Map,
+    panelId: string,
     centerLat: number,
     centerLng: number,
     widthM: number,
@@ -1045,8 +1046,30 @@ export default function Proposals() {
       fillOpacity: 0.4,
       strokeColor: "#1e40af",
       strokeWeight: 1,
-      clickable: false,
+      clickable: true,
       editable: false,
+    });
+
+    rect.addListener("click", () => {
+      if (confirm("Delete this panel?")) {
+        deletePanel(panelId);
+      }
+    });
+
+    rect.addListener("mouseover", () => {
+      rect.setOptions({
+        fillColor: "#ef4444",
+        fillOpacity: 0.6,
+        strokeWeight: 2,
+      });
+    });
+
+    rect.addListener("mouseout", () => {
+      rect.setOptions({
+        fillColor: "#3b82f6",
+        fillOpacity: 0.4,
+        strokeWeight: 1,
+      });
     });
 
     return rect;
@@ -1201,8 +1224,14 @@ export default function Proposals() {
     panelHeightM: number,
     obs: ObstructionRow
   ): boolean {
-    const panelLatDelta = panelHeightM / 2 / 111320;
-    const panelLngDelta = panelWidthM / 2 / (111320 * Math.cos(panelLat * Math.PI / 180));
+    if (!obs.center_lat || !obs.center_lng) {
+      console.warn("Obstruction missing center coordinates:", obs);
+      return false;
+    }
+
+    const bufferM = 0.15;
+    const panelLatDelta = (panelHeightM / 2 + bufferM) / 111320;
+    const panelLngDelta = (panelWidthM / 2 + bufferM) / (111320 * Math.cos(panelLat * Math.PI / 180));
 
     if (obs.type === "circle" || obs.type === "tree") {
       const radiusM = (obs.radius_ft ?? 12) / 3.28084;
@@ -1210,12 +1239,12 @@ export default function Proposals() {
         new google.maps.LatLng(panelLat, panelLng),
         new google.maps.LatLng(obs.center_lat, obs.center_lng)
       );
-      return distance < radiusM + Math.max(panelWidthM, panelHeightM) / 2;
+      return distance < (radiusM + bufferM + Math.max(panelWidthM, panelHeightM) / 2);
     } else if (obs.type === "rect") {
       const obsWidthM = (obs.width_ft ?? 4) / 3.28084;
       const obsHeightM = (obs.height_ft ?? 4) / 3.28084;
-      const obsLatDelta = obsHeightM / 2 / 111320;
-      const obsLngDelta = obsWidthM / 2 / (111320 * Math.cos(obs.center_lat * Math.PI / 180));
+      const obsLatDelta = (obsHeightM / 2 + bufferM) / 111320;
+      const obsLngDelta = (obsWidthM / 2 + bufferM) / (111320 * Math.cos(obs.center_lat * Math.PI / 180));
 
       const panelLeft = panelLng - panelLngDelta;
       const panelRight = panelLng + panelLngDelta;
@@ -1233,12 +1262,12 @@ export default function Proposals() {
     return false;
   }
 
-  async function clearPanels() {
+  async function clearAllPanels() {
     if (!proposal) return;
-    if (!confirm("Clear all panels from this proposal?")) return;
+    if (!confirm("Clear ALL panels from ALL roof planes?")) return;
 
     try {
-      setBusy("Clearing panels...");
+      setBusy("Clearing all panels...");
 
       const { error } = await supabase
         .from("proposal_panels")
@@ -1253,6 +1282,48 @@ export default function Proposals() {
       alert(e?.message ?? "Failed to clear panels.");
     } finally {
       setBusy(null);
+    }
+  }
+
+  async function clearPanelsOnRoof(roofId: string) {
+    if (!proposal) return;
+    const roof = roofPlanes.find(r => r.id === roofId);
+    const roofName = roof ? `Roof Plane ${roofPlanes.indexOf(roof) + 1}` : "this roof";
+    if (!confirm(`Clear all panels from ${roofName}?`)) return;
+
+    try {
+      setBusy("Clearing panels...");
+
+      const { error } = await supabase
+        .from("proposal_panels")
+        .delete()
+        .eq("proposal_id", proposal.id)
+        .eq("roof_plane_id", roofId);
+
+      if (error) throw error;
+
+      await reloadProposalData(proposal.id);
+    } catch (e: any) {
+      console.error(e);
+      alert(e?.message ?? "Failed to clear panels.");
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function deletePanel(panelId: string) {
+    try {
+      const { error } = await supabase
+        .from("proposal_panels")
+        .delete()
+        .eq("id", panelId);
+
+      if (error) throw error;
+
+      await reloadProposalData(proposal!.id);
+    } catch (e: any) {
+      console.error(e);
+      alert(e?.message ?? "Failed to delete panel.");
     }
   }
 
@@ -2206,11 +2277,30 @@ export default function Proposals() {
                 Auto-Fill Selected Roof
               </button>
 
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 12 }}>
+              <div style={{ marginBottom: 12 }}>
                 <button
-                  onClick={clearPanels}
+                  onClick={() => selectedRoofId && clearPanelsOnRoof(selectedRoofId)}
+                  disabled={!selectedRoofId || panels.filter(p => p.roof_plane_id === selectedRoofId).length === 0 || !!busy}
+                  style={{
+                    width: "100%",
+                    height: 38,
+                    borderRadius: 8,
+                    border: "1px solid rgba(220, 38, 38, 0.3)",
+                    background: "white",
+                    color: selectedRoofId && panels.filter(p => p.roof_plane_id === selectedRoofId).length > 0 ? "#dc2626" : "#9ca3af",
+                    fontWeight: 600,
+                    cursor: selectedRoofId && panels.filter(p => p.roof_plane_id === selectedRoofId).length > 0 ? "pointer" : "not-allowed",
+                    fontSize: 13,
+                    marginBottom: 8,
+                  }}
+                >
+                  Clear Selected Roof
+                </button>
+                <button
+                  onClick={clearAllPanels}
                   disabled={panels.length === 0 || !!busy}
                   style={{
+                    width: "100%",
                     height: 38,
                     borderRadius: 8,
                     border: "1px solid rgba(220, 38, 38, 0.3)",
@@ -2221,12 +2311,12 @@ export default function Proposals() {
                     fontSize: 13,
                   }}
                 >
-                  Clear Panels
+                  Clear All Panels
                 </button>
               </div>
 
               <div style={{ fontSize: 13, opacity: 0.75 }}>
-                {panels.length} panel(s) placed
+                {panels.length} panel(s) placed • Click panels to delete
               </div>
             </div>
 
