@@ -129,6 +129,8 @@ export default function Proposals() {
   const [customPrice, setCustomPrice] = useState<number>(0);
   const [financingOptions, setFinancingOptions] = useState<any[]>([]);
   const [customAdders, setCustomAdders] = useState<any[]>([]);
+  const [existingProposals, setExistingProposals] = useState<any[]>([]);
+  const [showProposalDropdown, setShowProposalDropdown] = useState(false);
 
   const selectedRoof = useMemo(
     () => roofPlanes.find((r) => r.id === selectedRoofId) ?? null,
@@ -225,6 +227,24 @@ export default function Proposals() {
     }
 
     loadCurrentUser();
+  }, [user?.id]);
+
+  useEffect(() => {
+    async function loadExistingProposals() {
+      if (!user?.id) return;
+
+      const { data, error } = await supabase
+        .from("proposals")
+        .select("*")
+        .order("created_at", { ascending: false })
+        .limit(50);
+
+      if (!error && data) {
+        setExistingProposals(data);
+      }
+    }
+
+    loadExistingProposals();
   }, [user?.id]);
 
   useEffect(() => {
@@ -702,11 +722,123 @@ export default function Proposals() {
       }
 
       await reloadProposalData(data.id);
+      await loadExistingProposalsList();
     } catch (e: any) {
       console.error(e);
       alert(e?.message ?? "Failed to create proposal.");
     } finally {
       setBusy(null);
+    }
+  }
+
+  async function loadExistingProposalsList() {
+    if (!user?.id) return;
+
+    const { data, error } = await supabase
+      .from("proposals")
+      .select("*")
+      .order("created_at", { ascending: false })
+      .limit(50);
+
+    if (!error && data) {
+      setExistingProposals(data);
+    }
+  }
+
+  async function loadExistingProposal(proposalId: string) {
+    try {
+      setBusy("Loading proposal...");
+
+      const { data, error } = await supabase
+        .from("proposals")
+        .select("*")
+        .eq("id", proposalId)
+        .maybeSingle();
+
+      if (error) throw error;
+      if (!data) throw new Error("Proposal not found");
+
+      setProposal({
+        id: data.id,
+        status: data.status,
+        place_id: data.place_id,
+        formatted_address: data.formatted_address,
+        lat: data.lat,
+        lng: data.lng,
+        panel_make: data.panel_make,
+        panel_model: data.panel_model,
+        panel_watts: data.panel_watts,
+        panel_orientation: data.panel_orientation,
+        usage_mode: data.usage_mode || "annual",
+        annual_kwh: data.annual_kwh || 12000,
+        monthly_kwh: Array.isArray(data.monthly_kwh) ? data.monthly_kwh : [],
+      });
+
+      setSelected({
+        placeId: data.place_id,
+        formattedAddress: data.formatted_address,
+        lat: data.lat,
+        lng: data.lng,
+      });
+
+      if (mapRef.current) {
+        mapRef.current.setCenter({ lat: data.lat, lng: data.lng });
+        mapRef.current.setZoom(20);
+      }
+
+      await reloadProposalData(data.id);
+      setShowProposalDropdown(false);
+    } catch (e: any) {
+      console.error(e);
+      alert(e?.message ?? "Failed to load proposal.");
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function updateProposalStatus(newStatus: string) {
+    if (!proposal) return;
+
+    try {
+      setBusy(`Updating status to ${newStatus}...`);
+
+      const { error } = await supabase
+        .from("proposals")
+        .update({ status: newStatus })
+        .eq("id", proposal.id);
+
+      if (error) throw error;
+
+      setProposal({ ...proposal, status: newStatus });
+      await loadExistingProposalsList();
+      alert(`Proposal status updated to ${newStatus}`);
+    } catch (e: any) {
+      console.error(e);
+      alert(e?.message ?? "Failed to update proposal status.");
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  function startNewProposal() {
+    setProposal(null);
+    setSelected(null);
+    setRoofPlanes([]);
+    setObstructions([]);
+    setPanels([]);
+    setSelectedRoofId(null);
+    setProposalStep("design");
+    setSelectedFinancingId(null);
+    setSelectedAdderIds([]);
+    roofPolysRef.current.forEach((poly) => poly.setMap(null));
+    roofPolysRef.current.clear();
+    obstructionShapesRef.current.forEach((shape) => shape.setMap(null));
+    obstructionShapesRef.current.clear();
+    panelRectanglesRef.current.forEach((rect) => rect.setMap(null));
+    panelRectanglesRef.current.clear();
+    if (locationMarkerRef.current) {
+      locationMarkerRef.current.setMap(null);
+      locationMarkerRef.current = null;
     }
   }
 
@@ -1580,11 +1712,138 @@ export default function Proposals() {
     <div style={{ display: "flex", height: "calc(100vh - 64px)", gap: 16, padding: 16 }}>
       <div style={{ width: 380, display: "flex", flexDirection: "column", gap: 12, overflowY: "auto", paddingRight: 8 }}>
         <div>
-          <div style={{ fontSize: 22, fontWeight: 800 }}>Proposals</div>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+            <div style={{ fontSize: 22, fontWeight: 800 }}>Proposals</div>
+            {proposal && (
+              <button
+                onClick={startNewProposal}
+                style={{
+                  padding: "6px 12px",
+                  borderRadius: 8,
+                  border: "1px solid rgba(0,0,0,0.15)",
+                  background: "white",
+                  fontWeight: 600,
+                  fontSize: 12,
+                  cursor: "pointer",
+                }}
+              >
+                New Proposal
+              </button>
+            )}
+          </div>
           <div style={{ fontSize: 13, opacity: 0.75 }}>
             Aptos 410W • Portrait (default). Draw roof planes + add obstructions.
           </div>
         </div>
+
+        <div style={{ position: "relative" }}>
+          <button
+            onClick={() => setShowProposalDropdown(!showProposalDropdown)}
+            style={{
+              width: "100%",
+              height: 42,
+              borderRadius: 10,
+              border: "1px solid rgba(0,0,0,0.15)",
+              background: "white",
+              fontWeight: 600,
+              fontSize: 13,
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              padding: "0 12px",
+            }}
+          >
+            <span>Load Existing Proposal</span>
+            <span style={{ fontSize: 16 }}>{showProposalDropdown ? "▲" : "▼"}</span>
+          </button>
+
+          {showProposalDropdown && (
+            <div style={{
+              position: "absolute",
+              top: "100%",
+              left: 0,
+              right: 0,
+              marginTop: 4,
+              background: "white",
+              border: "1px solid rgba(0,0,0,0.15)",
+              borderRadius: 10,
+              maxHeight: 300,
+              overflowY: "auto",
+              zIndex: 1000,
+              boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
+            }}>
+              {existingProposals.length === 0 ? (
+                <div style={{ padding: 16, fontSize: 13, opacity: 0.7, textAlign: "center" }}>
+                  No existing proposals
+                </div>
+              ) : (
+                existingProposals.map((p) => (
+                  <div
+                    key={p.id}
+                    onClick={() => loadExistingProposal(p.id)}
+                    style={{
+                      padding: 12,
+                      borderBottom: "1px solid rgba(0,0,0,0.08)",
+                      cursor: "pointer",
+                      transition: "background 0.15s",
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.background = "rgba(0,0,0,0.04)"}
+                    onMouseLeave={(e) => e.currentTarget.style.background = "white"}
+                  >
+                    <div style={{ fontWeight: 600, fontSize: 13, marginBottom: 4 }}>
+                      {p.formatted_address}
+                    </div>
+                    <div style={{ fontSize: 11, opacity: 0.7, display: "flex", gap: 12 }}>
+                      <span>Status: {p.status}</span>
+                      <span>•</span>
+                      <span>{new Date(p.created_at).toLocaleDateString()}</span>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          )}
+        </div>
+
+        {proposal && (
+          <div style={{ display: "flex", gap: 8 }}>
+            <button
+              onClick={() => updateProposalStatus("draft")}
+              disabled={proposal.status === "draft"}
+              style={{
+                flex: 1,
+                height: 36,
+                borderRadius: 8,
+                border: "1px solid rgba(0,0,0,0.15)",
+                background: proposal.status === "draft" ? "#e5e7eb" : "white",
+                fontWeight: 600,
+                fontSize: 12,
+                cursor: proposal.status === "draft" ? "not-allowed" : "pointer",
+                opacity: proposal.status === "draft" ? 0.6 : 1,
+              }}
+            >
+              Save as Draft
+            </button>
+            <button
+              onClick={() => updateProposalStatus("pending")}
+              disabled={proposal.status === "pending"}
+              style={{
+                flex: 1,
+                height: 36,
+                borderRadius: 8,
+                border: "1px solid rgba(0,0,0,0.15)",
+                background: proposal.status === "pending" ? "#e5e7eb" : "white",
+                fontWeight: 600,
+                fontSize: 12,
+                cursor: proposal.status === "pending" ? "not-allowed" : "pointer",
+                opacity: proposal.status === "pending" ? 0.6 : 1,
+              }}
+            >
+              Mark Pending
+            </button>
+          </div>
+        )}
 
         {mapsLoading && (
           <div style={{ fontSize: 13, opacity: 0.7 }}>
