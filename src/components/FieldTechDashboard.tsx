@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Briefcase, User, LogOut } from 'lucide-react';
+import { Briefcase, User, LogOut, Menu, X } from 'lucide-react';
 import FieldTechView from './FieldTechView';
 import EmployeeProfileView from './EmployeeProfileView';
 import { useAuth } from '../contexts/AuthContext';
@@ -7,10 +7,27 @@ import { useAuth } from '../contexts/AuthContext';
 export default function FieldTechDashboard() {
   const { logout } = useAuth();
   const [activeView, setActiveView] = useState<'tickets' | 'profile'>('tickets');
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   return (
     <div className="flex h-screen bg-gray-50">
-      <div className="w-64 bg-gray-900 text-white flex flex-col">
+      <button
+        onClick={() => setSidebarOpen(!sidebarOpen)}
+        className="fixed top-4 left-4 z-50 lg:hidden bg-orange-600 text-white p-2 rounded-lg shadow-lg"
+      >
+        {sidebarOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+      </button>
+
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 bg-black bg-opacity-50 z-30 lg:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
+      <div className={`fixed lg:static inset-y-0 left-0 w-64 bg-gray-900 text-white flex flex-col z-40 transform transition-transform duration-300 ease-in-out ${
+        sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
+      }`}>
         <div className="px-2 py-2 border-b border-gray-700">
           <img
             src="/solvera_energy_logo_redesign.png"
@@ -23,7 +40,10 @@ export default function FieldTechDashboard() {
           <ul className="space-y-1">
             <li>
               <button
-                onClick={() => setActiveView('tickets')}
+                onClick={() => {
+                  setActiveView('tickets');
+                  setSidebarOpen(false);
+                }}
                 className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg transition-colors text-sm ${
                   activeView === 'tickets'
                     ? 'bg-orange-600 text-white'
@@ -36,7 +56,10 @@ export default function FieldTechDashboard() {
             </li>
             <li>
               <button
-                onClick={() => setActiveView('profile')}
+                onClick={() => {
+                  setActiveView('profile');
+                  setSidebarOpen(false);
+                }}
                 className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg transition-colors text-sm ${
                   activeView === 'profile'
                     ? 'bg-orange-600 text-white'
@@ -61,7 +84,7 @@ export default function FieldTechDashboard() {
         </div>
       </div>
 
-      <div className="flex-1 overflow-auto">
+      <div className="flex-1 overflow-auto lg:ml-0">
         {activeView === 'tickets' && <FieldTechView />}
         {activeView === 'profile' && <EmployeeProfileView />}
       </div>

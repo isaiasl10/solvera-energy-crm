@@ -726,20 +726,40 @@ export default function TicketDetailModal({ ticketId, onClose, onUpdate, onViewP
           <div className="p-2 sm:p-4">
             {activeTab === 'customer' && (
             <>
-              <div className="flex gap-1.5 sm:gap-2 mb-2 sm:mb-3 border-b border-gray-200 pb-2 overflow-x-auto">
-                {['ticket', 'plan_set', 'permit', 'eng_letter', 'site_survey'].map((tab) => (
-                  <button
-                    key={tab}
-                    onClick={() => setSubTab(tab as SubTab)}
-                    className={`px-2 sm:px-3 py-1 sm:py-1.5 rounded-t text-xs sm:text-sm font-medium transition-colors whitespace-nowrap ${
-                      subTab === tab
-                        ? 'bg-orange-500 text-white'
-                        : 'text-gray-700 hover:bg-gray-100'
-                    }`}
-                  >
-                    {formatLabel(tab)}
-                  </button>
-                ))}
+              <div className="bg-gray-100 rounded-lg p-1.5 mb-3">
+                <div className="text-xs sm:text-sm font-semibold text-gray-700 mb-2 px-1">View Documents & Details:</div>
+                <div className="flex gap-1.5 sm:gap-2 overflow-x-auto pb-1">
+                  {['ticket', 'plan_set', 'permit', 'eng_letter', 'site_survey'].map((tab) => {
+                    let docCount = 0;
+                    if (tab === 'plan_set') docCount = planSetDocs.length;
+                    if (tab === 'permit') docCount = permitDocs.length;
+                    if (tab === 'eng_letter') docCount = engLetterDocs.length;
+                    if (tab === 'site_survey' && siteSurveyPhotos) {
+                      docCount = Object.values(siteSurveyPhotos.photo_urls || {}).flat().length;
+                    }
+
+                    return (
+                      <button
+                        key={tab}
+                        onClick={() => setSubTab(tab as SubTab)}
+                        className={`relative flex-shrink-0 px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg text-xs sm:text-sm font-semibold transition-all shadow-sm ${
+                          subTab === tab
+                            ? 'bg-orange-500 text-white shadow-md transform scale-105'
+                            : 'bg-white text-gray-700 hover:bg-gray-50 hover:shadow'
+                        }`}
+                      >
+                        {formatLabel(tab)}
+                        {tab !== 'ticket' && docCount > 0 && (
+                          <span className={`absolute -top-1 -right-1 flex items-center justify-center w-5 h-5 text-[10px] font-bold rounded-full ${
+                            subTab === tab ? 'bg-white text-orange-500' : 'bg-green-500 text-white'
+                          }`}>
+                            {docCount}
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
 
               {subTab === 'ticket' && (

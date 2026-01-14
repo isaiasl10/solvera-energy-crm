@@ -156,13 +156,13 @@ export default function FieldTechView() {
   }
 
   return (
-    <div className="flex-1 p-6 bg-gray-50">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">My Tickets</h1>
-        <p className="text-sm text-gray-600">View and manage your assigned work orders</p>
+    <div className="flex-1 p-4 sm:p-6 bg-gray-50 pt-16 lg:pt-6">
+      <div className="mb-4 sm:mb-6">
+        <h1 className="text-xl sm:text-2xl font-bold text-gray-900">My Tickets</h1>
+        <p className="text-xs sm:text-sm text-gray-600">View and manage your assigned work orders</p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
         {tickets.length === 0 ? (
           <div className="col-span-full text-center py-12">
             <Calendar className="w-12 h-12 text-gray-400 mx-auto mb-3" />
