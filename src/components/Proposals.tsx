@@ -1316,6 +1316,11 @@ export default function Proposals() {
     }
   }
 
+  const selectedPanelModel = useMemo(
+    () => panelModels.find((pm) => pm.id === selectedPanelModelId) ?? null,
+    [panelModels, selectedPanelModelId]
+  );
+
   const systemSummary = useMemo(() => {
     if (!proposal || !selectedPanelModel) return null;
 
@@ -1359,11 +1364,6 @@ export default function Proposals() {
       offsetPercent: offsetPercent.toFixed(1),
     };
   }, [proposal, selectedPanelModel, panels]);
-
-  const selectedPanelModel = useMemo(
-    () => panelModels.find((pm) => pm.id === selectedPanelModelId) ?? null,
-    [panelModels, selectedPanelModelId]
-  );
 
   return (
     <div style={{ display: "flex", height: "calc(100vh - 64px)", gap: 16, padding: 16 }}>
