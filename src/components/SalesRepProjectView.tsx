@@ -528,7 +528,7 @@ export default function SalesRepProjectView({ customer: initialCustomer, onBack 
                       />
                     ) : (
                       <p className="text-gray-900">
-                        {customer.contract_price ? `$${customer.contract_price.toLocaleString()}` : 'N/A'}
+                        {customer.contract_price ? `$${fmt(customer.contract_price, { maximumFractionDigits: 0 })}` : 'N/A'}
                       </p>
                     )}
                   </div>
@@ -843,7 +843,7 @@ export default function SalesRepProjectView({ customer: initialCustomer, onBack 
                       <p className="text-xs text-gray-500">Total system capacity in watts</p>
                     </div>
                     <p className="text-lg font-bold text-gray-900">
-                      {(customer.system_size_kw * 1000).toLocaleString()} W
+                      {fmt(customer.system_size_kw * 1000, { maximumFractionDigits: 0 })} W
                     </p>
                   </div>
 

@@ -713,7 +713,9 @@ export default function Proposals() {
         panel_orientation: data.panel_orientation,
         usage_mode: data.usage_mode || "annual",
         annual_kwh: data.annual_kwh || 12000,
-        monthly_kwh: Array.isArray(data.monthly_kwh) ? data.monthly_kwh : [],
+        monthly_kwh: Array.isArray(data.monthly_kwh) && data.monthly_kwh.length === 12
+          ? data.monthly_kwh.map(v => typeof v === 'number' ? v : 0)
+          : Array(12).fill(0),
       });
 
       if (mapRef.current) {
@@ -771,7 +773,9 @@ export default function Proposals() {
         panel_orientation: data.panel_orientation,
         usage_mode: data.usage_mode || "annual",
         annual_kwh: data.annual_kwh || 12000,
-        monthly_kwh: Array.isArray(data.monthly_kwh) ? data.monthly_kwh : [],
+        monthly_kwh: Array.isArray(data.monthly_kwh) && data.monthly_kwh.length === 12
+          ? data.monthly_kwh.map(v => typeof v === 'number' ? v : 0)
+          : Array(12).fill(0),
       });
 
       setSelected({
@@ -1512,20 +1516,28 @@ export default function Proposals() {
   );
 
   const systemSummary = useMemo(() => {
+    const defaults = {
+      panelCount: 0,
+      systemSizeKw: "0.00",
+      estimatedAnnualProduction: 0,
+      monthlyProduction: Array(12).fill(0),
+      offsetPercent: "0.0",
+    };
+
     if (!proposal) {
       console.log("systemSummary: no proposal");
-      return null;
+      return defaults;
     }
 
     if (panelModels.length === 0) {
       console.log("systemSummary: panel models not loaded yet");
-      return null;
+      return defaults;
     }
 
     const panelCount = panels.length;
     if (panelCount === 0) {
       console.log("systemSummary: no panels");
-      return null;
+      return defaults;
     }
 
     let panelModelToUse = selectedPanelModel;
@@ -1548,7 +1560,7 @@ export default function Proposals() {
         panelsCount: panels.length,
         firstPanelModelId: panels[0]?.panel_model_id
       });
-      return null;
+      return defaults;
     }
 
     const systemSizeKw = (panelCount * panelModelToUse.watts) / 1000;
@@ -1576,7 +1588,7 @@ export default function Proposals() {
     if (proposal.usage_mode === "annual" && proposal.annual_kwh > 0) {
       offsetPercent = (estimatedAnnualProduction / proposal.annual_kwh) * 100;
     } else if (proposal.usage_mode === "monthly" && proposal.monthly_kwh?.length === 12) {
-      const totalMonthlyUsage = proposal.monthly_kwh.reduce((sum, val) => sum + val, 0);
+      const totalMonthlyUsage = proposal.monthly_kwh.reduce((sum, val) => sum + (val || 0), 0);
       if (totalMonthlyUsage > 0) {
         offsetPercent = (estimatedAnnualProduction / totalMonthlyUsage) * 100;
       }
@@ -1664,7 +1676,7 @@ export default function Proposals() {
               </div>
               <div style={{ display: "flex", justifyContent: "space-between" }}>
                 <span style={{ opacity: 0.7 }}>Est. Annual Production:</span>
-                <strong>{systemSummary.estimatedAnnualProduction.toLocaleString()} kWh</strong>
+                <strong>{fmt(systemSummary.estimatedAnnualProduction, { maximumFractionDigits: 0 })} kWh</strong>
               </div>
               <div style={{ display: "flex", justifyContent: "space-between" }}>
                 <span style={{ opacity: 0.7 }}>Energy Offset:</span>
@@ -1765,7 +1777,7 @@ export default function Proposals() {
                       )}
                     </div>
                     <div style={{ fontWeight: 700, fontSize: 14 }}>
-                      ${adder.price.toLocaleString()}
+                      ${fmt(adder.price, { maximumFractionDigits: 0 })}
                     </div>
                   </label>
                 ))}
@@ -2523,7 +2535,7 @@ export default function Proposals() {
                   }}>
                     <div style={{ fontSize: 11, opacity: 0.7, marginBottom: 2 }}>Est. Annual Production</div>
                     <div style={{ fontSize: 18, fontWeight: 700 }}>
-                      {systemSummary.estimatedAnnualProduction.toLocaleString()} kWh
+                      {fmt(systemSummary.estimatedAnnualProduction, { maximumFractionDigits: 0 })} kWh
                     </div>
                   </div>
 
@@ -2536,7 +2548,7 @@ export default function Proposals() {
                     }}>
                       <div style={{ fontSize: 11, opacity: 0.7, marginBottom: 2 }}>Annual Usage</div>
                       <div style={{ fontSize: 18, fontWeight: 700 }}>
-                        {proposal.annual_kwh.toLocaleString()} kWh
+                        {fmt(proposal.annual_kwh, { maximumFractionDigits: 0 })} kWh
                       </div>
                     </div>
                   )}
@@ -2550,7 +2562,7 @@ export default function Proposals() {
                     }}>
                       <div style={{ fontSize: 11, opacity: 0.7, marginBottom: 2 }}>Total Annual Usage</div>
                       <div style={{ fontSize: 18, fontWeight: 700 }}>
-                        {proposal.monthly_kwh.reduce((sum, val) => sum + val, 0).toLocaleString()} kWh
+                        {fmt(proposal.monthly_kwh.reduce((sum, val) => sum + (val || 0), 0), { maximumFractionDigits: 0 })} kWh
                       </div>
                     </div>
                   )}
