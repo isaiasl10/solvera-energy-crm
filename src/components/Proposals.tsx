@@ -125,6 +125,7 @@ export default function Proposals() {
   useEffect(() => {
     if (!mapDivRef.current) return;
     if (mapsLoading || !isGoogleReady()) return;
+    if (mapRef.current) return;
 
     try {
       const map = new google.maps.Map(mapDivRef.current, {
@@ -227,7 +228,18 @@ export default function Proposals() {
     drawing.setMap(map);
     drawingRef.current = drawing;
 
-    google.maps.event.addListener(drawing, "polygoncomplete", async (poly: google.maps.Polygon) => {
+    } catch (error: any) {
+      console.error('Error initializing map:', error);
+      setMapsError(`Failed to initialize map: ${error.message || 'Unknown error'}`);
+    }
+  }, [mapsLoading]);
+
+  useEffect(() => {
+    const drawing = drawingRef.current;
+    const map = mapRef.current;
+    if (!drawing || !map) return;
+
+    const polygonListener = google.maps.event.addListener(drawing, "polygoncomplete", async (poly: google.maps.Polygon) => {
       if (!proposal) {
         poly.setMap(null);
         return;
@@ -284,7 +296,7 @@ export default function Proposals() {
       }
     });
 
-    google.maps.event.addListener(
+    const rectangleListener = google.maps.event.addListener(
       drawing,
       "rectanglecomplete",
       async (rect: google.maps.Rectangle) => {
@@ -358,7 +370,7 @@ export default function Proposals() {
       }
     );
 
-    google.maps.event.addListener(drawing, "circlecomplete", async (circle: google.maps.Circle) => {
+    const circleListener = google.maps.event.addListener(drawing, "circlecomplete", async (circle: google.maps.Circle) => {
       if (!proposal) {
         circle.setMap(null);
         return;
@@ -414,7 +426,7 @@ export default function Proposals() {
       }
     });
 
-    map.addListener("click", async (e: google.maps.MapMouseEvent) => {
+    const mapClickListener = map.addListener("click", async (e: google.maps.MapMouseEvent) => {
       if (!proposal) return;
       if (toolMode !== "tree") return;
       if (!e.latLng) return;
@@ -504,19 +516,13 @@ export default function Proposals() {
       }
     }
 
-      return () => {
-        drawing.setMap(null);
-        if (locationMarkerRef.current) {
-          locationMarkerRef.current.setMap(null);
-        }
-        mapRef.current = null;
-        drawingRef.current = null;
-      };
-    } catch (error: any) {
-      console.error('Error initializing map:', error);
-      setMapsError(`Failed to initialize map: ${error.message || 'Unknown error'}`);
-    }
-  }, [proposal, toolMode, roofPlanes.length, selectedRoofId, mapsLoading]);
+    return () => {
+      google.maps.event.removeListener(polygonListener);
+      google.maps.event.removeListener(rectangleListener);
+      google.maps.event.removeListener(circleListener);
+      google.maps.event.removeListener(mapClickListener);
+    };
+  }, [proposal, toolMode, roofPlanes.length, selectedRoofId]);
 
   useEffect(() => {
     const drawing = drawingRef.current;
