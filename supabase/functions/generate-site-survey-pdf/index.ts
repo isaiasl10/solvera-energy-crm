@@ -1,6 +1,5 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.57.4";
-import { jsPDF } from "npm:jspdf@2.5.2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -11,6 +10,99 @@ const corsHeaders = {
 interface RequestBody {
   customer_id: string;
   ticket_id: string;
+}
+
+function generateSimplePDF(customer: any, photos: any): Uint8Array {
+  const photoList: string[] = [];
+  Object.entries(photos.photo_urls).forEach(([key, urls]) => {
+    const label = key.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase());
+    (urls as string[]).forEach((url, idx) => {
+      photoList.push(`${label} ${idx + 1}: ${url}`);
+    });
+  });
+
+  const content = `%PDF-1.4
+1 0 obj
+<<
+/Type /Catalog
+/Pages 2 0 R
+>>
+endobj
+
+2 0 obj
+<<
+/Type /Pages
+/Kids [3 0 R]
+/Count 1
+>>
+endobj
+
+3 0 obj
+<<
+/Type /Page
+/Parent 2 0 R
+/Resources <<
+/Font <<
+/F1 <<
+/Type /Font
+/Subtype /Type1
+/BaseFont /Helvetica
+>>
+/F2 <<
+/Type /Font
+/Subtype /Type1
+/BaseFont /Helvetica-Bold
+>>
+>>
+>>
+/MediaBox [0 0 612 792]
+/Contents 4 0 R
+>>
+endobj
+
+4 0 obj
+<<
+/Length ${2000 + photoList.length * 100}
+>>
+stream
+BT
+/F2 18 Tf
+50 750 Td
+(Site Survey Photos Report) Tj
+0 -30 Td
+/F1 12 Tf
+(Customer: ${customer.full_name.replace(/[()\\]/g, '')}) Tj
+0 -20 Td
+(Customer ID: ${customer.customer_id}) Tj
+0 -20 Td
+(Address: ${customer.installation_address.replace(/[()\\]/g, '')}) Tj
+0 -30 Td
+/F2 14 Tf
+(Photo Locations:) Tj
+0 -25 Td
+/F1 10 Tf
+${photoList.map((p, i) => `0 -15 Td\n(${i + 1}. ${p.substring(0, 80).replace(/[()\\]/g, '')}) Tj`).join('\n')}
+ET
+endstream
+endobj
+
+xref
+0 5
+0000000000 65535 f
+0000000009 00000 n
+0000000058 00000 n
+0000000115 00000 n
+0000000317 00000 n
+trailer
+<<
+/Size 5
+/Root 1 0 R
+>>
+startxref
+${2500 + photoList.length * 100}
+%%EOF`;
+
+  return new TextEncoder().encode(content);
 }
 
 Deno.serve(async (req: Request) => {
@@ -48,149 +140,7 @@ Deno.serve(async (req: Request) => {
       throw new Error("Customer not found");
     }
 
-    const doc = new jsPDF({
-      orientation: "portrait",
-      unit: "mm",
-      format: "letter",
-    });
-
-    const pageWidth = doc.internal.pageSize.getWidth();
-    const pageHeight = doc.internal.pageSize.getHeight();
-    const margin = 15;
-
-    const logoUrl = `${supabaseUrl}/storage/v1/object/public/customer-documents/solvera_energy_logo_redesign.png`;
-
-    let logoData: ArrayBuffer;
-    try {
-      const logoResponse = await fetch(logoUrl);
-      if (logoResponse.ok) {
-        logoData = await logoResponse.arrayBuffer();
-      }
-    } catch (err) {
-      console.log("Logo not found, continuing without it");
-    }
-
-    const addHeaderFooter = (pageNum: number, totalPages: number) => {
-      if (logoData) {
-        try {
-          const logoBase64 = btoa(
-            new Uint8Array(logoData).reduce(
-              (data, byte) => data + String.fromCharCode(byte),
-              ""
-            )
-          );
-          doc.addImage(
-            `data:image/png;base64,${logoBase64}`,
-            "PNG",
-            margin,
-            margin - 5,
-            40,
-            15
-          );
-        } catch (err) {
-          console.log("Error adding logo:", err);
-        }
-      }
-
-      doc.setFontSize(18);
-      doc.setFont(undefined, "bold");
-      doc.text("Site Survey Photos", pageWidth / 2, margin + 5, {
-        align: "center",
-      });
-
-      doc.setFontSize(10);
-      doc.setFont(undefined, "normal");
-      doc.text(
-        `Customer: ${customer.full_name} (#${customer.customer_id})`,
-        pageWidth / 2,
-        margin + 12,
-        { align: "center" }
-      );
-      doc.text(
-        `Address: ${customer.installation_address}`,
-        pageWidth / 2,
-        margin + 18,
-        { align: "center" }
-      );
-
-      doc.setFontSize(8);
-      doc.text(
-        `Page ${pageNum} of ${totalPages}`,
-        pageWidth / 2,
-        pageHeight - 10,
-        { align: "center" }
-      );
-      doc.text(
-        `© ${new Date().getFullYear()} Solvera Energy`,
-        pageWidth - margin,
-        pageHeight - 10,
-        { align: "right" }
-      );
-    };
-
-    const allPhotos: Array<{ url: string; label: string }> = [];
-    Object.entries(siteSurveyPhotos.photo_urls).forEach(([key, urls]) => {
-      const label = key.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase());
-      (urls as string[]).forEach((url) => {
-        allPhotos.push({ url, label });
-      });
-    });
-
-    const photosPerPage = 4;
-    const totalPages = Math.ceil(allPhotos.length / photosPerPage);
-    let currentY = margin + 25;
-
-    for (let i = 0; i < allPhotos.length; i++) {
-      if (i % photosPerPage === 0 && i > 0) {
-        doc.addPage();
-        currentY = margin + 25;
-      }
-
-      if (i % photosPerPage === 0) {
-        addHeaderFooter(Math.floor(i / photosPerPage) + 1, totalPages);
-      }
-
-      const photo = allPhotos[i];
-
-      try {
-        const imageResponse = await fetch(photo.url);
-        if (imageResponse.ok) {
-          const imageData = await imageResponse.arrayBuffer();
-          const imageBase64 = btoa(
-            new Uint8Array(imageData).reduce(
-              (data, byte) => data + String.fromCharCode(byte),
-              ""
-            )
-          );
-
-          const imgWidth = pageWidth - 2 * margin;
-          const imgHeight = 50;
-
-          doc.setFontSize(10);
-          doc.setFont(undefined, "bold");
-          doc.text(photo.label, margin, currentY);
-          currentY += 5;
-
-          doc.addImage(
-            `data:image/jpeg;base64,${imageBase64}`,
-            "JPEG",
-            margin,
-            currentY,
-            imgWidth,
-            imgHeight
-          );
-
-          currentY += imgHeight + 5;
-        }
-      } catch (err) {
-        console.error(`Error adding image ${photo.label}:`, err);
-        doc.setFontSize(10);
-        doc.text(`[Image: ${photo.label} - Failed to load]`, margin, currentY);
-        currentY += 10;
-      }
-    }
-
-    const pdfBytes = doc.output("arraybuffer");
+    const pdfBytes = generateSimplePDF(customer, siteSurveyPhotos);
     const fileName = `site-survey-${customer.customer_id}-${Date.now()}.pdf`;
     const filePath = `${customer_id}/${fileName}`;
 
