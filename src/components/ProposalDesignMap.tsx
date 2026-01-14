@@ -62,7 +62,7 @@ export default function ProposalDesignMap({
   panels,
   panelModels = [],
   readOnly = false,
-  zoom = 19,
+  zoom = 20,
   onPlaneClick,
   onObstructionClick,
   onPanelClick,
@@ -72,6 +72,7 @@ export default function ProposalDesignMap({
   const roofPolysRef = useRef<Map<string, google.maps.Polygon>>(new Map());
   const obstructionShapesRef = useRef<Map<string, any>>(new Map());
   const panelRectanglesRef = useRef<Map<string, google.maps.Rectangle>>(new Map());
+  const locationMarkerRef = useRef<google.maps.Marker | null>(null);
   const [mapsLoading, setMapsLoading] = React.useState(true);
 
   useEffect(() => {
@@ -116,6 +117,25 @@ export default function ProposalDesignMap({
     });
 
     mapRef.current = map;
+
+    if (locationMarkerRef.current) {
+      locationMarkerRef.current.setMap(null);
+    }
+
+    locationMarkerRef.current = new google.maps.Marker({
+      map,
+      position: { lat: center.lat, lng: center.lng },
+      title: "Project Location",
+      animation: google.maps.Animation.DROP,
+      icon: {
+        path: google.maps.SymbolPath.CIRCLE,
+        scale: 10,
+        fillOpacity: 1,
+        fillColor: "#ef4444",
+        strokeColor: "#ffffff",
+        strokeWeight: 3,
+      },
+    });
   }, [mapsLoading, center, zoom, readOnly]);
 
   useEffect(() => {
@@ -134,9 +154,7 @@ export default function ProposalDesignMap({
         paths: path,
         clickable: !readOnly && !!onPlaneClick,
         editable: false,
-        fillColor: "#10b981",
         fillOpacity: 0.18,
-        strokeColor: "#059669",
         strokeWeight: 2,
       });
 
@@ -166,16 +184,13 @@ export default function ProposalDesignMap({
       const center = { lat: obs.center_lat, lng: obs.center_lng };
 
       if (obs.type === "circle") {
-        const radiusM = (obs.radius_ft ?? 5) * 0.3048;
         const circle = new google.maps.Circle({
           map,
           center,
-          radius: radiusM,
+          radius: ((obs.radius_ft ?? 6) / 3.28084),
           clickable: !readOnly && !!onObstructionClick,
           editable: false,
-          fillColor: "#f59e0b",
           fillOpacity: 0.12,
-          strokeColor: "#d97706",
           strokeOpacity: 0.45,
           strokeWeight: 2,
         });
@@ -185,12 +200,11 @@ export default function ProposalDesignMap({
           circle.addListener("click", () => onObstructionClick(obs.id));
         }
       } else if (obs.type === "rect") {
-        const latLng = new google.maps.LatLng(center.lat, center.lng);
-        const widthM = (obs.width_ft ?? 8) * 0.3048;
-        const heightM = (obs.height_ft ?? 8) * 0.3048;
+        const d = (obs.width_ft ?? 8) / 3.28084;
+        const e = (obs.height_ft ?? 8) / 3.28084;
 
-        const latDelta = heightM / 2 / 111320;
-        const lngDelta = widthM / 2 / (111320 * Math.cos(center.lat * (Math.PI / 180)));
+        const latDelta = e / 2 / 111320;
+        const lngDelta = d / 2 / (111320 * Math.cos(center.lat * (Math.PI / 180)));
 
         const bounds = new google.maps.LatLngBounds(
           new google.maps.LatLng(center.lat - latDelta, center.lng - lngDelta),
@@ -202,9 +216,7 @@ export default function ProposalDesignMap({
           bounds,
           clickable: !readOnly && !!onObstructionClick,
           editable: false,
-          fillColor: "#f59e0b",
           fillOpacity: 0.12,
-          strokeColor: "#d97706",
           strokeOpacity: 0.45,
           strokeWeight: 2,
         });
@@ -220,24 +232,21 @@ export default function ProposalDesignMap({
           title: "Tree",
           icon: {
             path: google.maps.SymbolPath.CIRCLE,
-            scale: 6,
-            fillColor: "#16a34a",
+            scale: 7,
             fillOpacity: 1,
-            strokeColor: "#fff",
+            fillColor: "#16a34a",
+            strokeColor: "#065f46",
             strokeWeight: 2,
           },
         });
 
-        const radiusM = (obs.radius_ft ?? 10) * 0.3048;
         const canopy = new google.maps.Circle({
           map,
           center,
-          radius: radiusM,
+          radius: (obs.radius_ft ?? 12) / 3.28084,
           clickable: !readOnly && !!onObstructionClick,
           editable: false,
-          fillColor: "#16a34a",
           fillOpacity: 0.08,
-          strokeColor: "#16a34a",
           strokeOpacity: 0.35,
           strokeWeight: 2,
         });
