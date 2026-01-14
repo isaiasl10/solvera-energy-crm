@@ -44,7 +44,7 @@ export default function Proposals() {
   }
 
   const mapDivRef = useRef<HTMLDivElement | null>(null);
-  const autocompleteHostRef = useRef<HTMLDivElement | null>(null);
+  const autocompleteInputRef = useRef<HTMLInputElement | null>(null);
 
   const mapRef = useRef<google.maps.Map | null>(null);
   const markerRef = useRef<google.maps.Marker | null>(null);
@@ -61,7 +61,7 @@ export default function Proposals() {
         await loadGoogleMaps(apiKey!);
         if (cancelled) return;
 
-        mapRef.current = new google.maps.Map(mapDivRef.current as HTMLDivElement, {
+        const map = new google.maps.Map(mapDivRef.current!, {
           center: { lat: 39.7392, lng: -104.9903 },
           zoom: 19,
           mapTypeId: "satellite",
@@ -71,44 +71,37 @@ export default function Proposals() {
           mapTypeControl: true,
         });
 
-        const pac = new google.maps.places.PlaceAutocompleteElement({
-          types: ["address"],
-        });
+        mapRef.current = map;
 
-        if (!autocompleteHostRef.current) return;
-        autocompleteHostRef.current.innerHTML = "";
-        autocompleteHostRef.current.appendChild(pac);
+        const autocomplete = new google.maps.places.Autocomplete(
+          autocompleteInputRef.current!,
+          { types: ["address"] }
+        );
 
-        pac.addEventListener("gmp-select", async (evt: any) => {
-          const place = evt.place;
-          if (!place) return;
+        autocomplete.addListener("place_changed", () => {
+          const place = autocomplete.getPlace();
+          if (!place.geometry?.location) return;
 
-          await place.fetchFields({
-            fields: ["id", "formattedAddress", "location"],
-          });
-
-          const loc = place.location;
-          if (!loc) return;
-
+          const loc = place.geometry.location;
           const lat = loc.lat();
           const lng = loc.lng();
+          const center = { lat, lng };
 
           const payload: SelectedAddress = {
-            placeId: place.id,
-            formattedAddress: place.formattedAddress ?? "",
+            placeId: place.place_id ?? "",
+            formattedAddress: place.formatted_address ?? "",
             lat,
             lng,
           };
 
           setSelected(payload);
 
-          const center = { lat, lng };
-          mapRef.current?.setCenter(center);
-          mapRef.current?.setZoom(20);
+          map.setCenter(center);
+          map.setZoom(20);
 
           if (!markerRef.current) {
             markerRef.current = new google.maps.Marker({
-              map: mapRef.current!,
+              map,
               position: center,
               draggable: false,
             });
@@ -144,16 +137,18 @@ export default function Proposals() {
             Address search (select from dropdown)
           </div>
 
-          <div
-            ref={autocompleteHostRef}
+          <input
+            ref={autocompleteInputRef}
+            type="text"
+            placeholder="Enter an address..."
             style={{
+              width: "100%",
               border: "1px solid rgba(0,0,0,0.15)",
               borderRadius: 10,
-              padding: 8,
+              padding: "12px 16px",
               background: "white",
-              minHeight: 52,
-              display: "flex",
-              alignItems: "center",
+              fontSize: 14,
+              outline: "none",
             }}
           />
         </div>
