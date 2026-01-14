@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Calendar, DollarSign, Clock, Battery, Zap } from 'lucide-react';
+import { Calendar, DollarSign, Clock, Battery, Zap, AlertCircle } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -16,19 +16,24 @@ type PayrollPeriod = {
   end_date: Date;
   total_hourly_earnings: number;
   total_battery_earnings: number;
+  total_battery_earnings_estimated: number;
   total_per_watt_earnings: number;
+  total_per_watt_earnings_estimated: number;
   total_hours: number;
   total_earnings: number;
+  total_earnings_estimated: number;
   time_entries: TimeClockEntry[];
   battery_jobs: Array<{
     customer_name: string;
     battery_quantity: number;
     battery_pay: number;
+    is_completed: boolean;
   }>;
   per_watt_jobs: Array<{
     customer_name: string;
     system_size: number;
     per_watt_pay: number;
+    is_completed: boolean;
   }>;
 };
 
@@ -104,17 +109,21 @@ export default function PayrollPeriodView() {
         const totalHours = timeEntries?.reduce((sum, entry) => sum + (entry.total_hours || 0), 0) || 0;
         const hourlyEarnings = totalHours * (appUser.hourly_rate || 0);
 
-        const batteryJobs: Array<{ customer_name: string; battery_quantity: number; battery_pay: number }> = [];
-        const perWattJobs: Array<{ customer_name: string; system_size: number; per_watt_pay: number }> = [];
+        const batteryJobs: Array<{ customer_name: string; battery_quantity: number; battery_pay: number; is_completed: boolean }> = [];
+        const perWattJobs: Array<{ customer_name: string; system_size: number; per_watt_pay: number; is_completed: boolean }> = [];
         let totalBatteryEarnings = 0;
+        let totalBatteryEarningsEstimated = 0;
         let totalPerWattEarnings = 0;
+        let totalPerWattEarningsEstimated = 0;
 
-        const { data: completedInstalls, error: installsError } = await supabase
+        const { data: allInstalls, error: installsError } = await supabase
           .from('scheduling')
           .select(`
             id,
             customer_id,
             closed_at,
+            scheduled_date,
+            ticket_status,
             customers!inner (
               id,
               full_name,
@@ -124,17 +133,19 @@ export default function PayrollPeriodView() {
           `)
           .eq('pv_installer_id', appUser.id)
           .eq('ticket_type', 'installation')
-          .not('closed_at', 'is', null)
-          .gte('closed_at', period.start_date.toISOString())
-          .lte('closed_at', period.end_date.toISOString());
+          .in('ticket_status', ['scheduled', 'in_progress', 'completed'])
+          .gte('scheduled_date', period.start_date.toISOString().split('T')[0])
+          .lte('scheduled_date', period.end_date.toISOString().split('T')[0]);
 
         if (installsError) {
-          console.error('Error loading completed installs:', installsError);
+          console.error('Error loading installs:', installsError);
         }
 
-        completedInstalls?.forEach(install => {
+        allInstalls?.forEach(install => {
           const customer = Array.isArray(install.customers) ? install.customers[0] : install.customers;
           if (!customer) return;
+
+          const isCompleted = install.closed_at !== null;
 
           if (customer.battery_quantity && customer.battery_quantity > 0) {
             const batteryKey = Math.min(customer.battery_quantity, 4).toString();
@@ -144,9 +155,15 @@ export default function PayrollPeriodView() {
               batteryJobs.push({
                 customer_name: customer.full_name,
                 battery_quantity: customer.battery_quantity,
-                battery_pay: batteryPay
+                battery_pay: batteryPay,
+                is_completed: isCompleted
               });
-              totalBatteryEarnings += batteryPay;
+
+              if (isCompleted) {
+                totalBatteryEarnings += batteryPay;
+              } else {
+                totalBatteryEarningsEstimated += batteryPay;
+              }
             }
           }
 
@@ -158,9 +175,15 @@ export default function PayrollPeriodView() {
               perWattJobs.push({
                 customer_name: customer.full_name,
                 system_size: customer.system_size_kw,
-                per_watt_pay: perWattPay
+                per_watt_pay: perWattPay,
+                is_completed: isCompleted
               });
-              totalPerWattEarnings += perWattPay;
+
+              if (isCompleted) {
+                totalPerWattEarnings += perWattPay;
+              } else {
+                totalPerWattEarningsEstimated += perWattPay;
+              }
             }
           }
         });
@@ -171,8 +194,11 @@ export default function PayrollPeriodView() {
           total_hours: totalHours,
           total_hourly_earnings: hourlyEarnings,
           total_battery_earnings: totalBatteryEarnings,
+          total_battery_earnings_estimated: totalBatteryEarningsEstimated,
           total_per_watt_earnings: totalPerWattEarnings,
+          total_per_watt_earnings_estimated: totalPerWattEarningsEstimated,
           total_earnings: hourlyEarnings + totalBatteryEarnings + totalPerWattEarnings,
+          total_earnings_estimated: hourlyEarnings + totalBatteryEarnings + totalPerWattEarnings + totalBatteryEarningsEstimated + totalPerWattEarningsEstimated,
           time_entries: timeEntries || [],
           battery_jobs: batteryJobs,
           per_watt_jobs: perWattJobs
@@ -233,6 +259,12 @@ export default function PayrollPeriodView() {
             <p className="text-2xl font-bold text-green-600">
               {formatCurrency(selectedPeriod.total_earnings)}
             </p>
+            {selectedPeriod.total_earnings_estimated > selectedPeriod.total_earnings && (
+              <p className="text-sm text-gray-500 flex items-center justify-end gap-1 mt-1">
+                <AlertCircle className="w-3 h-3" />
+                With estimates: {formatCurrency(selectedPeriod.total_earnings_estimated)}
+              </p>
+            )}
           </div>
         </div>
 
@@ -250,7 +282,7 @@ export default function PayrollPeriodView() {
             </p>
           </div>
 
-          {selectedPeriod.total_battery_earnings > 0 && (
+          {(selectedPeriod.total_battery_earnings > 0 || selectedPeriod.total_battery_earnings_estimated > 0) && (
             <div className="bg-purple-50 rounded-lg p-4">
               <div className="flex items-center gap-2 mb-2">
                 <Battery className="w-5 h-5 text-purple-600" />
@@ -259,13 +291,18 @@ export default function PayrollPeriodView() {
               <p className="text-xl font-bold text-purple-900">
                 {formatCurrency(selectedPeriod.total_battery_earnings)}
               </p>
+              {selectedPeriod.total_battery_earnings_estimated > 0 && (
+                <p className="text-xs text-purple-600 mt-1">
+                  + {formatCurrency(selectedPeriod.total_battery_earnings_estimated)} estimated
+                </p>
+              )}
               <p className="text-xs text-purple-700 mt-1">
                 {selectedPeriod.battery_jobs.length} installation{selectedPeriod.battery_jobs.length !== 1 ? 's' : ''}
               </p>
             </div>
           )}
 
-          {selectedPeriod.total_per_watt_earnings > 0 && (
+          {(selectedPeriod.total_per_watt_earnings > 0 || selectedPeriod.total_per_watt_earnings_estimated > 0) && (
             <div className="bg-yellow-50 rounded-lg p-4">
               <div className="flex items-center gap-2 mb-2">
                 <Zap className="w-5 h-5 text-yellow-600" />
@@ -274,6 +311,11 @@ export default function PayrollPeriodView() {
               <p className="text-xl font-bold text-yellow-900">
                 {formatCurrency(selectedPeriod.total_per_watt_earnings)}
               </p>
+              {selectedPeriod.total_per_watt_earnings_estimated > 0 && (
+                <p className="text-xs text-yellow-600 mt-1">
+                  + {formatCurrency(selectedPeriod.total_per_watt_earnings_estimated)} estimated
+                </p>
+              )}
               <p className="text-xs text-yellow-700 mt-1">
                 {formatCurrency(userPaymentInfo?.per_watt_rate || 0)}/watt
               </p>
@@ -290,11 +332,18 @@ export default function PayrollPeriodView() {
             <div className="space-y-2">
               {selectedPeriod.battery_jobs.map((job, idx) => (
                 <div key={idx} className="flex items-center justify-between text-sm border-b border-gray-100 pb-2">
-                  <div>
-                    <p className="font-medium text-gray-900">{job.customer_name}</p>
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                      <p className="font-medium text-gray-900">{job.customer_name}</p>
+                      {!job.is_completed && (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-600">
+                          Estimated
+                        </span>
+                      )}
+                    </div>
                     <p className="text-xs text-gray-600">{job.battery_quantity} batteries</p>
                   </div>
-                  <p className="font-semibold text-purple-900">
+                  <p className={`font-semibold ${job.is_completed ? 'text-purple-900' : 'text-gray-500'}`}>
                     {formatCurrency(job.battery_pay)}
                   </p>
                 </div>
@@ -312,11 +361,18 @@ export default function PayrollPeriodView() {
             <div className="space-y-2">
               {selectedPeriod.per_watt_jobs.map((job, idx) => (
                 <div key={idx} className="flex items-center justify-between text-sm border-b border-gray-100 pb-2">
-                  <div>
-                    <p className="font-medium text-gray-900">{job.customer_name}</p>
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                      <p className="font-medium text-gray-900">{job.customer_name}</p>
+                      {!job.is_completed && (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-600">
+                          Estimated
+                        </span>
+                      )}
+                    </div>
                     <p className="text-xs text-gray-600">{job.system_size} kW system</p>
                   </div>
-                  <p className="font-semibold text-yellow-900">
+                  <p className={`font-semibold ${job.is_completed ? 'text-yellow-900' : 'text-gray-500'}`}>
                     {formatCurrency(job.per_watt_pay)}
                   </p>
                 </div>
@@ -434,7 +490,13 @@ export default function PayrollPeriodView() {
                 <p className="text-lg font-bold text-green-600">
                   {formatCurrency(period.total_earnings)}
                 </p>
-                <div className="flex items-center gap-2 mt-1">
+                {period.total_earnings_estimated > period.total_earnings && (
+                  <p className="text-xs text-gray-500 flex items-center justify-end gap-1">
+                    <AlertCircle className="w-3 h-3" />
+                    + {formatCurrency(period.total_earnings_estimated - period.total_earnings)} est.
+                  </p>
+                )}
+                <div className="flex items-center gap-2 mt-1 flex-wrap justify-end">
                   {period.total_hourly_earnings > 0 && (
                     <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded">
                       Hourly: {formatCurrency(period.total_hourly_earnings)}
@@ -445,9 +507,19 @@ export default function PayrollPeriodView() {
                       Battery: {formatCurrency(period.total_battery_earnings)}
                     </span>
                   )}
+                  {period.total_battery_earnings_estimated > 0 && (
+                    <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded">
+                      +{formatCurrency(period.total_battery_earnings_estimated)} est.
+                    </span>
+                  )}
                   {period.total_per_watt_earnings > 0 && (
                     <span className="text-xs bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded">
                       PPW: {formatCurrency(period.total_per_watt_earnings)}
+                    </span>
+                  )}
+                  {period.total_per_watt_earnings_estimated > 0 && (
+                    <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded">
+                      +{formatCurrency(period.total_per_watt_earnings_estimated)} est.
                     </span>
                   )}
                 </div>
