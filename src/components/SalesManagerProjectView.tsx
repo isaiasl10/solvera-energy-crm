@@ -168,12 +168,12 @@ export default function SalesManagerProjectView({ customer: initialCustomer, onB
   const totalBatteryKw = kwPerUnit * batteryQuantity;
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="bg-white border-b border-gray-200 px-6 py-4">
+    <div className="h-screen flex flex-col bg-gray-50">
+      <div className="bg-white border-b border-gray-200 px-4 py-3 flex-shrink-0">
         <div className="max-w-7xl mx-auto">
           <button
             onClick={onBack}
-            className="flex items-center gap-2 text-gray-600 hover:text-gray-900 mb-4"
+            className="flex items-center gap-2 text-gray-600 hover:text-gray-900 mb-2"
           >
             <ArrowLeft className="w-4 h-4" />
             Back to Customers
@@ -181,12 +181,12 @@ export default function SalesManagerProjectView({ customer: initialCustomer, onB
 
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">{customer.full_name}</h1>
-              <p className="text-sm text-gray-500 mt-1">Customer ID: {customer.customer_id}</p>
+              <h1 className="text-xl font-bold text-gray-900">{customer.full_name}</h1>
+              <p className="text-xs text-gray-500">Customer ID: {customer.customer_id}</p>
             </div>
 
             {success && (
-              <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-2 rounded-lg">
+              <div className="bg-green-50 border border-green-200 text-green-700 px-3 py-1.5 rounded-lg text-sm">
                 Changes saved successfully
               </div>
             )}
@@ -194,34 +194,39 @@ export default function SalesManagerProjectView({ customer: initialCustomer, onB
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-6 py-6">
-        <div className="flex gap-2 mb-6 border-b border-gray-200">
-          {tabs.map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`px-4 py-2 font-medium text-sm border-b-2 transition-colors ${
-                activeTab === tab.id
-                  ? 'border-orange-500 text-orange-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700'
-              }`}
-            >
-              {tab.label}
-            </button>
-          ))}
-        </div>
-
-        {error && (
-          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-6">
-            {error}
+      <div className="flex-shrink-0 bg-white border-b border-gray-200">
+        <div className="max-w-7xl mx-auto px-4">
+          <div className="flex gap-2">
+            {tabs.map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`px-3 py-2 font-medium text-sm border-b-2 transition-colors ${
+                  activeTab === tab.id
+                    ? 'border-orange-500 text-orange-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
           </div>
-        )}
+        </div>
+      </div>
+
+      <div className="flex-1 overflow-y-auto">
+        <div className="max-w-7xl mx-auto px-4 py-4">
+          {error && (
+            <div className="bg-red-50 border border-red-200 text-red-700 px-3 py-2 rounded-lg mb-4 text-sm">
+              {error}
+            </div>
+          )}
 
         {activeTab === 'details' && (
-          <div className="space-y-6">
-            <div className="bg-white rounded-lg border border-gray-200 p-6">
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-lg font-semibold text-gray-900">Customer Information</h2>
+          <div className="space-y-4">
+            <div className="bg-white rounded-lg border border-gray-200 p-4">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-base font-semibold text-gray-900">Customer Information</h2>
                 {!isEditing ? (
                   <button
                     onClick={handleEdit}
@@ -261,9 +266,9 @@ export default function SalesManagerProjectView({ customer: initialCustomer, onB
                 )}
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-xs font-medium text-gray-700 mb-1">
                     Full Name
                   </label>
                   {isEditing ? (
@@ -272,15 +277,15 @@ export default function SalesManagerProjectView({ customer: initialCustomer, onB
                       name="full_name"
                       value={formData.full_name}
                       onChange={handleChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                      className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-orange-500"
                     />
                   ) : (
-                    <p className="text-gray-900">{customer.full_name}</p>
+                    <p className="text-sm text-gray-900">{customer.full_name}</p>
                   )}
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-xs font-medium text-gray-700 mb-1">
                     Email
                   </label>
                   {isEditing ? (
@@ -289,15 +294,15 @@ export default function SalesManagerProjectView({ customer: initialCustomer, onB
                       name="email"
                       value={formData.email || ''}
                       onChange={handleChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                      className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-orange-500"
                     />
                   ) : (
-                    <p className="text-gray-900">{customer.email || 'Not provided'}</p>
+                    <p className="text-sm text-gray-900">{customer.email || 'Not provided'}</p>
                   )}
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-xs font-medium text-gray-700 mb-1">
                     Phone Number
                   </label>
                   {isEditing ? (
@@ -306,15 +311,15 @@ export default function SalesManagerProjectView({ customer: initialCustomer, onB
                       name="phone_number"
                       value={formData.phone_number || ''}
                       onChange={handleChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                      className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-orange-500"
                     />
                   ) : (
-                    <p className="text-gray-900">{customer.phone_number || 'Not provided'}</p>
+                    <p className="text-sm text-gray-900">{customer.phone_number || 'Not provided'}</p>
                   )}
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-xs font-medium text-gray-700 mb-1">
                     Installation Address
                   </label>
                   {isEditing ? (
@@ -323,15 +328,15 @@ export default function SalesManagerProjectView({ customer: initialCustomer, onB
                       name="installation_address"
                       value={formData.installation_address}
                       onChange={handleChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                      className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-orange-500"
                     />
                   ) : (
-                    <p className="text-gray-900">{customer.installation_address}</p>
+                    <p className="text-sm text-gray-900">{customer.installation_address}</p>
                   )}
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-xs font-medium text-gray-700 mb-1">
                     Signature Date
                   </label>
                   {isEditing ? (
@@ -340,10 +345,10 @@ export default function SalesManagerProjectView({ customer: initialCustomer, onB
                       name="signature_date"
                       value={formData.signature_date || ''}
                       onChange={handleChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                      className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-orange-500"
                     />
                   ) : (
-                    <p className="text-gray-900">
+                    <p className="text-sm text-gray-900">
                       {customer.signature_date
                         ? new Date(customer.signature_date).toLocaleDateString()
                         : 'Not set'}
@@ -353,12 +358,12 @@ export default function SalesManagerProjectView({ customer: initialCustomer, onB
               </div>
             </div>
 
-            <div className="bg-white rounded-lg border border-gray-200 p-6">
-              <h2 className="text-lg font-semibold text-gray-900 mb-6">System Details</h2>
+            <div className="bg-white rounded-lg border border-gray-200 p-4">
+              <h2 className="text-base font-semibold text-gray-900 mb-4">System Details</h2>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-xs font-medium text-gray-700 mb-1">
                     System Size (kW)
                   </label>
                   {isEditing ? (
@@ -368,15 +373,15 @@ export default function SalesManagerProjectView({ customer: initialCustomer, onB
                       name="system_size_kw"
                       value={formData.system_size_kw}
                       onChange={handleChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                      className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-orange-500"
                     />
                   ) : (
-                    <p className="text-gray-900 font-semibold">{customer.system_size_kw} kW</p>
+                    <p className="text-sm text-gray-900 font-semibold">{customer.system_size_kw} kW</p>
                   )}
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-xs font-medium text-gray-700 mb-1">
                     Contract Price
                   </label>
                   {isEditing ? (
@@ -386,10 +391,10 @@ export default function SalesManagerProjectView({ customer: initialCustomer, onB
                       name="contract_price"
                       value={formData.contract_price || ''}
                       onChange={handleChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                      className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-orange-500"
                     />
                   ) : (
-                    <p className="text-gray-900 font-semibold">
+                    <p className="text-sm text-gray-900 font-semibold">
                       {customer.contract_price
                         ? `$${Number(customer.contract_price).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
                         : 'Not set'}
@@ -398,22 +403,22 @@ export default function SalesManagerProjectView({ customer: initialCustomer, onB
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-xs font-medium text-gray-700 mb-1">
                     Base EPC Cost
                   </label>
-                  <div className="flex items-center gap-2">
-                    <DollarSign className="w-5 h-5 text-green-600" />
-                    <p className="text-gray-900 font-bold text-lg">
+                  <div className="flex items-center gap-1.5">
+                    <DollarSign className="w-4 h-4 text-green-600" />
+                    <p className="text-sm text-gray-900 font-bold">
                       ${baseEpcCost.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </p>
                   </div>
-                  <p className="text-xs text-gray-500 mt-1">
-                    Based on your PPW: ${ppwRedline.toFixed(4)}
+                  <p className="text-xs text-gray-500 mt-0.5">
+                    PPW: ${ppwRedline.toFixed(4)}
                   </p>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-xs font-medium text-gray-700 mb-1">
                     Panel Quantity
                   </label>
                   {isEditing ? (
@@ -422,15 +427,15 @@ export default function SalesManagerProjectView({ customer: initialCustomer, onB
                       name="panel_quantity"
                       value={formData.panel_quantity}
                       onChange={handleChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                      className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-orange-500"
                     />
                   ) : (
-                    <p className="text-gray-900">{customer.panel_quantity}</p>
+                    <p className="text-sm text-gray-900">{customer.panel_quantity}</p>
                   )}
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-xs font-medium text-gray-700 mb-1">
                     Panel Brand
                   </label>
                   {isEditing ? (
@@ -439,15 +444,15 @@ export default function SalesManagerProjectView({ customer: initialCustomer, onB
                       name="panel_brand"
                       value={formData.panel_brand}
                       onChange={handleChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                      className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-orange-500"
                     />
                   ) : (
-                    <p className="text-gray-900">{customer.panel_brand}</p>
+                    <p className="text-sm text-gray-900">{customer.panel_brand}</p>
                   )}
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-xs font-medium text-gray-700 mb-1">
                     Panel Wattage
                   </label>
                   {isEditing ? (
@@ -456,15 +461,15 @@ export default function SalesManagerProjectView({ customer: initialCustomer, onB
                       name="panel_wattage"
                       value={formData.panel_wattage}
                       onChange={handleChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                      className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-orange-500"
                     />
                   ) : (
-                    <p className="text-gray-900">{customer.panel_wattage}W</p>
+                    <p className="text-sm text-gray-900">{customer.panel_wattage}W</p>
                   )}
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-xs font-medium text-gray-700 mb-1">
                     Inverter Option
                   </label>
                   {isEditing ? (
@@ -473,15 +478,15 @@ export default function SalesManagerProjectView({ customer: initialCustomer, onB
                       name="inverter_option"
                       value={formData.inverter_option}
                       onChange={handleChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                      className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-orange-500"
                     />
                   ) : (
-                    <p className="text-gray-900">{customer.inverter_option}</p>
+                    <p className="text-sm text-gray-900">{customer.inverter_option}</p>
                   )}
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-xs font-medium text-gray-700 mb-1">
                     Racking Type
                   </label>
                   {isEditing ? (
@@ -489,7 +494,7 @@ export default function SalesManagerProjectView({ customer: initialCustomer, onB
                       name="racking_type"
                       value={formData.racking_type}
                       onChange={handleChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                      className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-orange-500"
                     >
                       <option value="IronRidge XR-10">IronRidge XR-10</option>
                       <option value="IronRidge XR-100">IronRidge XR-100</option>
@@ -500,12 +505,12 @@ export default function SalesManagerProjectView({ customer: initialCustomer, onB
                       <option value="Other">Other</option>
                     </select>
                   ) : (
-                    <p className="text-gray-900">{customer.racking_type}</p>
+                    <p className="text-sm text-gray-900">{customer.racking_type}</p>
                   )}
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-xs font-medium text-gray-700 mb-1">
                     Roof Type
                   </label>
                   {isEditing ? (
@@ -513,7 +518,7 @@ export default function SalesManagerProjectView({ customer: initialCustomer, onB
                       name="roof_type"
                       value={formData.roof_type || ''}
                       onChange={handleChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                      className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-orange-500"
                     >
                       <option value="">Select roof type</option>
                       <option value="Composition Shingle">Composition Shingle</option>
@@ -524,16 +529,16 @@ export default function SalesManagerProjectView({ customer: initialCustomer, onB
                       <option value="Other">Other</option>
                     </select>
                   ) : (
-                    <p className="text-gray-900">{customer.roof_type || 'Not specified'}</p>
+                    <p className="text-sm text-gray-900">{customer.roof_type || 'Not specified'}</p>
                   )}
                 </div>
               </div>
 
-              <div className="mt-6 border-t border-gray-200 pt-6">
-                <h3 className="text-md font-semibold text-gray-900 mb-4">Battery Storage</h3>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="mt-4 border-t border-gray-200 pt-4">
+                <h3 className="text-sm font-semibold text-gray-900 mb-3">Battery Storage</h3>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label className="block text-xs font-medium text-gray-700 mb-1">
                       Battery Brand
                     </label>
                     {isEditing ? (
@@ -541,7 +546,7 @@ export default function SalesManagerProjectView({ customer: initialCustomer, onB
                         name="battery_brand"
                         value={formData.battery_brand || ''}
                         onChange={handleChange}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                        className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-orange-500"
                       >
                         <option value="">No Battery</option>
                         <option value="Sonnen">Sonnen (20kW each)</option>
@@ -550,12 +555,12 @@ export default function SalesManagerProjectView({ customer: initialCustomer, onB
                         <option value="EP Cube">EP Cube (3.3kW each)</option>
                       </select>
                     ) : (
-                      <p className="text-gray-900">{customer.battery_brand || 'No Battery'}</p>
+                      <p className="text-sm text-gray-900">{customer.battery_brand || 'No Battery'}</p>
                     )}
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label className="block text-xs font-medium text-gray-700 mb-1">
                       Battery Quantity
                     </label>
                     {isEditing ? (
@@ -564,29 +569,29 @@ export default function SalesManagerProjectView({ customer: initialCustomer, onB
                         name="battery_quantity"
                         value={formData.battery_quantity || 0}
                         onChange={handleChange}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                        className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-orange-500"
                       />
                     ) : (
-                      <p className="text-gray-900">{customer.battery_quantity || 0}</p>
+                      <p className="text-sm text-gray-900">{customer.battery_quantity || 0}</p>
                     )}
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label className="block text-xs font-medium text-gray-700 mb-1">
                       Total Battery Capacity
                     </label>
-                    <p className="text-gray-900 font-bold">
+                    <p className="text-sm text-gray-900 font-bold">
                       {totalBatteryKw > 0 ? `${totalBatteryKw.toFixed(1)} kW` : 'N/A'}
                     </p>
                   </div>
                 </div>
               </div>
 
-              <div className="mt-6 border-t border-gray-200 pt-6">
-                <h3 className="text-md font-semibold text-gray-900 mb-4">Utility & HOA Information</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="mt-4 border-t border-gray-200 pt-4">
+                <h3 className="text-sm font-semibold text-gray-900 mb-3">Utility & HOA Information</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label className="block text-xs font-medium text-gray-700 mb-1">
                       Utility Company
                     </label>
                     {isEditing ? (
@@ -595,15 +600,15 @@ export default function SalesManagerProjectView({ customer: initialCustomer, onB
                         name="utility_company"
                         value={formData.utility_company || ''}
                         onChange={handleChange}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                        className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-orange-500"
                       />
                     ) : (
-                      <p className="text-gray-900">{customer.utility_company || 'Not provided'}</p>
+                      <p className="text-sm text-gray-900">{customer.utility_company || 'Not provided'}</p>
                     )}
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label className="block text-xs font-medium text-gray-700 mb-1">
                       Utility App ID
                     </label>
                     {isEditing ? (
@@ -612,15 +617,15 @@ export default function SalesManagerProjectView({ customer: initialCustomer, onB
                         name="utility_app_id"
                         value={formData.utility_app_id || ''}
                         onChange={handleChange}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                        className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-orange-500"
                       />
                     ) : (
-                      <p className="text-gray-900">{customer.utility_app_id || 'Not provided'}</p>
+                      <p className="text-sm text-gray-900">{customer.utility_app_id || 'Not provided'}</p>
                     )}
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label className="block text-xs font-medium text-gray-700 mb-1">
                       HOA Name
                     </label>
                     {isEditing ? (
@@ -629,15 +634,15 @@ export default function SalesManagerProjectView({ customer: initialCustomer, onB
                         name="hoa_name"
                         value={formData.hoa_name || ''}
                         onChange={handleChange}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                        className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-orange-500"
                       />
                     ) : (
-                      <p className="text-gray-900">{customer.hoa_name || 'Not provided'}</p>
+                      <p className="text-sm text-gray-900">{customer.hoa_name || 'Not provided'}</p>
                     )}
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label className="block text-xs font-medium text-gray-700 mb-1">
                       HOA Management Company
                     </label>
                     {isEditing ? (
@@ -646,10 +651,10 @@ export default function SalesManagerProjectView({ customer: initialCustomer, onB
                         name="hoa_management_company"
                         value={formData.hoa_management_company || ''}
                         onChange={handleChange}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                        className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-orange-500"
                       />
                     ) : (
-                      <p className="text-gray-900">{customer.hoa_management_company || 'Not provided'}</p>
+                      <p className="text-sm text-gray-900">{customer.hoa_management_company || 'Not provided'}</p>
                     )}
                   </div>
                 </div>
@@ -663,9 +668,9 @@ export default function SalesManagerProjectView({ customer: initialCustomer, onB
         )}
 
         {activeTab === 'timeline' && (
-          <div className="bg-white rounded-lg border border-gray-200 p-6">
-            <div className="mb-4 bg-blue-50 border border-blue-200 rounded-lg p-4">
-              <p className="text-sm text-blue-800">
+          <div className="bg-white rounded-lg border border-gray-200 p-4">
+            <div className="mb-3 bg-blue-50 border border-blue-200 rounded-lg p-3">
+              <p className="text-xs text-blue-800">
                 <strong>Note:</strong> Timeline is view-only for Sales Managers. Contact operations to update project status.
               </p>
             </div>
@@ -676,6 +681,7 @@ export default function SalesManagerProjectView({ customer: initialCustomer, onB
         {activeTab === 'chat' && (
           <ProjectChat customer={customer} />
         )}
+        </div>
       </div>
     </div>
   );
