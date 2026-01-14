@@ -1512,18 +1512,44 @@ export default function Proposals() {
   );
 
   const systemSummary = useMemo(() => {
-    if (!proposal) return null;
+    if (!proposal) {
+      console.log("systemSummary: no proposal");
+      return null;
+    }
+
+    if (panelModels.length === 0) {
+      console.log("systemSummary: panel models not loaded yet");
+      return null;
+    }
 
     const panelCount = panels.length;
-    if (panelCount === 0) return null;
+    if (panelCount === 0) {
+      console.log("systemSummary: no panels");
+      return null;
+    }
 
     let panelModelToUse = selectedPanelModel;
     if (!panelModelToUse && panels.length > 0) {
       const firstPanel = panels[0];
       panelModelToUse = panelModels.find(pm => pm.id === firstPanel.panel_model_id) || null;
+      console.log("systemSummary: trying to find panel model from panels", {
+        firstPanelModelId: firstPanel.panel_model_id,
+        panelModelsCount: panelModels.length,
+        panelModelsIds: panelModels.map(pm => pm.id),
+        found: !!panelModelToUse
+      });
     }
 
-    if (!panelModelToUse) return null;
+    if (!panelModelToUse) {
+      console.log("systemSummary: no panel model found", {
+        selectedPanelModel,
+        selectedPanelModelId,
+        panelModelsCount: panelModels.length,
+        panelsCount: panels.length,
+        firstPanelModelId: panels[0]?.panel_model_id
+      });
+      return null;
+    }
 
     const systemSizeKw = (panelCount * panelModelToUse.watts) / 1000;
 
@@ -1565,7 +1591,32 @@ export default function Proposals() {
     };
   }, [proposal, selectedPanelModel, panels, panelModels]);
 
-  if (proposal && proposalStep === "pricing" && systemSummary) {
+  if (proposal && proposalStep === "pricing") {
+    if (!systemSummary) {
+      return (
+        <div style={{ display: "flex", justifyContent: "center", alignItems: "center", height: "calc(100vh - 64px)" }}>
+          <div style={{ textAlign: "center" }}>
+            <div style={{ fontSize: 18, fontWeight: 600, marginBottom: 12 }}>Loading system data...</div>
+            <div style={{ fontSize: 14, opacity: 0.7 }}>Please wait while we calculate your system details.</div>
+            <button
+              onClick={() => setProposalStep("design")}
+              style={{
+                marginTop: 20,
+                padding: "10px 20px",
+                borderRadius: 8,
+                border: "1px solid rgba(0,0,0,0.15)",
+                background: "white",
+                fontWeight: 600,
+                cursor: "pointer",
+              }}
+            >
+              ← Back to Design
+            </button>
+          </div>
+        </div>
+      );
+    }
+
     const systemSizeKw = parseFloat(systemSummary.systemSizeKw);
     const basePrice = customPrice || currentUserData?.ppw_redline || 2.5;
     const systemCost = systemSizeKw * 1000 * basePrice;
