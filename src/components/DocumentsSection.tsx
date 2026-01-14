@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
-import { ChevronDown, ChevronRight, Folder, Camera, Upload, Image } from 'lucide-react';
+import { ChevronDown, ChevronRight, Folder, Camera, Upload, Image, Download, FileText } from 'lucide-react';
 import DocumentUpload from './DocumentUpload';
-import { supabase } from '../lib/supabase';
+import { supabase, type Document } from '../lib/supabase';
 
 interface DocumentsSectionProps {
   customerId: string;
@@ -33,7 +33,9 @@ export default function DocumentsSection({ customerId, allowedTypes }: Documents
   };
   const [installationTickets, setInstallationTickets] = useState<PhotoTicket[]>([]);
   const [selectedTicket, setSelectedTicket] = useState<PhotoTicket | null>(null);
+  const [siteSurveyPdfs, setSiteSurveyPdfs] = useState<Document[]>([]);
   const [loading, setLoading] = useState(false);
+  const [surveyLoading, setSurveyLoading] = useState(false);
 
   useEffect(() => {
     loadInstallationPhotos();
@@ -74,6 +76,25 @@ export default function DocumentsSection({ customerId, allowedTypes }: Documents
     }
   };
 
+  const loadSiteSurveyPdfs = async () => {
+    try {
+      setSurveyLoading(true);
+      const { data, error } = await supabase
+        .from('documents')
+        .select('*')
+        .eq('customer_id', customerId)
+        .eq('document_type', 'site_survey_photos')
+        .order('uploaded_at', { ascending: false });
+
+      if (error) throw error;
+      setSiteSurveyPdfs(data || []);
+    } catch (err) {
+      console.error('Error loading site survey PDFs:', err);
+    } finally {
+      setSurveyLoading(false);
+    }
+  };
+
   const toggleFolder = async (folderId: string) => {
     setExpandedFolders(prev => ({
       ...prev,
@@ -82,6 +103,10 @@ export default function DocumentsSection({ customerId, allowedTypes }: Documents
 
     if (folderId === 'installation' && !expandedFolders[folderId]) {
       await loadInstallationPhotos();
+    }
+
+    if (folderId === 'siteSurvey' && !expandedFolders[folderId]) {
+      await loadSiteSurveyPdfs();
     }
   };
 
@@ -103,6 +128,34 @@ export default function DocumentsSection({ customerId, allowedTypes }: Documents
       'electrical_7': 'IEEE Grid Setting Screenshot',
     };
     return labels[photoId] || photoId;
+  };
+
+  const downloadPdf = async (document: Document) => {
+    try {
+      const { data, error } = await supabase.storage
+        .from('customer-documents')
+        .download(document.file_path);
+
+      if (error) throw error;
+
+      const url = URL.createObjectURL(data);
+      const a = window.document.createElement('a');
+      a.href = url;
+      a.download = document.file_name;
+      window.document.body.appendChild(a);
+      a.click();
+      window.document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('Error downloading PDF:', err);
+    }
+  };
+
+  const getDocumentUrl = (document: Document) => {
+    const { data } = supabase.storage
+      .from('customer-documents')
+      .getPublicUrl(document.file_path);
+    return data.publicUrl;
   };
 
   return (
@@ -386,17 +439,60 @@ export default function DocumentsSection({ customerId, allowedTypes }: Documents
           ) : (
             <ChevronRight className="w-5 h-5 text-gray-600" />
           )}
-          <Camera className="w-5 h-5 text-purple-600" />
+          <FileText className="w-5 h-5 text-purple-600" />
           <h3 className="text-lg font-semibold text-gray-900">Site Survey Photos</h3>
+          {siteSurveyPdfs.length > 0 && (
+            <span className="ml-auto text-sm text-gray-500">
+              {siteSurveyPdfs.length} {siteSurveyPdfs.length === 1 ? 'PDF' : 'PDFs'}
+            </span>
+          )}
         </button>
 
         {expandedFolders.siteSurvey && (
           <div className="p-6 pt-0 border-t border-gray-100">
-            <div className="text-center py-8 text-gray-500">
-              <Camera className="w-12 h-12 mx-auto mb-3 text-gray-400" />
-              <p>No site survey photos available yet</p>
-              <p className="text-sm mt-2">Coming soon</p>
-            </div>
+            {surveyLoading ? (
+              <div className="text-center py-8 text-gray-500">Loading site survey photos...</div>
+            ) : siteSurveyPdfs.length === 0 ? (
+              <div className="text-center py-8 text-gray-500">
+                <FileText className="w-12 h-12 mx-auto mb-3 text-gray-400" />
+                <p>No site survey photos PDFs available yet</p>
+                <p className="text-sm mt-2 text-gray-400">PDFs will be generated automatically when site surveys are completed</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {siteSurveyPdfs.map((pdf) => (
+                  <div key={pdf.id} className="bg-white border border-gray-300 rounded-lg overflow-hidden">
+                    <div className="flex items-center justify-between p-3 bg-gray-50 border-b border-gray-200">
+                      <div className="flex items-center gap-3 flex-1 min-w-0">
+                        <FileText className="w-5 h-5 text-purple-600 flex-shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <div className="text-sm font-medium text-gray-900 truncate">
+                            {pdf.file_name}
+                          </div>
+                          <div className="text-xs text-gray-500">
+                            {new Date(pdf.uploaded_at).toLocaleDateString()} - {(pdf.file_size / 1024 / 1024).toFixed(2)} MB
+                          </div>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => downloadPdf(pdf)}
+                        className="flex items-center gap-1.5 px-3 py-1.5 bg-purple-600 text-white text-sm rounded hover:bg-purple-700 transition-colors"
+                      >
+                        <Download className="w-4 h-4" />
+                        Download
+                      </button>
+                    </div>
+                    <div className="p-3">
+                      <iframe
+                        src={getDocumentUrl(pdf)}
+                        className="w-full h-[600px] rounded border border-gray-200"
+                        title={pdf.file_name}
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
       </div>

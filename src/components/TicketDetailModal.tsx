@@ -318,7 +318,7 @@ export default function TicketDetailModal({ ticketId, onClose, onUpdate, onViewP
 
       if ((ticket.ticket_type === 'inspection' && ticket.problem_code === 'site_survey') ||
           (ticket.ticket_type === 'service' && ticket.appointment_type === 'site_survey')) {
-        if (customer && (reason === 'Survey Complete' || reason === 'Work Complete')) {
+        if (customer && (reason === 'Survey Complete' || reason === 'Work Complete' || reason === 'Site Survey Complete')) {
           const { data: existingTimeline } = await supabase
             .from('project_timeline')
             .select('id')
@@ -357,6 +357,30 @@ export default function TicketDetailModal({ ticketId, onClose, onUpdate, onViewP
             if (insertError) {
               console.error('Error inserting project timeline:', insertError);
             }
+          }
+
+          try {
+            const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-site-survey-pdf`;
+            const response = await fetch(apiUrl, {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                customer_id: customer.id,
+                ticket_id: ticketId,
+              }),
+            });
+
+            const result = await response.json();
+            if (!result.success) {
+              console.error('Error generating site survey PDF:', result.error);
+            } else {
+              console.log('Site survey PDF generated successfully:', result.file_name);
+            }
+          } catch (pdfError) {
+            console.error('Error calling PDF generation function:', pdfError);
           }
         }
       }
