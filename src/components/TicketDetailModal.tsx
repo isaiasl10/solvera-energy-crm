@@ -597,14 +597,14 @@ export default function TicketDetailModal({ ticketId, onClose, onUpdate, onViewP
   }
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4">
-      <div className="bg-white rounded-lg w-full max-h-[95vh] sm:max-h-[90vh] flex flex-col max-w-[95vw] sm:max-w-2xl lg:max-w-4xl">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 sm:p-6">
+      <div className="bg-white rounded-lg w-full max-h-[85vh] sm:max-h-[90vh] flex flex-col max-w-full sm:max-w-2xl lg:max-w-4xl">
         <div className="flex-shrink-0 bg-white border-b border-gray-200">
-          <div className="flex items-center justify-between p-3 sm:p-4 border-b border-gray-200">
-            <div className="flex gap-2 flex-wrap">
+          <div className="flex items-center justify-between p-2 sm:p-4 border-b border-gray-200 gap-2">
+            <div className="flex gap-1.5 sm:gap-2 flex-wrap">
               <button
                 onClick={() => setActiveTab('customer')}
-                className={`px-4 py-1.5 rounded text-sm font-medium transition-colors ${
+                className={`px-3 sm:px-4 py-1 sm:py-1.5 rounded text-xs sm:text-sm font-medium transition-colors ${
                   activeTab === 'customer'
                     ? 'bg-orange-500 text-white'
                     : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
@@ -614,7 +614,7 @@ export default function TicketDetailModal({ ticketId, onClose, onUpdate, onViewP
               </button>
               <button
                 onClick={() => setActiveTab('equipment')}
-                className={`px-4 py-1.5 rounded text-sm font-medium transition-colors ${
+                className={`px-3 sm:px-4 py-1 sm:py-1.5 rounded text-xs sm:text-sm font-medium transition-colors ${
                   activeTab === 'equipment'
                     ? 'bg-orange-500 text-white'
                     : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
@@ -624,7 +624,7 @@ export default function TicketDetailModal({ ticketId, onClose, onUpdate, onViewP
               </button>
               <button
                 onClick={() => setActiveTab('adders')}
-                className={`px-4 py-1.5 rounded text-sm font-medium transition-colors ${
+                className={`px-3 sm:px-4 py-1 sm:py-1.5 rounded text-xs sm:text-sm font-medium transition-colors ${
                   activeTab === 'adders'
                     ? 'bg-orange-500 text-white'
                     : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
@@ -635,15 +635,15 @@ export default function TicketDetailModal({ ticketId, onClose, onUpdate, onViewP
             </div>
             <button
               onClick={onClose}
-              className="text-gray-400 hover:text-gray-600 transition-colors"
+              className="text-gray-400 hover:text-gray-600 transition-colors flex-shrink-0"
             >
               <X className="w-5 h-5" />
             </button>
           </div>
 
           {activeTab === 'customer' && (
-            <div className="p-3 sm:p-4 bg-gray-50">
-              <div className="space-y-3">
+            <div className="p-2 sm:p-4 bg-gray-50">
+              <div className="space-y-2 sm:space-y-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <input type="checkbox" className="w-4 h-4 rounded" />
@@ -699,15 +699,15 @@ export default function TicketDetailModal({ ticketId, onClose, onUpdate, onViewP
         </div>
 
         <div className="flex-1 overflow-y-auto">
-          <div className="p-3 sm:p-4">
+          <div className="p-2 sm:p-4">
             {activeTab === 'customer' && (
             <>
-              <div className="flex gap-2 mb-3 border-b border-gray-200 pb-2 overflow-x-auto">
+              <div className="flex gap-1.5 sm:gap-2 mb-2 sm:mb-3 border-b border-gray-200 pb-2 overflow-x-auto">
                 {['ticket', 'plan_set', 'permit', 'eng_letter', 'site_survey'].map((tab) => (
                   <button
                     key={tab}
                     onClick={() => setSubTab(tab as SubTab)}
-                    className={`px-3 py-1.5 rounded-t text-sm font-medium transition-colors whitespace-nowrap ${
+                    className={`px-2 sm:px-3 py-1 sm:py-1.5 rounded-t text-xs sm:text-sm font-medium transition-colors whitespace-nowrap ${
                       subTab === tab
                         ? 'bg-orange-500 text-white'
                         : 'text-gray-700 hover:bg-gray-100'
@@ -719,39 +719,39 @@ export default function TicketDetailModal({ ticketId, onClose, onUpdate, onViewP
               </div>
 
               {subTab === 'ticket' && (
-                <div className="space-y-3 sm:space-y-4">
-                  <div className="bg-gray-900 text-white rounded-lg p-3 sm:p-4">
-                    <h3 className="text-base sm:text-lg font-bold mb-2">{formatLabel(ticket.ticket_type || 'service')}</h3>
-                    <div className="flex items-center gap-2 mb-2">
-                      <span className="text-sm text-gray-400">Assigned:</span>
-                      <span className="text-sm sm:text-base font-medium">
+                <div className="space-y-2 sm:space-y-4">
+                  <div className="bg-gray-900 text-white rounded-lg p-2.5 sm:p-4">
+                    <h3 className="text-sm sm:text-lg font-bold mb-1.5 sm:mb-2">{formatLabel(ticket.ticket_type || 'service')}</h3>
+                    <div className="flex items-center gap-2 mb-1.5 sm:mb-2">
+                      <span className="text-xs sm:text-sm text-gray-400">Assigned:</span>
+                      <span className="text-xs sm:text-base font-medium">
                         {ticket.assigned_technicians && ticket.assigned_technicians.length > 0
                           ? ticket.assigned_technicians.join('/')
                           : 'Unassigned'}
                       </span>
                     </div>
                     {ticket.notes && (
-                      <div className="text-sm whitespace-pre-wrap">{ticket.notes}</div>
+                      <div className="text-xs sm:text-sm whitespace-pre-wrap">{ticket.notes}</div>
                     )}
                   </div>
 
-                  <div className="space-y-2 sm:space-y-3">
+                  <div className="space-y-1.5 sm:space-y-3">
                     <div
                       onClick={() => handleProgressClick('in_transit')}
-                      className={`flex items-center justify-between p-3 sm:p-4 rounded-lg border-2 cursor-pointer transition-colors ${
+                      className={`flex items-center justify-between p-2.5 sm:p-4 rounded-lg border-2 cursor-pointer transition-colors ${
                         ticket.in_transit_at
                           ? 'bg-green-50 border-green-500'
                           : 'bg-white border-gray-300 hover:border-gray-400'
                       }`}
                     >
-                      <div className="flex items-center gap-3">
-                        <Truck className={`w-5 h-5 ${ticket.in_transit_at ? 'text-green-600' : 'text-gray-400'}`} />
+                      <div className="flex items-center gap-2 sm:gap-3">
+                        <Truck className={`w-4 sm:w-5 h-4 sm:h-5 ${ticket.in_transit_at ? 'text-green-600' : 'text-gray-400'}`} />
                         <div>
-                          <div className="text-sm sm:text-base font-medium">1. In Transit to Site</div>
+                          <div className="text-xs sm:text-base font-medium">1. In Transit to Site</div>
                         </div>
                       </div>
                       {ticket.in_transit_at && (
-                        <div className="text-xs sm:text-sm font-medium text-green-600 ml-2">
+                        <div className="text-[10px] sm:text-sm font-medium text-green-600 ml-1 sm:ml-2">
                           {formatDateTime(ticket.in_transit_at)}
                         </div>
                       )}
@@ -759,20 +759,20 @@ export default function TicketDetailModal({ ticketId, onClose, onUpdate, onViewP
 
                     <div
                       onClick={() => handleProgressClick('arrived')}
-                      className={`flex items-center justify-between p-3 sm:p-4 rounded-lg border-2 cursor-pointer transition-colors ${
+                      className={`flex items-center justify-between p-2.5 sm:p-4 rounded-lg border-2 cursor-pointer transition-colors ${
                         ticket.arrived_at
                           ? 'bg-green-50 border-green-500'
                           : 'bg-white border-gray-300 hover:border-gray-400'
                       }`}
                     >
-                      <div className="flex items-center gap-3">
-                        <Home className={`w-5 h-5 ${ticket.arrived_at ? 'text-green-600' : 'text-gray-400'}`} />
+                      <div className="flex items-center gap-2 sm:gap-3">
+                        <Home className={`w-4 sm:w-5 h-4 sm:h-5 ${ticket.arrived_at ? 'text-green-600' : 'text-gray-400'}`} />
                         <div>
-                          <div className="text-sm sm:text-base font-medium">2. Arrived on Site</div>
+                          <div className="text-xs sm:text-base font-medium">2. Arrived on Site</div>
                         </div>
                       </div>
                       {ticket.arrived_at && (
-                        <div className="text-xs sm:text-sm font-medium text-green-600 ml-2">
+                        <div className="text-[10px] sm:text-sm font-medium text-green-600 ml-1 sm:ml-2">
                           {formatDateTime(ticket.arrived_at)}
                         </div>
                       )}
@@ -780,54 +780,54 @@ export default function TicketDetailModal({ ticketId, onClose, onUpdate, onViewP
 
                     <div
                       onClick={() => handleProgressClick('begin')}
-                      className={`flex items-center justify-between p-3 sm:p-4 rounded-lg border-2 cursor-pointer transition-colors ${
+                      className={`flex items-center justify-between p-2.5 sm:p-4 rounded-lg border-2 cursor-pointer transition-colors ${
                         ticket.begin_ticket_at
                           ? 'bg-green-50 border-green-500'
                           : 'bg-white border-gray-300 hover:border-gray-400'
                       }`}
                     >
-                      <div className="flex items-center gap-3">
-                        <PlayCircle className={`w-5 h-5 ${ticket.begin_ticket_at ? 'text-green-600' : 'text-gray-400'}`} />
-                        <div className="text-sm sm:text-base font-medium">3. Begin Ticket</div>
+                      <div className="flex items-center gap-2 sm:gap-3">
+                        <PlayCircle className={`w-4 sm:w-5 h-4 sm:h-5 ${ticket.begin_ticket_at ? 'text-green-600' : 'text-gray-400'}`} />
+                        <div className="text-xs sm:text-base font-medium">3. Begin Ticket</div>
                       </div>
                       {ticket.begin_ticket_at && (
-                        <div className="text-xs sm:text-sm font-medium text-green-600 ml-2">
+                        <div className="text-[10px] sm:text-sm font-medium text-green-600 ml-1 sm:ml-2">
                           {formatDateTime(ticket.begin_ticket_at)}
                         </div>
                       )}
                     </div>
 
-                    <div className="p-3 sm:p-4 rounded-lg border-2 border-gray-300 bg-white">
-                      <div className="flex items-center gap-3 mb-2">
-                        <ClipboardList className="w-5 h-5 text-gray-600" />
-                        <div className="text-sm sm:text-base font-medium">4. Work Performed *</div>
+                    <div className="p-2.5 sm:p-4 rounded-lg border-2 border-gray-300 bg-white">
+                      <div className="flex items-center gap-2 sm:gap-3 mb-1.5 sm:mb-2">
+                        <ClipboardList className="w-4 sm:w-5 h-4 sm:h-5 text-gray-600" />
+                        <div className="text-xs sm:text-base font-medium">4. Work Performed *</div>
                       </div>
                       <textarea
                         value={workPerformed}
                         onChange={(e) => setWorkPerformed(e.target.value)}
                         onBlur={saveWorkPerformed}
                         placeholder="Describe the work performed..."
-                        rows={4}
-                        className="w-full px-3 py-2 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                        rows={3}
+                        className="w-full px-2 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
                       />
                     </div>
 
                     <div
                       onClick={() => handleProgressClick('departing')}
-                      className={`flex items-center justify-between p-3 sm:p-4 rounded-lg border-2 cursor-pointer transition-colors ${
+                      className={`flex items-center justify-between p-2.5 sm:p-4 rounded-lg border-2 cursor-pointer transition-colors ${
                         ticket.departing_at
                           ? 'bg-green-50 border-green-500'
                           : 'bg-white border-gray-300 hover:border-gray-400'
                       }`}
                     >
-                      <div className="flex items-center gap-3">
-                        <LogOut className={`w-5 h-5 ${ticket.departing_at ? 'text-green-600' : 'text-gray-400'}`} />
+                      <div className="flex items-center gap-2 sm:gap-3">
+                        <LogOut className={`w-4 sm:w-5 h-4 sm:h-5 ${ticket.departing_at ? 'text-green-600' : 'text-gray-400'}`} />
                         <div>
-                          <div className="text-sm sm:text-base font-medium">5. Departing Site</div>
+                          <div className="text-xs sm:text-base font-medium">5. Departing Site</div>
                         </div>
                       </div>
                       {ticket.departing_at && (
-                        <div className="text-xs sm:text-sm font-medium text-green-600 ml-2">
+                        <div className="text-[10px] sm:text-sm font-medium text-green-600 ml-1 sm:ml-2">
                           {formatDateTime(ticket.departing_at)}
                         </div>
                       )}
@@ -835,23 +835,23 @@ export default function TicketDetailModal({ ticketId, onClose, onUpdate, onViewP
 
                     <div
                       onClick={() => handleProgressClick('closed')}
-                      className={`flex items-center justify-between p-3 sm:p-4 rounded-lg border-2 cursor-pointer transition-colors ${
+                      className={`flex items-center justify-between p-2.5 sm:p-4 rounded-lg border-2 cursor-pointer transition-colors ${
                         ticket.closed_at
                           ? 'bg-green-50 border-green-500'
                           : 'bg-white border-gray-300 hover:border-gray-400'
                       }`}
                     >
-                      <div className="flex items-center gap-3">
-                        <CheckCircle className={`w-5 h-5 ${ticket.closed_at ? 'text-green-600' : 'text-gray-400'}`} />
+                      <div className="flex items-center gap-2 sm:gap-3">
+                        <CheckCircle className={`w-4 sm:w-5 h-4 sm:h-5 ${ticket.closed_at ? 'text-green-600' : 'text-gray-400'}`} />
                         <div>
-                          <div className="text-sm sm:text-base font-medium">6. Close Ticket</div>
+                          <div className="text-xs sm:text-base font-medium">6. Close Ticket</div>
                           {ticket.close_reason && (
-                            <div className="text-xs sm:text-sm text-gray-600">{ticket.close_reason}</div>
+                            <div className="text-[10px] sm:text-sm text-gray-600">{ticket.close_reason}</div>
                           )}
                         </div>
                       </div>
                       {ticket.closed_at && (
-                        <div className="text-xs sm:text-sm font-medium text-green-600 ml-2">
+                        <div className="text-[10px] sm:text-sm font-medium text-green-600 ml-1 sm:ml-2">
                           {formatDateTime(ticket.closed_at)}
                         </div>
                       )}
@@ -871,9 +871,9 @@ export default function TicketDetailModal({ ticketId, onClose, onUpdate, onViewP
           )}
 
           {activeTab === 'equipment' && (
-            <div className="p-3 sm:p-4">
-              <div className="space-y-3">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+            <div className="p-2 sm:p-4">
+              <div className="space-y-2 sm:space-y-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-4">
                   <div>
                     <div className="text-xs text-gray-500">Panel Brand</div>
                     <div className="text-sm font-medium">{customer.panel_brand}</div>
@@ -896,8 +896,8 @@ export default function TicketDetailModal({ ticketId, onClose, onUpdate, onViewP
           )}
 
           {activeTab === 'adders' && (
-            <div className="p-3 sm:p-4">
-              <div className="space-y-2">
+            <div className="p-2 sm:p-4">
+              <div className="space-y-1.5 sm:space-y-2">
                 {customer.adder_steep_roof && <div className="text-sm">✓ Steep Roof</div>}
                 {customer.adder_metal_roof && <div className="text-sm">✓ Metal Roof</div>}
                 {customer.adder_tile_roof && <div className="text-sm">✓ Tile Roof</div>}
@@ -916,11 +916,11 @@ export default function TicketDetailModal({ ticketId, onClose, onUpdate, onViewP
           </div>
         </div>
 
-        <div className="flex-shrink-0 border-t border-gray-200 bg-white p-3 sm:p-4 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2">
+        <div className="flex-shrink-0 border-t border-gray-200 bg-white p-2 sm:p-4 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2">
           {onViewProject ? (
             <button
               onClick={onViewProject}
-              className="flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors font-medium"
+              className="flex items-center justify-center gap-2 px-3 sm:px-4 py-1.5 sm:py-2 bg-blue-600 text-white text-xs sm:text-sm rounded-lg hover:bg-blue-700 transition-colors font-medium"
             >
               <FolderOpen className="w-4 h-4" />
               Project
@@ -931,7 +931,7 @@ export default function TicketDetailModal({ ticketId, onClose, onUpdate, onViewP
           <div className="flex items-center gap-2">
             <button
               onClick={onClose}
-              className="flex-1 sm:flex-none px-4 py-2 bg-gray-200 text-gray-700 text-sm rounded-lg hover:bg-gray-300 transition-colors font-medium"
+              className="flex-1 sm:flex-none px-3 sm:px-4 py-1.5 sm:py-2 bg-gray-200 text-gray-700 text-xs sm:text-sm rounded-lg hover:bg-gray-300 transition-colors font-medium"
             >
               Close
             </button>
@@ -957,7 +957,7 @@ export default function TicketDetailModal({ ticketId, onClose, onUpdate, onViewP
                 }
               }}
               disabled={saving}
-              className="flex-1 sm:flex-none px-4 py-2 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700 transition-colors font-medium disabled:opacity-50"
+              className="flex-1 sm:flex-none px-3 sm:px-4 py-1.5 sm:py-2 bg-green-600 text-white text-xs sm:text-sm rounded-lg hover:bg-green-700 transition-colors font-medium disabled:opacity-50"
             >
               {saving ? 'Saving...' : 'Save'}
             </button>
