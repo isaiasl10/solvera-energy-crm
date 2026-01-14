@@ -9,6 +9,15 @@ type SelectedAddress = {
 };
 
 export default function Proposals() {
+  const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || "";
+  if (!apiKey) {
+    return (
+      <div style={{ padding: 24, color: "crimson" }}>
+        Missing VITE_GOOGLE_MAPS_API_KEY environment variable. Please add your Google Maps API key to .env file.
+      </div>
+    );
+  }
+
   const mapDivRef = useRef<HTMLDivElement | null>(null);
   const autocompleteHostRef = useRef<HTMLDivElement | null>(null);
 
@@ -19,17 +28,15 @@ export default function Proposals() {
   const [mapsReady, setMapsReady] = useState(false);
   const [mapsError, setMapsError] = useState<string | null>(null);
 
-  const loader = useMemo(() => {
-    const key = import.meta.env.VITE_GOOGLE_MAPS_API_KEY as string | undefined;
-    if (!key) {
-      throw new Error("Missing VITE_GOOGLE_MAPS_API_KEY env var.");
-    }
-    return new Loader({
-      apiKey: key,
-      version: "weekly",
-      libraries: ["places"],
-    });
-  }, []);
+  const loader = useMemo(
+    () =>
+      new Loader({
+        apiKey,
+        version: "weekly",
+        libraries: ["places"],
+      }),
+    []
+  );
 
   useEffect(() => {
     let cancelled = false;
