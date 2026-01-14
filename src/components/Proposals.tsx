@@ -24,6 +24,9 @@ type Proposal = {
   panel_model: string;
   panel_watts: number;
   panel_orientation: "portrait" | "landscape";
+  usage_mode: "annual" | "monthly";
+  annual_kwh: number;
+  monthly_kwh: number[];
 };
 
 type RoofPlaneRow = {
@@ -617,6 +620,9 @@ export default function Proposals() {
           panel_model: "410W",
           panel_watts: 410,
           panel_orientation: "portrait",
+          usage_mode: "annual",
+          annual_kwh: 12000,
+          monthly_kwh: [],
         })
         .select()
         .single();
@@ -634,6 +640,9 @@ export default function Proposals() {
         panel_model: data.panel_model,
         panel_watts: data.panel_watts,
         panel_orientation: data.panel_orientation,
+        usage_mode: data.usage_mode || "annual",
+        annual_kwh: data.annual_kwh || 12000,
+        monthly_kwh: Array.isArray(data.monthly_kwh) ? data.monthly_kwh : [],
       });
 
       if (mapRef.current) {
@@ -1116,6 +1125,241 @@ export default function Proposals() {
     }
   }
 
+  async function autoGenerateStarterRoofPlane() {
+    if (!proposal || !mapRef.current) return;
+
+    try {
+      setBusy("Generating starter roof plane...");
+
+      const center = { lat: proposal.lat, lng: proposal.lng };
+      const widthFt = 45;
+      const heightFt = 30;
+
+      const widthM = widthFt / 3.28084;
+      const heightM = heightFt / 3.28084;
+
+      const latDelta = heightM / 2 / 111320;
+      const lngDelta = widthM / 2 / (111320 * Math.cos(center.lat * Math.PI / 180));
+
+      const rectangleBounds = new google.maps.LatLngBounds(
+        new google.maps.LatLng(center.lat - latDelta, center.lng - lngDelta),
+        new google.maps.LatLng(center.lat + latDelta, center.lng + lngDelta)
+      );
+
+      const rectangle = new google.maps.Rectangle({
+        map: mapRef.current,
+        bounds: rectangleBounds,
+        editable: true,
+        draggable: true,
+        fillColor: "#3b82f6",
+        fillOpacity: 0.15,
+        strokeColor: "#1e40af",
+        strokeWeight: 2,
+      });
+
+      const confirmBtn = document.createElement("button");
+      confirmBtn.textContent = "Confirm Roof Plane";
+      confirmBtn.style.cssText = `
+        position: absolute;
+        top: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        padding: 12px 24px;
+        background: #111827;
+        color: white;
+        border: none;
+        border-radius: 10px;
+        font-weight: 700;
+        cursor: pointer;
+        z-index: 1000;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      `;
+
+      const cancelBtn = document.createElement("button");
+      cancelBtn.textContent = "Cancel";
+      cancelBtn.style.cssText = `
+        position: absolute;
+        top: 20px;
+        left: 50%;
+        transform: translateX(calc(-50% + 180px));
+        padding: 12px 24px;
+        background: white;
+        color: #111827;
+        border: 1px solid rgba(0,0,0,0.15);
+        border-radius: 10px;
+        font-weight: 700;
+        cursor: pointer;
+        z-index: 1000;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      `;
+
+      const mapDiv = mapDivRef.current;
+      if (!mapDiv) return;
+
+      mapDiv.appendChild(confirmBtn);
+      mapDiv.appendChild(cancelBtn);
+
+      const cleanup = () => {
+        rectangle.setMap(null);
+        confirmBtn.remove();
+        cancelBtn.remove();
+      };
+
+      cancelBtn.onclick = () => {
+        cleanup();
+        setBusy(null);
+      };
+
+      confirmBtn.onclick = async () => {
+        try {
+          const bounds = rectangle.getBounds();
+          if (!bounds) return;
+
+          const ne = bounds.getNorthEast();
+          const sw = bounds.getSouthWest();
+          const nw = new google.maps.LatLng(ne.lat(), sw.lng());
+          const se = new google.maps.LatLng(sw.lat(), ne.lng());
+
+          const path = [
+            { lat: nw.lat(), lng: nw.lng() },
+            { lat: ne.lat(), lng: ne.lng() },
+            { lat: se.lat(), lng: se.lng() },
+            { lat: sw.lat(), lng: sw.lng() },
+          ];
+
+          const latSpan = ne.lat() - sw.lat();
+          const lngSpan = ne.lng() - sw.lng();
+          const approxM2 = latSpan * 111320 * lngSpan * 111320 * Math.cos(center.lat * Math.PI / 180);
+          const areaSqft = m2ToFt2(approxM2);
+
+          const roofCount = roofPlanes.length;
+          const name = `Roof Plane ${roofCount + 1}`;
+
+          const { error } = await supabase.from("proposal_roof_planes").insert({
+            proposal_id: proposal.id,
+            name,
+            pitch_deg: 18,
+            path,
+            area_sqft: areaSqft,
+          });
+
+          if (error) throw error;
+
+          cleanup();
+          await reloadProposalData(proposal.id);
+          setBusy(null);
+        } catch (e: any) {
+          console.error(e);
+          alert(e?.message ?? "Failed to save roof plane.");
+          cleanup();
+          setBusy(null);
+        }
+      };
+    } catch (e: any) {
+      console.error(e);
+      alert(e?.message ?? "Failed to generate starter roof plane.");
+      setBusy(null);
+    }
+  }
+
+  async function updateUsageMode(mode: "annual" | "monthly") {
+    if (!proposal) return;
+
+    try {
+      const { error } = await supabase
+        .from("proposals")
+        .update({ usage_mode: mode })
+        .eq("id", proposal.id);
+
+      if (error) throw error;
+
+      setProposal({ ...proposal, usage_mode: mode });
+    } catch (e: any) {
+      console.error(e);
+      alert(e?.message ?? "Failed to update usage mode.");
+    }
+  }
+
+  async function updateAnnualUsage(kwh: number) {
+    if (!proposal) return;
+
+    try {
+      const { error } = await supabase
+        .from("proposals")
+        .update({ annual_kwh: kwh })
+        .eq("id", proposal.id);
+
+      if (error) throw error;
+
+      setProposal({ ...proposal, annual_kwh: kwh });
+    } catch (e: any) {
+      console.error(e);
+      alert(e?.message ?? "Failed to update annual usage.");
+    }
+  }
+
+  async function updateMonthlyUsage(monthlyKwh: number[]) {
+    if (!proposal) return;
+
+    try {
+      const { error } = await supabase
+        .from("proposals")
+        .update({ monthly_kwh: monthlyKwh })
+        .eq("id", proposal.id);
+
+      if (error) throw error;
+
+      setProposal({ ...proposal, monthly_kwh: monthlyKwh });
+    } catch (e: any) {
+      console.error(e);
+      alert(e?.message ?? "Failed to update monthly usage.");
+    }
+  }
+
+  const systemSummary = useMemo(() => {
+    if (!proposal || !selectedPanelModel) return null;
+
+    const panelCount = panels.length;
+    const systemSizeKw = (panelCount * selectedPanelModel.watts) / 1000;
+
+    const yieldFactor = 1400;
+    const derateStdSun = 0.77;
+    const estimatedAnnualProduction = systemSizeKw * yieldFactor * derateStdSun;
+
+    const monthlyProduction = [
+      estimatedAnnualProduction * 0.07,
+      estimatedAnnualProduction * 0.075,
+      estimatedAnnualProduction * 0.09,
+      estimatedAnnualProduction * 0.095,
+      estimatedAnnualProduction * 0.10,
+      estimatedAnnualProduction * 0.095,
+      estimatedAnnualProduction * 0.09,
+      estimatedAnnualProduction * 0.085,
+      estimatedAnnualProduction * 0.08,
+      estimatedAnnualProduction * 0.075,
+      estimatedAnnualProduction * 0.07,
+      estimatedAnnualProduction * 0.065,
+    ];
+
+    let offsetPercent = 0;
+    if (proposal.usage_mode === "annual" && proposal.annual_kwh > 0) {
+      offsetPercent = (estimatedAnnualProduction / proposal.annual_kwh) * 100;
+    } else if (proposal.usage_mode === "monthly" && proposal.monthly_kwh.length === 12) {
+      const totalMonthlyUsage = proposal.monthly_kwh.reduce((sum, val) => sum + val, 0);
+      if (totalMonthlyUsage > 0) {
+        offsetPercent = (estimatedAnnualProduction / totalMonthlyUsage) * 100;
+      }
+    }
+
+    return {
+      panelCount,
+      systemSizeKw: systemSizeKw.toFixed(2),
+      estimatedAnnualProduction: Math.round(estimatedAnnualProduction),
+      monthlyProduction,
+      offsetPercent: offsetPercent.toFixed(1),
+    };
+  }, [proposal, selectedPanelModel, panels]);
+
   const selectedPanelModel = useMemo(
     () => panelModels.find((pm) => pm.id === selectedPanelModelId) ?? null,
     [panelModels, selectedPanelModelId]
@@ -1191,6 +1435,22 @@ export default function Proposals() {
               >
                 Draw Roof Plane
               </button>
+              <button
+                onClick={autoGenerateStarterRoofPlane}
+                disabled={!!busy}
+                style={{
+                  height: 42,
+                  borderRadius: 10,
+                  border: "1px solid rgba(0,0,0,0.15)",
+                  background: "#059669",
+                  color: "white",
+                  fontWeight: 800,
+                  cursor: "pointer",
+                }}
+              >
+                Auto-Generate Starter
+              </button>
+
               <button
                 onClick={() => setToolMode("none")}
                 style={toolButtonStyle(toolMode === "none")}
@@ -1499,6 +1759,187 @@ export default function Proposals() {
                 {panels.length} panel(s) placed
               </div>
             </div>
+
+            <div style={{ borderTop: "1px solid rgba(0,0,0,0.08)", paddingTop: 12 }}>
+              <div style={{ fontWeight: 800, marginBottom: 6 }}>Energy Usage</div>
+
+              <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
+                <button
+                  onClick={() => updateUsageMode("annual")}
+                  style={{
+                    flex: 1,
+                    height: 38,
+                    borderRadius: 8,
+                    border: proposal.usage_mode === "annual" ? "2px solid #111827" : "1px solid rgba(0,0,0,0.15)",
+                    background: proposal.usage_mode === "annual" ? "#111827" : "white",
+                    color: proposal.usage_mode === "annual" ? "white" : "#111827",
+                    fontWeight: 700,
+                    cursor: "pointer",
+                    fontSize: 13,
+                  }}
+                >
+                  Annual
+                </button>
+                <button
+                  onClick={() => updateUsageMode("monthly")}
+                  style={{
+                    flex: 1,
+                    height: 38,
+                    borderRadius: 8,
+                    border: proposal.usage_mode === "monthly" ? "2px solid #111827" : "1px solid rgba(0,0,0,0.15)",
+                    background: proposal.usage_mode === "monthly" ? "#111827" : "white",
+                    color: proposal.usage_mode === "monthly" ? "white" : "#111827",
+                    fontWeight: 700,
+                    cursor: "pointer",
+                    fontSize: 13,
+                  }}
+                >
+                  Monthly
+                </button>
+              </div>
+
+              {proposal.usage_mode === "annual" && (
+                <div>
+                  <label style={{ display: "block", marginBottom: 4, fontSize: 12, opacity: 0.7 }}>
+                    Annual Usage (kWh)
+                  </label>
+                  <input
+                    type="number"
+                    min={0}
+                    step={100}
+                    value={proposal.annual_kwh}
+                    onChange={(e) => updateAnnualUsage(Number(e.target.value))}
+                    style={{
+                      width: "100%",
+                      height: 38,
+                      borderRadius: 8,
+                      border: "1px solid rgba(0,0,0,0.2)",
+                      padding: "0 8px",
+                      fontSize: 13,
+                    }}
+                  />
+                </div>
+              )}
+
+              {proposal.usage_mode === "monthly" && (
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                  {["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"].map((month, idx) => (
+                    <div key={month}>
+                      <label style={{ display: "block", marginBottom: 4, fontSize: 11, opacity: 0.7 }}>
+                        {month} (kWh)
+                      </label>
+                      <input
+                        type="number"
+                        min={0}
+                        step={10}
+                        value={proposal.monthly_kwh[idx] || 0}
+                        onChange={(e) => {
+                          const newMonthly = [...proposal.monthly_kwh];
+                          while (newMonthly.length < 12) newMonthly.push(0);
+                          newMonthly[idx] = Number(e.target.value);
+                          updateMonthlyUsage(newMonthly);
+                        }}
+                        style={{
+                          width: "100%",
+                          height: 34,
+                          borderRadius: 6,
+                          border: "1px solid rgba(0,0,0,0.2)",
+                          padding: "0 6px",
+                          fontSize: 12,
+                        }}
+                      />
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {systemSummary && (
+              <div style={{ borderTop: "1px solid rgba(0,0,0,0.08)", paddingTop: 12 }}>
+                <div style={{ fontWeight: 800, marginBottom: 8 }}>System Summary</div>
+
+                <div style={{
+                  background: "linear-gradient(135deg, #059669 0%, #047857 100%)",
+                  padding: 16,
+                  borderRadius: 12,
+                  color: "white",
+                  marginBottom: 12,
+                }}>
+                  <div style={{ fontSize: 24, fontWeight: 800, marginBottom: 4 }}>
+                    {systemSummary.offsetPercent}%
+                  </div>
+                  <div style={{ fontSize: 13, opacity: 0.9 }}>
+                    Energy Offset
+                  </div>
+                </div>
+
+                <div style={{ display: "grid", gap: 10 }}>
+                  <div style={{
+                    padding: 12,
+                    borderRadius: 10,
+                    border: "1px solid rgba(0,0,0,0.1)",
+                    background: "rgba(0,0,0,0.02)",
+                  }}>
+                    <div style={{ fontSize: 11, opacity: 0.7, marginBottom: 2 }}>Panel Count</div>
+                    <div style={{ fontSize: 18, fontWeight: 700 }}>{systemSummary.panelCount}</div>
+                  </div>
+
+                  <div style={{
+                    padding: 12,
+                    borderRadius: 10,
+                    border: "1px solid rgba(0,0,0,0.1)",
+                    background: "rgba(0,0,0,0.02)",
+                  }}>
+                    <div style={{ fontSize: 11, opacity: 0.7, marginBottom: 2 }}>System Size</div>
+                    <div style={{ fontSize: 18, fontWeight: 700 }}>{systemSummary.systemSizeKw} kW</div>
+                  </div>
+
+                  <div style={{
+                    padding: 12,
+                    borderRadius: 10,
+                    border: "1px solid rgba(0,0,0,0.1)",
+                    background: "rgba(0,0,0,0.02)",
+                  }}>
+                    <div style={{ fontSize: 11, opacity: 0.7, marginBottom: 2 }}>Est. Annual Production</div>
+                    <div style={{ fontSize: 18, fontWeight: 700 }}>
+                      {systemSummary.estimatedAnnualProduction.toLocaleString()} kWh
+                    </div>
+                  </div>
+
+                  {proposal.usage_mode === "annual" && (
+                    <div style={{
+                      padding: 12,
+                      borderRadius: 10,
+                      border: "1px solid rgba(0,0,0,0.1)",
+                      background: "rgba(0,0,0,0.02)",
+                    }}>
+                      <div style={{ fontSize: 11, opacity: 0.7, marginBottom: 2 }}>Annual Usage</div>
+                      <div style={{ fontSize: 18, fontWeight: 700 }}>
+                        {proposal.annual_kwh.toLocaleString()} kWh
+                      </div>
+                    </div>
+                  )}
+
+                  {proposal.usage_mode === "monthly" && proposal.monthly_kwh.length === 12 && (
+                    <div style={{
+                      padding: 12,
+                      borderRadius: 10,
+                      border: "1px solid rgba(0,0,0,0.1)",
+                      background: "rgba(0,0,0,0.02)",
+                    }}>
+                      <div style={{ fontSize: 11, opacity: 0.7, marginBottom: 2 }}>Total Annual Usage</div>
+                      <div style={{ fontSize: 18, fontWeight: 700 }}>
+                        {proposal.monthly_kwh.reduce((sum, val) => sum + val, 0).toLocaleString()} kWh
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <div style={{ fontSize: 11, opacity: 0.6, marginTop: 12, lineHeight: 1.4 }}>
+                  Production estimate uses local yield factor (1400 kWh/kW/yr) with 77% derate.
+                </div>
+              </div>
+            )}
 
             {busy && (
               <div style={{ fontSize: 12, opacity: 0.75, marginTop: 8 }}>
