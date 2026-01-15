@@ -126,6 +126,7 @@ export default function Proposals() {
         const { data: proposalData, error: proposalError } = await supabase
           .from("proposals")
           .insert({
+            created_by: user.id,
             owner_id: user.id,
             customer_id: customerData.id,
             place_id: selectedPlace.placeId,
