@@ -117,6 +117,88 @@ const CustomerFormInputs = React.memo(({
 
 CustomerFormInputs.displayName = 'CustomerFormInputs';
 
+const ElectricityUsageInputs = React.memo(({
+  initialData,
+  onChange,
+}: {
+  initialData: { annual_consumption: number | null };
+  onChange: (data: { annual_consumption: number | null }) => void;
+}) => {
+  const renderCount = useRef(0);
+  renderCount.current++;
+
+  const [localData, setLocalData] = useState(initialData);
+  const dataRef = useRef(localData);
+
+  useEffect(() => {
+    setLocalData(initialData);
+    dataRef.current = initialData;
+  }, [initialData]);
+
+  const handleChange = useCallback((value: string) => {
+    setLocalData((prev: any) => {
+      const updated = { ...prev, annual_consumption: value === "" ? null : Number(value) };
+      dataRef.current = updated;
+      return updated;
+    });
+  }, []);
+
+  const handleBlur = useCallback(() => {
+    onChange(dataRef.current);
+  }, [onChange]);
+
+  console.log("ElectricityUsageInputs render", renderCount.current);
+
+  return (
+    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+      <div>
+        <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#374151", marginBottom: 8 }}>
+          Data source
+        </label>
+        <select
+          style={{
+            width: "100%",
+            padding: "10px 12px",
+            background: "#fff",
+            border: "1px solid #d1d5db",
+            borderRadius: 6,
+            fontSize: 14,
+            color: "#111827",
+          }}
+        >
+          <option>Annual Consumption (kWh)</option>
+          <option>Monthly Usage</option>
+          <option>Utility Bill</option>
+        </select>
+      </div>
+
+      <div>
+        <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#374151", marginBottom: 8 }}>
+          Annual kWh
+        </label>
+        <input
+          type="number"
+          value={localData.annual_consumption ?? ""}
+          onChange={(e) => handleChange(e.target.value)}
+          onBlur={handleBlur}
+          placeholder="23000"
+          style={{
+            width: "100%",
+            padding: "10px 12px",
+            background: "#fff",
+            border: "1px solid #d1d5db",
+            borderRadius: 6,
+            fontSize: 14,
+            color: "#111827",
+          }}
+        />
+      </div>
+    </div>
+  );
+});
+
+ElectricityUsageInputs.displayName = 'ElectricityUsageInputs';
+
 type ToolMode = "none" | "roof" | "circle" | "rect" | "tree" | "add-panel" | "delete-panel";
 
 type RoofPlaneRow = {
@@ -204,6 +286,14 @@ export default function ProposalWorkspace({
   const handleCustomerChange = useCallback((data: any) => {
     isDirtyRef.current = true;
     setDraftCustomer(data);
+  }, []);
+
+  const handleElectricityChange = useCallback((data: { annual_consumption: number | null }) => {
+    isDirtyRef.current = true;
+    setProposalDraft((prev: any) => ({
+      ...prev,
+      annual_consumption: data.annual_consumption,
+    }));
   }, []);
 
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
@@ -1157,56 +1247,10 @@ export default function ProposalWorkspace({
 
       <CollapsibleSection id="electricity" icon={Zap} title="Electricity Usage">
         <form onSubmit={(e) => e.preventDefault()}>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
-            <div>
-              <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#374151", marginBottom: 8 }}>
-                Data source
-              </label>
-              <select
-                style={{
-                  width: "100%",
-                  padding: "10px 12px",
-                  background: "#fff",
-                  border: "1px solid #d1d5db",
-                  borderRadius: 6,
-                  fontSize: 14,
-                  color: "#111827",
-                }}
-              >
-                <option>Annual Consumption (kWh)</option>
-                <option>Monthly Usage</option>
-                <option>Utility Bill</option>
-              </select>
-            </div>
-
-            <div>
-              <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#374151", marginBottom: 8 }}>
-                Annual kWh
-              </label>
-              <input
-                type="number"
-                value={proposalDraft.annual_consumption ?? ""}
-                onChange={(e) => {
-                  isDirtyRef.current = true;
-                  const val = e.target.value;
-                  setProposalDraft((prev: any) => ({
-                    ...prev,
-                    annual_consumption: val === "" ? null : Number(val),
-                  }));
-                }}
-                placeholder="23000"
-                style={{
-                  width: "100%",
-                  padding: "10px 12px",
-                  background: "#fff",
-                  border: "1px solid #d1d5db",
-                  borderRadius: 6,
-                  fontSize: 14,
-                  color: "#111827",
-                }}
-              />
-            </div>
-          </div>
+          <ElectricityUsageInputs
+            initialData={{ annual_consumption: proposalDraft.annual_consumption ?? null }}
+            onChange={handleElectricityChange}
+          />
 
           <button
             type="button"
