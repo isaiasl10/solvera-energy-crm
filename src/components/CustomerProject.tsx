@@ -16,6 +16,7 @@ type CustomerProjectProps = {
   customer: Customer;
   onBack: () => void;
   initialTab?: Tab;
+  onTabChange?: (tab: string) => void;
 };
 
 type Tab = 'system' | 'pricing' | 'adders' | 'epc-costs' | 'documents' | 'scheduling' | 'timeline' | 'chat' | 'activity';
@@ -91,15 +92,15 @@ const getDerivedProjectStatus = (timeline: ProjectTimelineData): string => {
   return 'New Lead';
 };
 
-export default function CustomerProject({ customer: initialCustomer, onBack, initialTab }: CustomerProjectProps) {
+export default function CustomerProject({ customer: initialCustomer, onBack, initialTab, onTabChange }: CustomerProjectProps) {
   const { canEdit, isEmployee, isSalesRep, isSalesManager, user } = useAuth();
 
   if (isSalesRep) {
-    return <SalesRepProjectView customer={initialCustomer} onBack={onBack} />;
+    return <SalesRepProjectView customer={initialCustomer} onBack={onBack} initialTab={initialTab as any} onTabChange={onTabChange} />;
   }
 
   if (isSalesManager) {
-    return <SalesManagerProjectView customer={initialCustomer} onBack={onBack} />;
+    return <SalesManagerProjectView customer={initialCustomer} onBack={onBack} initialTab={initialTab as any} onTabChange={onTabChange} />;
   }
 
   const mapCustomerToFormData = (cust: Customer) => ({
@@ -110,6 +111,12 @@ export default function CustomerProject({ customer: initialCustomer, onBack, ini
   const [activeTab, setActiveTab] = useState<Tab>(initialTab || 'system');
   const [editingSection, setEditingSection] = useState<EditingSection>(null);
   const [customer, setCustomer] = useState(initialCustomer);
+
+  useEffect(() => {
+    if (onTabChange) {
+      onTabChange(activeTab);
+    }
+  }, [activeTab, onTabChange]);
   const [formData, setFormData] = useState(mapCustomerToFormData(initialCustomer));
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);

@@ -7,10 +7,12 @@ import { supabase, type Customer } from '../lib/supabase';
 
 interface CustomerQueueProps {
   initialCustomerId?: string | null;
+  initialTab?: string | null;
   onCustomerChange?: () => void;
+  onTabChange?: (tab: string) => void;
 }
 
-export default function CustomerQueue({ initialCustomerId, onCustomerChange }: CustomerQueueProps = {}) {
+export default function CustomerQueue({ initialCustomerId, initialTab, onCustomerChange, onTabChange }: CustomerQueueProps = {}) {
   const [showForm, setShowForm] = useState(false);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
@@ -63,7 +65,14 @@ export default function CustomerQueue({ initialCustomerId, onCustomerChange }: C
   };
 
   if (selectedCustomer) {
-    return <CustomerProject customer={selectedCustomer} onBack={handleBackToList} />;
+    return (
+      <CustomerProject
+        customer={selectedCustomer}
+        onBack={handleBackToList}
+        initialTab={initialTab as any}
+        onTabChange={onTabChange}
+      />
+    );
   }
 
   const showResults = searchQuery.trim().length > 0 || statusFilter !== 'all';

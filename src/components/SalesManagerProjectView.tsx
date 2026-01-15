@@ -9,13 +9,21 @@ import { useAuth } from '../contexts/AuthContext';
 type SalesManagerProjectViewProps = {
   customer: Customer;
   onBack: () => void;
+  initialTab?: Tab;
+  onTabChange?: (tab: string) => void;
 };
 
 type Tab = 'details' | 'documents' | 'timeline' | 'chat';
 
-export default function SalesManagerProjectView({ customer: initialCustomer, onBack }: SalesManagerProjectViewProps) {
+export default function SalesManagerProjectView({ customer: initialCustomer, onBack, initialTab, onTabChange }: SalesManagerProjectViewProps) {
   const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState<Tab>('details');
+  const [activeTab, setActiveTab] = useState<Tab>(initialTab || 'details');
+
+  useEffect(() => {
+    if (onTabChange) {
+      onTabChange(activeTab);
+    }
+  }, [activeTab, onTabChange]);
   const [customer, setCustomer] = useState(initialCustomer);
   const [formData, setFormData] = useState(initialCustomer);
   const [isEditing, setIsEditing] = useState(false);

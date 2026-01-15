@@ -11,10 +11,21 @@ type SelectedPlace = {
   lng: number;
 };
 
-export default function Proposals() {
+type ProposalsProps = {
+  initialProposalId?: string | null;
+  onProposalChange?: (proposalId: string | null) => void;
+};
+
+export default function Proposals({ initialProposalId, onProposalChange }: ProposalsProps = {}) {
   const [proposals, setProposals] = useState<any[]>([]);
-  const [selectedProposalId, setSelectedProposalId] = useState<string | null>(null);
+  const [selectedProposalId, setSelectedProposalId] = useState<string | null>(initialProposalId || null);
   const [showNewProposalModal, setShowNewProposalModal] = useState(false);
+
+  useEffect(() => {
+    if (onProposalChange) {
+      onProposalChange(selectedProposalId);
+    }
+  }, [selectedProposalId, onProposalChange]);
   const [newAddress, setNewAddress] = useState("");
   const [selectedPlace, setSelectedPlace] = useState<SelectedPlace | null>(null);
   const [isCreating, setIsCreating] = useState(false);

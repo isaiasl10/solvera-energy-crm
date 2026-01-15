@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Menu } from 'lucide-react';
 import Sidebar, { type ViewType } from './components/Sidebar';
 import Calendar from './components/Calendar';
@@ -35,7 +35,14 @@ function App() {
   const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(() => {
     return localStorage.getItem('selectedCustomerId') || null;
   });
+  const [customerProjectTab, setCustomerProjectTab] = useState<string | null>(() => {
+    return localStorage.getItem('customerProjectTab') || null;
+  });
+  const [selectedProposalId, setSelectedProposalId] = useState<string | null>(() => {
+    return localStorage.getItem('selectedProposalId') || null;
+  });
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+  const hasAppliedRoleDefaults = useRef(false);
 
   useEffect(() => {
     localStorage.setItem('currentView', currentView);
@@ -50,6 +57,22 @@ function App() {
   }, [selectedCustomerId]);
 
   useEffect(() => {
+    if (customerProjectTab) {
+      localStorage.setItem('customerProjectTab', customerProjectTab);
+    } else {
+      localStorage.removeItem('customerProjectTab');
+    }
+  }, [customerProjectTab]);
+
+  useEffect(() => {
+    if (selectedProposalId) {
+      localStorage.setItem('selectedProposalId', selectedProposalId);
+    } else {
+      localStorage.removeItem('selectedProposalId');
+    }
+  }, [selectedProposalId]);
+
+  useEffect(() => {
     const handleLocationChange = () => {
       setCurrentPath(window.location.pathname);
     };
@@ -59,24 +82,40 @@ function App() {
   }, []);
 
   useEffect(() => {
-    if (!user) return;
+    if (!user || hasAppliedRoleDefaults.current) return;
 
     const savedView = localStorage.getItem('currentView');
+    const hasActiveNavigation = savedView && (
+      savedView.startsWith('queue-') ||
+      savedView === 'customers' ||
+      savedView === 'proposals' ||
+      selectedCustomerId !== null ||
+      selectedProposalId !== null
+    );
 
-    if (isAdmin) {
-      if (!savedView || savedView === 'sales-manager-dashboard') {
-        setCurrentView('administration');
-      }
-    } else if (isSalesManager) {
-      if (!savedView) {
-        setCurrentView('sales-manager-dashboard');
+    if (!hasActiveNavigation) {
+      if (isAdmin) {
+        if (!savedView || savedView === 'sales-manager-dashboard') {
+          setCurrentView('administration');
+        }
+      } else if (isSalesManager) {
+        if (!savedView) {
+          setCurrentView('sales-manager-dashboard');
+        }
       }
     }
-  }, [user, isAdmin, isSalesManager]);
+
+    hasAppliedRoleDefaults.current = true;
+  }, [user, isAdmin, isSalesManager, selectedCustomerId, selectedProposalId]);
 
   const handleViewCustomerProject = (customerId: string) => {
     setSelectedCustomerId(customerId);
+    setCustomerProjectTab(null);
     setCurrentView('customers');
+  };
+
+  const handleCustomerTabChange = (tab: string) => {
+    setCustomerProjectTab(tab);
   };
 
   if (currentPath === '/reset-password') {
@@ -120,9 +159,24 @@ function App() {
       case 'calendar':
         return <Calendar onViewCustomerProject={handleViewCustomerProject} />;
       case 'customers':
-        return <CustomerQueue initialCustomerId={selectedCustomerId} onCustomerChange={() => setSelectedCustomerId(null)} />;
+        return (
+          <CustomerQueue
+            initialCustomerId={selectedCustomerId}
+            initialTab={customerProjectTab}
+            onCustomerChange={() => {
+              setSelectedCustomerId(null);
+              setCustomerProjectTab(null);
+            }}
+            onTabChange={handleCustomerTabChange}
+          />
+        );
       case 'proposals':
-        return <Proposals />;
+        return (
+          <Proposals
+            initialProposalId={selectedProposalId}
+            onProposalChange={(proposalId) => setSelectedProposalId(proposalId)}
+          />
+        );
       case 'user-management':
         if (!isAdmin && !isManagement) {
           setCurrentView('calendar');

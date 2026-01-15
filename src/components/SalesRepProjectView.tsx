@@ -9,6 +9,8 @@ import { useAuth } from '../contexts/AuthContext';
 type SalesRepProjectViewProps = {
   customer: Customer;
   onBack: () => void;
+  initialTab?: Tab;
+  onTabChange?: (tab: string) => void;
 };
 
 type Tab = 'details' | 'adders' | 'commission' | 'documents' | 'timeline' | 'chat';
@@ -21,9 +23,15 @@ type SiteSurveyScheduling = {
   time_window: string;
 };
 
-export default function SalesRepProjectView({ customer: initialCustomer, onBack }: SalesRepProjectViewProps) {
+export default function SalesRepProjectView({ customer: initialCustomer, onBack, initialTab, onTabChange }: SalesRepProjectViewProps) {
   const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState<Tab>('details');
+  const [activeTab, setActiveTab] = useState<Tab>(initialTab || 'details');
+
+  useEffect(() => {
+    if (onTabChange) {
+      onTabChange(activeTab);
+    }
+  }, [activeTab, onTabChange]);
   const [customer, setCustomer] = useState(initialCustomer);
   const [formData, setFormData] = useState(initialCustomer);
   const [isEditing, setIsEditing] = useState(false);
