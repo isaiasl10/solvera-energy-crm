@@ -7,8 +7,7 @@ import QueueDetailView from './components/QueueDetailView';
 import ServiceTicketsQueue from './components/ServiceTicketsQueue';
 import UserManagement from './components/UserManagement';
 import Proposals from './components/Proposals';
-import CreateProposal from './components/CreateProposal';
-import CustomerPricing from './components/CustomerPricing';
+import ProposalWorkspace from './components/ProposalWorkspace';
 import Analytics from './components/admin/Analytics';
 import Payroll from './components/admin/Payroll';
 import CustomAdders from './components/admin/CustomAdders';
@@ -82,14 +81,9 @@ function App() {
     setCurrentView('customers');
   };
 
-  const handleOpenCreateProposal = (proposalId: string) => {
+  const handleOpenProposal = (proposalId: string) => {
     setActiveProposalId(proposalId);
-    setCurrentView('createProposal');
-  };
-
-  const handleOpenCustomerPricing = (proposalId: string) => {
-    setActiveProposalId(proposalId);
-    setCurrentView('customerPricing');
+    setCurrentView('proposalWorkspace');
   };
 
   if (currentPath === '/reset-password') {
@@ -135,11 +129,9 @@ function App() {
       case 'customers':
         return <CustomerQueue initialCustomerId={selectedCustomerId} onCustomerChange={() => setSelectedCustomerId(null)} />;
       case 'proposals':
-        return <Proposals onOpenCreateProposal={handleOpenCreateProposal} onOpenCustomerPricing={handleOpenCustomerPricing} />;
-      case 'createProposal':
-        return <CreateProposal proposalId={activeProposalId || ''} onBack={() => setCurrentView('proposals')} />;
-      case 'customerPricing':
-        return <CustomerPricing proposalId={activeProposalId} onBack={() => setCurrentView('proposals')} />;
+        return <Proposals onOpenProposal={handleOpenProposal} />;
+      case 'proposalWorkspace':
+        return <ProposalWorkspace proposalId={activeProposalId} onBack={() => setCurrentView('proposals')} />;
       case 'user-management':
         if (!isAdmin && !isManagement) {
           setCurrentView('calendar');

@@ -102,11 +102,10 @@ function isGoogleReady() {
 type ToolMode = "none" | "roof" | "circle" | "rect" | "tree" | "add-panel" | "delete-panel";
 
 type ProposalsProps = {
-  onOpenCreateProposal?: (proposalId: string) => void;
-  onOpenCustomerPricing?: (proposalId: string) => void;
+  onOpenProposal?: (proposalId: string) => void;
 };
 
-export default function Proposals({ onOpenCreateProposal, onOpenCustomerPricing }: ProposalsProps = {}) {
+export default function Proposals({ onOpenProposal }: ProposalsProps = {}) {
   const { user } = useAuth();
 
   const mapDivRef = useRef<HTMLDivElement | null>(null);
@@ -1825,16 +1824,16 @@ export default function Proposals({ onOpenCreateProposal, onOpenCustomerPricing 
             </div>
           </div>
 
-          {onOpenCreateProposal && (
+          {onOpenProposal && (
             <div style={{ borderTop: "1px solid rgba(0,0,0,0.08)", paddingTop: 12 }}>
               <button
-                onClick={() => onOpenCreateProposal(proposal.id)}
+                onClick={() => onOpenProposal(proposal.id)}
                 style={{
                   width: "100%",
                   padding: 16,
                   borderRadius: 10,
                   border: "1px solid rgba(0,0,0,0.15)",
-                  background: "#111827",
+                  background: "#f97316",
                   color: "white",
                   fontWeight: 700,
                   fontSize: 15,
@@ -1846,7 +1845,7 @@ export default function Proposals({ onOpenCreateProposal, onOpenCustomerPricing 
                 }}
               >
                 <FileText size={18} />
-                Create Proposal (PDF)
+                Configure Proposal →
               </button>
             </div>
           )}
@@ -2586,39 +2585,23 @@ export default function Proposals({ onOpenCreateProposal, onOpenCustomerPricing 
 
             {systemSummary && proposalStep === "design" && (
               <div style={{ marginTop: 12, display: "flex", flexDirection: "column", gap: 8 }}>
-                <button
-                  onClick={() => setProposalStep("pricing")}
-                  style={{
-                    width: "100%",
-                    height: 48,
-                    borderRadius: 12,
-                    border: "none",
-                    background: "linear-gradient(135deg, #111827 0%, #1f2937 100%)",
-                    color: "white",
-                    fontWeight: 800,
-                    fontSize: 15,
-                    cursor: "pointer",
-                    boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
-                  }}
-                >
-                  Next: Inline Pricing →
-                </button>
-                {onOpenCustomerPricing && (
+                {onOpenProposal && (
                   <button
-                    onClick={() => onOpenCustomerPricing(proposal.id)}
+                    onClick={() => onOpenProposal(proposal.id)}
                     style={{
                       width: "100%",
                       height: 48,
                       borderRadius: 12,
-                      border: "2px solid #111827",
-                      background: "white",
-                      color: "#111827",
+                      border: "none",
+                      background: "#f97316",
+                      color: "white",
                       fontWeight: 800,
                       fontSize: 15,
                       cursor: "pointer",
+                      boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
                     }}
                   >
-                    Customer & Pricing (Full Screen) →
+                    Configure Proposal →
                   </button>
                 )}
               </div>
