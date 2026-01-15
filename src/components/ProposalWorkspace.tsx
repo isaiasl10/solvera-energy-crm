@@ -258,6 +258,7 @@ export default function ProposalWorkspace({
   }, [proposalId]);
 
   useEffect(() => {
+    if (activeTab !== "solar-design") return;
     if (!isGoogleReady() || !mapDivRef.current || !proposal) return;
 
     const google = (window as any).google;
@@ -314,7 +315,7 @@ export default function ProposalWorkspace({
         }
       });
     }
-  }, [mapsLoading, proposal, toolMode, selectedRoofId, selectedPanelModelId]);
+  }, [activeTab, mapsLoading, proposal, toolMode, selectedRoofId, selectedPanelModelId]);
 
   useEffect(() => {
     if (!mapRef.current || !isGoogleReady()) return;

@@ -63,7 +63,7 @@ export default function CustomerPricing({
       }
       setProposalDraft(proposal);
     })();
-  }, [proposal]);
+  }, [proposal?.customer_id]);
 
   const selectedFinanceValue = useMemo(() => {
     if (!proposalDraft) return "cash";
