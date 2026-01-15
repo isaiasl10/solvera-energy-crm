@@ -73,7 +73,7 @@ export default function Proposals() {
   const loadProposals = async () => {
     const { data } = await supabase
       .from("proposals")
-      .select("*, customers(name, email)")
+      .select("*, customers(full_name, email)")
       .order("created_at", { ascending: false });
 
     if (data) {
@@ -97,11 +97,16 @@ export default function Proposals() {
     setError(null);
 
     try {
+      const { data: { user }, error: userErr } = await supabase.auth.getUser();
+      if (userErr || !user) {
+        throw new Error("Not authenticated");
+      }
+
       console.log('Creating customer...');
       const { data: customerData, error: customerError } = await supabase
         .from("customers")
         .insert({
-          name: "New Customer",
+          full_name: "New Customer",
           email: "",
           phone: "",
           address: selectedPlace.formattedAddress,
@@ -121,6 +126,7 @@ export default function Proposals() {
         const { data: proposalData, error: proposalError } = await supabase
           .from("proposals")
           .insert({
+            owner_id: user.id,
             customer_id: customerData.id,
             place_id: selectedPlace.placeId,
             formatted_address: selectedPlace.formattedAddress,
