@@ -934,6 +934,7 @@ export default function ProposalWorkspace({
   const [mapsError, setMapsError] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [mapsLoading, setMapsLoading] = useState(true);
+  const [showRoofPlanes, setShowRoofPlanes] = useState(false);
 
   const selectedRoof = useMemo(
     () => roofPlanes.find((r) => r.id === selectedRoofId) ?? null,
@@ -2658,8 +2659,6 @@ export default function ProposalWorkspace({
   };
 
   const renderSolarDesignTab = () => {
-    const [showRoofPlanes, setShowRoofPlanes] = useState(false);
-
     return (
     <div style={{ display: "flex", flexDirection: "column", height: "calc(100vh - 180px)" }}>
       <div style={{
