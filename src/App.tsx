@@ -8,6 +8,7 @@ import ServiceTicketsQueue from './components/ServiceTicketsQueue';
 import UserManagement from './components/UserManagement';
 import Proposals from './components/Proposals';
 import CreateProposal from './components/CreateProposal';
+import CustomerPricing from './components/CustomerPricing';
 import Analytics from './components/admin/Analytics';
 import Payroll from './components/admin/Payroll';
 import CustomAdders from './components/admin/CustomAdders';
@@ -86,6 +87,11 @@ function App() {
     setCurrentView('createProposal');
   };
 
+  const handleOpenCustomerPricing = (proposalId: string) => {
+    setActiveProposalId(proposalId);
+    setCurrentView('customerPricing');
+  };
+
   if (currentPath === '/reset-password') {
     return <ResetPassword />;
   }
@@ -132,6 +138,8 @@ function App() {
         return <Proposals onOpenCreateProposal={handleOpenCreateProposal} />;
       case 'createProposal':
         return <CreateProposal proposalId={activeProposalId || ''} onBack={() => setCurrentView('proposals')} />;
+      case 'customerPricing':
+        return <CustomerPricing proposalId={activeProposalId} />;
       case 'user-management':
         if (!isAdmin && !isManagement) {
           setCurrentView('calendar');
