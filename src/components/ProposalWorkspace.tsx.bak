@@ -3404,6 +3404,584 @@ export default function ProposalWorkspace({
     );
   };
 
+  const autoFillPanels = () => {
+    if (!selectedRoofId || !selectedPanelModelId) return;
+    // TODO: Implement auto-fill algorithm
+  };
+
+  const clearAllPanels = () => {
+    if (!selectedRoofId) return;
+    const panelsToDelete = panels.filter((p) => p.roof_plane_id === selectedRoofId);
+    panelsToDelete.forEach((p) => {
+      setDeletedPanelIds((prev) => [...prev, p.id]);
+    });
+    setPanels((prev) => prev.filter((p) => p.roof_plane_id !== selectedRoofId));
+  };
+
+  const deleteRoof = (roofId: string) => {
+    // Delete all panels on this roof first
+    const panelsToDelete = panels.filter((p) => p.roof_plane_id === roofId);
+    panelsToDelete.forEach((p) => {
+      setDeletedPanelIds((prev) => [...prev, p.id]);
+    });
+    setPanels((prev) => prev.filter((p) => p.roof_plane_id !== roofId));
+
+    // Delete the roof
+    setRoofPlanes((prev) => prev.filter((r) => r.id !== roofId));
+    if (selectedRoofId === roofId) {
+      setSelectedRoofId(null);
+    }
+  };
+
+  return (
+    <div style={{ height: "calc(100vh - 64px)", overflow: "auto", background: "#f5f5f7" }}>
+      <div style={{ maxWidth: "100%", margin: "0 auto", padding: 20 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
+          {onBack && (
+            <button
+              onClick={(e) => {
+                e.preventDefault();
+                onBack();
+              }}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 6,
+                padding: "8px 14px",
+                background: "#fff",
+                border: "1px solid #d1d5db",
+                borderRadius: 6,
+                cursor: "pointer",
+                fontWeight: 500,
+                fontSize: 13,
+                color: "#374151",
+              }}
+            >
+              <ArrowLeft size={16} />
+              Back
+            </button>
+          )}
+          <div>
+            <div style={{ fontSize: 22, fontWeight: 700, color: "#111827", letterSpacing: "-0.02em" }}>
+              Proposal Configuration
+            </div>
+            <div style={{ fontSize: 13, color: "#6b7280", marginTop: 2 }}>
+              {proposal?.formatted_address ?? "Configure customer details and pricing"}
+            </div>
+          </div>
+        </div>
+
+        <div style={{ display: "flex", gap: 2, marginBottom: 20, borderBottom: "1px solid #e5e7eb", background: "#fff", borderRadius: "8px 8px 0 0",padding: "6px 12px",
+              background: toolMode === "add-panel" ? "#f97316" : (selectedRoofId && selectedPanelModelId ? "#3b82f6" : "#e5e7eb"),
+              color: (toolMode === "add-panel" || (selectedRoofId && selectedPanelModelId)) ? "#fff" : "#9ca3af",
+              border: "none",
+              borderRadius: 4,
+              cursor: (selectedRoofId && selectedPanelModelId) ? "pointer" : "not-allowed",
+              fontWeight: 500,
+              fontSize: 12,
+            }}
+          >
+            <Pencil size={14} />
+            <span>Manual</span>
+          </button>
+
+          <button
+            onClick={() => setToolMode(toolMode === "delete-panel" ? "none" : "delete-panel")}
+            title="Delete Panels"
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 6,
+              padding: "6px 12px",
+              background: toolMode === "delete-panel" ? "#f97316" : "#fff",
+              color: toolMode === "delete-panel" ? "#fff" : "#dc2626",
+              border: "1px solid " + (toolMode === "delete-panel" ? "#f97316" : "#fca5a5"),
+              borderRadius: 4,
+              cursor: "pointer",
+              fontWeight: 500,
+              fontSize: 12,
+            }}
+          >
+            <Trash2 size={14} />
+            <span>Delete</span>
+          </button>
+
+          <button
+            onClick={clearAllPanels}
+            disabled={!selectedRoofId}
+            title="Clear All Panels"
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 6,
+              padding: "6px 12px",
+              background: selectedRoofId ? "#991b1b" : "#e5e7eb",
+              color: selectedRoofId ? "#fff" : "#9ca3af",
+              border: "none",
+              borderRadius: 4,
+              cursor: selectedRoofId ? "pointer" : "not-allowed",
+              fontWeight: 500,
+              fontSize: 12,
+            }}
+          >
+            <Trash2 size={14} />
+            <span>Clear All</span>
+          </button>
+        </div>
+
+        <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 8 }}>
+          <button
+            onClick={saveDesignChanges}
+            disabled={!!busy}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 6,
+              padding: "7px 16px",
+              background: busy ? "#9ca3af" : "#10b981",
+              color: "#fff",
+              border: "none",
+              borderRadius: 4,
+              cursor: busy ? "not-allowed" : "pointer",
+              fontWeight: 600,
+              fontSize: 12,
+            }}
+          >
+            {busy ? busy : `Save Design${(panels.filter(p => p.id.startsWith('temp-')).length + obstructions.filter(o => o.id.startsWith('temp-')).length + deletedPanelIds.length + deletedObstructionIds.length) > 0 ? ` (${panels.filter(p => p.id.startsWith('temp-')).length + obstructions.filter(o => o.id.startsWith('temp-')).length + deletedPanelIds.length + deletedObstructionIds.length})` : ''}`}
+          </button>
+        </div>
+      </div>
+
+      {showRoofPlanes && (
+        <div style={{
+          position: "absolute",
+          top: 60,
+          left: "50%",
+          transform: "translateX(-50%)",
+          zIndex: 1000,
+          background: "#fff",
+          borderRadius: 8,
+          padding: 16,
+          boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
+          minWidth: 320,
+          maxWidth: 400,
+          maxHeight: 500,
+          overflowY: "auto",
+        }}>
+          <div style={{ fontSize: 13, fontWeight: 600, color: "#111827", marginBottom: 12, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <span>Roof Planes</span>
+            <button
+              onClick={() => setShowRoofPlanes(false)}
+              style={{
+                background: "none",
+                border: "none",
+                cursor: "pointer",
+                color: "#6b7280",
+                fontSize: 18,
+                lineHeight: 1,
+              }}
+            >
+              ×
+            </button>
+          </div>
+          {roofPlanes.length === 0 ? (
+            <div style={{ padding: "20px 12px", textAlign: "center", color: "#6b7280", fontSize: 13 }}>
+              No roof planes yet. Click "Roof" and draw on the map to create one.
+            </div>
+          ) : (
+            roofPlanes.map((roof) => (
+              <div
+                key={roof.id}
+                onClick={() => {
+                  setSelectedRoofId(roof.id);
+                  setShowRoofPlanes(false);
+                }}
+                style={{
+                  padding: "10px 12px",
+                  background: selectedRoofId === roof.id ? "#fef3c7" : "#f9fafb",
+                  border: selectedRoofId === roof.id ? "2px solid #f97316" : "1px solid #e5e7eb",
+                  borderRadius: 6,
+                  cursor: "pointer",
+                  marginBottom: 8,
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                }}
+              >
+                <div>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: "#111827" }}>{roof.name}</div>
+                  <div style={{ fontSize: 11, color: "#6b7280" }}>
+                    {panels.filter((p) => p.roof_plane_id === roof.id).length} panels
+                  </div>
+                </div>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    deleteRoof(roof.id);
+                  }}
+                  style={{
+                    padding: "4px 8px",
+                    background: "#ef4444",
+                    color: "#fff",
+                    border: "none",
+                    borderRadius: 4,
+                    cursor: "pointer",
+                    fontSize: 11,
+                  }}
+                >
+                  Delete
+                </button>
+              </div>
+            ))
+          )}
+        </div>
+      )}
+
+      <div style={{ flex: 1, position: "relative", overflow: "hidden", background: "#f3f4f6" }}>
+        {mapsError ? (
+          <div style={{ padding: 20, color: "#ef4444" }}>{mapsError}</div>
+        ) : mapsLoading ? (
+          <div style={{ padding: 20 }}>Loading map...</div>
+        ) : (
+          <div ref={mapDivRef} style={{ width: "100%", height: "100%" }} />
+        )}
+
+        {drawingStart && (
+          <div style={{
+            position: "absolute",
+            top: 20,
+            left: "50%",
+            transform: "translateX(-50%)",
+            background: "#f97316",
+            color: "#fff",
+            padding: "8px 16px",
+            borderRadius: 6,
+            boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
+            fontSize: 13,
+            fontWeight: 600,
+            zIndex: 999,
+          }}>
+            Click on the map to complete the {toolMode === "circle" ? "circle" : toolMode === "rect" ? "rectangle" : "tree"} obstruction
+          </div>
+        )}
+
+        {selectedObstruction && (
+          <div style={{
+            position: "absolute",
+            bottom: 20,
+            left: 20,
+            background: "#fff",
+            padding: 16,
+            borderRadius: 8,
+            boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
+            minWidth: 280,
+            zIndex: 999,
+          }}>
+            <div style={{ fontSize: 13, fontWeight: 600, color: "#111827", marginBottom: 8, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <span>Obstruction Selected</span>
+              <button
+                onClick={() => setSelectedObstruction(null)}
+                style={{
+                  background: "none",
+                  border: "none",
+                  cursor: "pointer",
+                  color: "#6b7280",
+                  fontSize: 18,
+                  lineHeight: 1,
+                }}
+              >
+                ×
+              </button>
+            </div>
+
+            <div style={{
+              fontSize: 11,
+              color: "#059669",
+              background: "#d1fae5",
+              padding: "6px 10px",
+              borderRadius: 4,
+              marginBottom: 12,
+              border: "1px solid #a7f3d0"
+            }}>
+              Drag handles to resize • Drag shape to move
+            </div>
+
+            <div style={{ fontSize: 12, color: "#6b7280", marginBottom: 12 }}>
+              Type: <span style={{ fontWeight: 600, color: "#111827" }}>{selectedObstruction.type}</span>
+            </div>
+            {selectedObstruction.type === "circle" ? (
+              <div style={{ marginBottom: 12 }}>
+                <label style={{ fontSize: 11, fontWeight: 600, color: "#6b7280", display: "block", marginBottom: 4 }}>Radius (ft)</label>
+                <div style={{ fontSize: 13, fontWeight: 600, color: "#111827", padding: "6px 0" }}>
+                  {(selectedObstruction.radius_ft ?? 5).toFixed(1)} ft
+                </div>
+              </div>
+            ) : (
+              <>
+                <div style={{ marginBottom: 12 }}>
+                  <label style={{ fontSize: 11, fontWeight: 600, color: "#6b7280", display: "block", marginBottom: 4 }}>Width (ft)</label>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: "#111827", padding: "6px 0" }}>
+                    {(selectedObstruction.width_ft ?? 5).toFixed(1)} ft
+                  </div>
+                </div>
+                <div style={{ marginBottom: 12 }}>
+                  <label style={{ fontSize: 11, fontWeight: 600, color: "#6b7280", display: "block", marginBottom: 4 }}>Height (ft)</label>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: "#111827", padding: "6px 0" }}>
+                    {(selectedObstruction.height_ft ?? 5).toFixed(1)} ft
+                  </div>
+                </div>
+              </>
+            )}
+            <button
+              onClick={() => {
+                deleteObstructionById(selectedObstruction.id);
+                setSelectedObstruction(null);
+              }}
+              style={{
+                width: "100%",
+                padding: "8px 12px",
+                background: "#dc2626",
+                color: "#fff",
+                border: "none",
+                borderRadius: 4,
+                cursor: "pointer",
+                fontWeight: 600,
+                fontSize: 12,
+              }}
+            >
+              Delete Obstruction
+            </button>
+          </div>
+        )}
+
+        <div style={{ position: "absolute", bottom: 20, left: "50%", transform: "translateX(-50%)", background: "#fff", padding: "12px 24px", borderRadius: 8, boxShadow: "0 4px 12px rgba(0,0,0,0.15)" }}>
+          <div style={{ fontSize: 13, color: "#6b7280", marginBottom: 4 }}>System Summary</div>
+          <div style={{ display: "flex", gap: 24 }}>
+            <div>
+              <div style={{ fontSize: 11, color: "#9ca3af" }}>Panels</div>
+              <div style={{ fontSize: 16, fontWeight: 700, color: "#111827" }}>{systemSummary.panelCount}</div>
+            </div>
+            <div>
+              <div style={{ fontSize: 11, color: "#9ca3af" }}>System Size</div>
+              <div style={{ fontSize: 16, fontWeight: 700, color: "#111827" }}>{fmt(systemSummary.systemKw, 2)} kW</div>
+            </div>
+            <div>
+              <div style={{ fontSize: 11, color: "#9ca3af" }}>Production</div>
+              <div style={{ fontSize: 16, fontWeight: 700, color: "#111827" }}>{fmt(systemSummary.annualProductionKwh, 0)} kWh</div>
+            </div>
+            <div>
+              <div style={{ fontSize: 11, color: "#9ca3af" }}>Offset</div>
+              <div style={{ fontSize: 16, fontWeight: 700, color: "#10b981" }}>{fmt(systemSummary.offsetPercent, 1)}%</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    );
+  };
+
+  const renderEnergyTab = () => {
+    const annualConsumption = proposalDraft?.annual_consumption || proposal?.annual_consumption || 0;
+    const electricityRate = proposalDraft?.electricity_rate || proposal?.electricity_rate || 0;
+    const systemKw = systemSummary.systemKw || 0;
+    const annualProduction = systemSummary.annualProductionKwh || 0;
+    const totalContractPrice = systemSummary.totalContractPrice || 0;
+    const financeType = proposalDraft?.finance_type || proposal?.finance_type || "cash";
+    const meterFee = proposalDraft?.meter_fee || proposal?.meter_fee || 0;
+
+    const monthlyConsumptionKwh = annualConsumption / 12;
+    const monthlyUtilityBill = monthlyConsumptionKwh * electricityRate;
+    const annualUtilityBill = monthlyUtilityBill * 12;
+
+    const systemOffsetPercent = annualConsumption > 0 ? (annualProduction / annualConsumption) * 100 : 0;
+    const monthlyProductionKwh = annualProduction / 12;
+    const uncoveredMonthlyKwh = Math.max(0, monthlyConsumptionKwh - monthlyProductionKwh);
+    const monthlyRemainingUtility = uncoveredMonthlyKwh * electricityRate;
+
+    let monthlySolarPayment = 0;
+    if (financeType === "loan") {
+      const loanAmount = totalContractPrice;
+      const loanRate = 0.0599 / 12;
+      const loanTermMonths = 300;
+      if (loanAmount > 0) {
+        monthlySolarPayment = (loanAmount * loanRate * Math.pow(1 + loanRate, loanTermMonths)) / (Math.pow(1 + loanRate, loanTermMonths) - 1);
+      }
+    } else if (financeType === "cash") {
+      monthlySolarPayment = 0;
+    }
+
+    const totalMonthlyWithSolar = monthlySolarPayment + monthlyRemainingUtility + meterFee;
+    const monthlySavings = monthlyUtilityBill - totalMonthlyWithSolar;
+
+    let total25YearUtilityBill = 0;
+    let currentAnnualBill = annualUtilityBill;
+    for (let year = 0; year < 25; year++) {
+      total25YearUtilityBill += currentAnnualBill;
+      currentAnnualBill *= 1.03;
+    }
+
+    let total25YearRemainingUtility = 0;
+    let currentAnnualRemainingUtility = monthlyRemainingUtility * 12;
+    for (let year = 0; year < 25; year++) {
+      total25YearRemainingUtility += currentAnnualRemainingUtility;
+      currentAnnualRemainingUtility *= 1.03;
+    }
+
+    const total25YearMeterFees = meterFee * 12 * 25;
+    const total25YearSolarPayments = financeType === "loan" ? monthlySolarPayment * 300 : totalContractPrice;
+    const total25YearSolarCost = total25YearSolarPayments + total25YearRemainingUtility + total25YearMeterFees;
+    const total25YearSavings = total25YearUtilityBill - total25YearSolarCost;
+    const roi = totalContractPrice > 0 ? (total25YearSavings / totalContractPrice) * 100 : 0;
+
+    return (
+      <div style={{ padding: 20, maxWidth: 1200, margin: "0 auto" }}>
+        <div style={{ background: "#fff", padding: 24, borderRadius: 8, border: "1px solid #e5e7eb", marginBottom: 20 }}>
+          <div style={{ fontSize: 18, fontWeight: 700, color: "#111827", marginBottom: 20 }}>Energy Usage Analysis</div>
+
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24, marginBottom: 24 }}>
+            <div>
+              <div style={{ fontSize: 12, fontWeight: 600, color: "#6b7280", marginBottom: 8 }}>CURRENT UTILITY</div>
+              <div style={{ background: "#fef3c7", padding: 16, borderRadius: 6, border: "1px solid #fbbf24" }}>
+                <div style={{ fontSize: 11, color: "#78350f", marginBottom: 4 }}>Monthly Utility Bill</div>
+                <div style={{ fontSize: 28, fontWeight: 700, color: "#78350f" }}>${fmt(monthlyUtilityBill, 2)}</div>
+                <div style={{ fontSize: 11, color: "#78350f", marginTop: 8 }}>Annual: ${fmt(annualUtilityBill, 2)}</div>
+              </div>
+            </div>
+
+            <div>
+              <div style={{ fontSize: 12, fontWeight: 600, color: "#6b7280", marginBottom: 8 }}>WITH SOLAR</div>
+              <div style={{ background: "#dcfce7", padding: 16, borderRadius: 6, border: "1px solid #22c55e" }}>
+                <div style={{ fontSize: 11, color: "#14532d", marginBottom: 4 }}>
+                  Total Monthly Cost
+                </div>
+                <div style={{ fontSize: 28, fontWeight: 700, color: "#14532d" }}>${fmt(totalMonthlyWithSolar, 2)}</div>
+                <div style={{ fontSize: 10, color: "#14532d", marginTop: 8, paddingTop: 8, borderTop: "1px solid #86efac" }}>
+                  {financeType === "loan" && monthlySolarPayment > 0 && (
+                    <div style={{ marginBottom: 3 }}>Solar Payment: ${fmt(monthlySolarPayment, 2)}</div>
+                  )}
+                  {monthlyRemainingUtility > 0 && (
+                    <div style={{ marginBottom: 3 }}>Remaining Utility: ${fmt(monthlyRemainingUtility, 2)}</div>
+                  )}
+                  {meterFee > 0 && (
+                    <div style={{ marginBottom: 3 }}>Meter Fee: ${fmt(meterFee, 2)}</div>
+                  )}
+                  {financeType === "cash" && (
+                    <div style={{ fontStyle: "italic" }}>Solar paid upfront</div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div style={{ background: "#f0fdf4", padding: 20, borderRadius: 8, border: "2px solid #22c55e", marginBottom: 24 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <div>
+                <div style={{ fontSize: 12, fontWeight: 600, color: "#166534", marginBottom: 4 }}>ESTIMATED MONTHLY SAVINGS</div>
+                <div style={{ fontSize: 36, fontWeight: 700, color: "#059669" }}>${fmt(monthlySavings, 2)}</div>
+              </div>
+              <div style={{ textAlign: "right" }}>
+                <div style={{ fontSize: 11, color: "#166534" }}>Savings compared to utility</div>
+                <div style={{ fontSize: 11, color: "#166534", marginTop: 2 }}>
+                  {monthlyUtilityBill > 0 ? ((monthlySavings / monthlyUtilityBill) * 100).toFixed(1) : 0}% reduction
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div style={{ borderTop: "1px solid #e5e7eb", paddingTop: 24 }}>
+            <div style={{ fontSize: 16, fontWeight: 700, color: "#111827", marginBottom: 16 }}>25-Year Financial Projection</div>
+            <div style={{ fontSize: 11, color: "#6b7280", marginBottom: 16 }}>
+              Includes 3% annual utility rate escalation
+            </div>
+
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 16, marginBottom: 20 }}>
+              <div style={{ background: "#fef2f2", padding: 16, borderRadius: 6, border: "1px solid #fca5a5" }}>
+                <div style={{ fontSize: 11, fontWeight: 600, color: "#991b1b", marginBottom: 8 }}>WITHOUT SOLAR</div>
+                <div style={{ fontSize: 11, color: "#991b1b", marginBottom: 4 }}>25-Year Utility Costs</div>
+                <div style={{ fontSize: 20, fontWeight: 700, color: "#dc2626" }}>${fmt(total25YearUtilityBill, 0)}</div>
+              </div>
+
+              <div style={{ background: "#dbeafe", padding: 16, borderRadius: 6, border: "1px solid #60a5fa" }}>
+                <div style={{ fontSize: 11, fontWeight: 600, color: "#1e40af", marginBottom: 8 }}>WITH SOLAR</div>
+                <div style={{ fontSize: 11, color: "#1e40af", marginBottom: 4 }}>25-Year Solar Costs</div>
+                <div style={{ fontSize: 20, fontWeight: 700, color: "#2563eb" }}>${fmt(total25YearSolarCost, 0)}</div>
+              </div>
+
+              <div style={{ background: "#d1fae5", padding: 16, borderRadius: 6, border: "1px solid #34d399" }}>
+                <div style={{ fontSize: 11, fontWeight: 600, color: "#065f46", marginBottom: 8 }}>TOTAL SAVINGS</div>
+                <div style={{ fontSize: 11, color: "#065f46", marginBottom: 4 }}>25-Year Savings</div>
+                <div style={{ fontSize: 20, fontWeight: 700, color: "#059669" }}>${fmt(total25YearSavings, 0)}</div>
+              </div>
+            </div>
+
+            <div style={{ background: "#f9fafb", padding: 16, borderRadius: 6, border: "1px solid #e5e7eb" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div>
+                  <div style={{ fontSize: 11, fontWeight: 600, color: "#374151", marginBottom: 4 }}>RETURN ON INVESTMENT (ROI)</div>
+                  <div style={{ fontSize: 13, color: "#6b7280" }}>
+                    Based on 25-year savings vs. system cost
+                  </div>
+                </div>
+                <div style={{ textAlign: "right" }}>
+                  <div style={{ fontSize: 32, fontWeight: 700, color: roi >= 0 ? "#059669" : "#dc2626" }}>
+                    {fmt(roi, 1)}%
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div style={{ marginTop: 20, padding: 16, background: "#fefce8", borderRadius: 6, border: "1px solid #facc15" }}>
+            <div style={{ fontSize: 11, fontWeight: 600, color: "#854d0e", marginBottom: 8 }}>SYSTEM DETAILS</div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, fontSize: 11, color: "#713f12" }}>
+              <div>
+                <div style={{ marginBottom: 4 }}>System Size</div>
+                <div style={{ fontWeight: 600 }}>{fmt(systemKw, 2)} kW</div>
+              </div>
+              <div>
+                <div style={{ marginBottom: 4 }}>Annual Production</div>
+                <div style={{ fontWeight: 600 }}>{fmt(annualProduction, 0)} kWh</div>
+              </div>
+              <div>
+                <div style={{ marginBottom: 4 }}>System Offset</div>
+                <div style={{ fontWeight: 600 }}>
+                  {annualConsumption > 0 ? fmt((annualProduction / annualConsumption) * 100, 1) : 0}%
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const renderPaymentsTab = () => (
+    <div style={{ padding: 20 }}>
+      <div style={{ background: "#fff", padding: 20, borderRadius: 8, border: "1px solid #e5e7eb" }}>
+        <div style={{ fontSize: 15, fontWeight: 600, color: "#111827", marginBottom: 16 }}>Payment Details</div>
+        <div style={{ color: "#6b7280", fontSize: 14 }}>Payment information and history will be displayed here.</div>
+      </div>
+    </div>
+  );
+
+  const renderOnlineProposalTab = () => (
+    <div style={{ padding: 20 }}>
+      <div style={{ background: "#fff", padding: 20, borderRadius: 8, border: "1px solid #e5e7eb" }}>
+        <div style={{ fontSize: 15, fontWeight: 600, color: "#111827", marginBottom: 16 }}>Online Proposal</div>
+        <div style={{ color: "#6b7280", fontSize: 14 }}>Online proposal preview will be displayed here.</div>
+      </div>
+    </div>
+  );
+
+  const renderPDFProposalTab = () => (
+    <div style={{ padding: 20 }}>
+      <div style={{ background: "#fff", padding: 20, borderRadius: 8, border: "1px solid #e5e7eb" }}>
+        <div style={{ fontSize: 15, fontWeight: 600, color: "#111827", marginBottom: 16 }}>PDF Proposal</div>
+        <div style={{ color: "#6b7280", fontSize: 14 }}>PDF proposal generation options will be displayed here.</div>
+      </div>
+    </div>
+  );
+
   return (
     <div style={{ height: "calc(100vh - 64px)", overflow: "auto", background: "#f5f5f7" }}>
       <div style={{ maxWidth: "100%", margin: "0 auto", padding: 20 }}>
