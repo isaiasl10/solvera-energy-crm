@@ -3252,7 +3252,7 @@ export default function ProposalWorkspace({
           </div>
 
           <button
-            onClick={saveDesign}
+            onClick={saveDesignChanges}
             disabled={!!busy}
             style={{
               padding: "14px 20px",
