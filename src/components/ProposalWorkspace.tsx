@@ -83,6 +83,11 @@ export default function ProposalWorkspace({
   const [customer, setCustomer] = useState<any>(null);
   const [proposal, setProposal] = useState<any>(null);
   const [proposalDraft, setProposalDraft] = useState<any>({});
+
+  const [draftCustomer, setDraftCustomer] = useState<any>({ full_name: "", email: "", phone: "" });
+  const didInitDraftRef = useRef(false);
+  const isDirtyRef = useRef(false);
+
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
     customer: true,
     electricity: true,
@@ -114,6 +119,22 @@ export default function ProposalWorkspace({
   const [panelRotation, setPanelRotation] = useState<number>(0);
   const [rowSpacing, setRowSpacing] = useState<number>(0.01);
   const [colSpacing, setColSpacing] = useState<number>(0.01);
+
+  const toolModeRef = useRef<ToolMode>("none");
+  const selectedRoofIdRef = useRef<string | null>(null);
+  const selectedPanelModelIdRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    toolModeRef.current = toolMode;
+  }, [toolMode]);
+
+  useEffect(() => {
+    selectedRoofIdRef.current = selectedRoofId;
+  }, [selectedRoofId]);
+
+  useEffect(() => {
+    selectedPanelModelIdRef.current = selectedPanelModelId;
+  }, [selectedPanelModelId]);
 
   const [mapsError, setMapsError] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
@@ -264,6 +285,13 @@ export default function ProposalWorkspace({
 
   useEffect(() => {
     if (!proposalId) return;
+    didInitDraftRef.current = false;
+    isDirtyRef.current = false;
+    lastLoadedProposalId.current = null;
+  }, [proposalId]);
+
+  useEffect(() => {
+    if (!proposalId) return;
     if (lastLoadedProposalId.current === proposalId) return;
 
     lastLoadedProposalId.current = proposalId;
@@ -326,6 +354,22 @@ export default function ProposalWorkspace({
 
     loadProposal();
   }, [proposalId]);
+
+  useEffect(() => {
+    if (!proposalId) return;
+    if (didInitDraftRef.current) return;
+    if (!proposal?.id || !customer?.id) return;
+
+    console.log("Draft init ran", didInitDraftRef.current);
+
+    setDraftCustomer({
+      full_name: customer.full_name ?? "",
+      email: customer.email ?? "",
+      phone: customer.phone ?? "",
+    });
+
+    didInitDraftRef.current = true;
+  }, [proposalId, proposal?.id, customer?.id]);
 
   useEffect(() => {
     if (activeTab !== "solar-design") return;
@@ -397,15 +441,20 @@ export default function ProposalWorkspace({
       google.maps.event.addListener(map, "click", (e: any) => {
         const lat = e.latLng.lat();
         const lng = e.latLng.lng();
+        const currentToolMode = toolModeRef.current;
+        const currentRoofId = selectedRoofIdRef.current;
+        const currentPanelModelId = selectedPanelModelIdRef.current;
 
-        if (toolMode === "add-panel" && selectedRoofId && selectedPanelModelId) {
+        console.log("Map clicked", { toolMode: currentToolMode, lat, lng });
+
+        if (currentToolMode === "add-panel" && currentRoofId && currentPanelModelId) {
           addPanelAt(lat, lng);
-        } else if (toolMode === "circle") {
+        } else if (currentToolMode === "circle") {
           const newObstruction = {
             id: `temp-${Date.now()}-${Math.random()}`,
-            proposal_id: proposalId,
+            proposal_id: proposalId!,
             type: "circle" as const,
-            roof_plane_id: selectedRoofId,
+            roof_plane_id: currentRoofId,
             center_lat: lat,
             center_lng: lng,
             radius_ft: 5,
@@ -413,13 +462,14 @@ export default function ProposalWorkspace({
             height_ft: null,
             rotation_deg: null,
           };
+          console.log("Adding circle obstruction", newObstruction);
           setObstructions((prev) => [...prev, newObstruction]);
-        } else if (toolMode === "rect") {
+        } else if (currentToolMode === "rect") {
           const newObstruction = {
             id: `temp-${Date.now()}-${Math.random()}`,
-            proposal_id: proposalId,
+            proposal_id: proposalId!,
             type: "rect" as const,
-            roof_plane_id: selectedRoofId,
+            roof_plane_id: currentRoofId,
             center_lat: lat,
             center_lng: lng,
             radius_ft: null,
@@ -427,13 +477,14 @@ export default function ProposalWorkspace({
             height_ft: 5,
             rotation_deg: 0,
           };
+          console.log("Adding rect obstruction", newObstruction);
           setObstructions((prev) => [...prev, newObstruction]);
-        } else if (toolMode === "tree") {
+        } else if (currentToolMode === "tree") {
           const newObstruction = {
             id: `temp-${Date.now()}-${Math.random()}`,
-            proposal_id: proposalId,
+            proposal_id: proposalId!,
             type: "tree" as const,
-            roof_plane_id: selectedRoofId,
+            roof_plane_id: currentRoofId,
             center_lat: lat,
             center_lng: lng,
             radius_ft: null,
@@ -441,11 +492,12 @@ export default function ProposalWorkspace({
             height_ft: 8,
             rotation_deg: 0,
           };
+          console.log("Adding tree obstruction", newObstruction);
           setObstructions((prev) => [...prev, newObstruction]);
         }
       });
     }
-  }, [activeTab, mapsLoading, proposal, toolMode, selectedRoofId, selectedPanelModelId]);
+  }, [activeTab, mapsLoading, proposal?.lat, proposal?.lng, proposalId]);
 
   useEffect(() => {
     if (!mapRef.current || !isGoogleReady()) return;
@@ -899,6 +951,10 @@ export default function ProposalWorkspace({
 
   const renderManageTab = () => (
     <div style={{ padding: 20 }}>
+      <div style={{ position: "fixed", bottom: 10, left: 10, zIndex: 9999, background: "#fff", padding: 8, border: "1px solid #000", borderRadius: 4, fontSize: 11 }}>
+        dirty: {String(isDirtyRef.current)} | init: {String(didInitDraftRef.current)}
+      </div>
+
       <CollapsibleSection id="customer" icon={User} title="Customer Information">
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 16 }}>
           <div>
@@ -906,8 +962,11 @@ export default function ProposalWorkspace({
               Full Name
             </label>
             <input
-              value={customer?.full_name ?? ""}
-              onChange={(e) => setCustomer((c: any) => ({ ...c, full_name: e.target.value }))}
+              value={draftCustomer.full_name}
+              onChange={(e) => {
+                isDirtyRef.current = true;
+                setDraftCustomer((c: any) => ({ ...c, full_name: e.target.value }));
+              }}
               placeholder="Enter customer name"
               style={{
                 width: "100%",
@@ -927,8 +986,11 @@ export default function ProposalWorkspace({
             </label>
             <input
               type="email"
-              value={customer?.email ?? ""}
-              onChange={(e) => setCustomer((c: any) => ({ ...c, email: e.target.value }))}
+              value={draftCustomer.email}
+              onChange={(e) => {
+                isDirtyRef.current = true;
+                setDraftCustomer((c: any) => ({ ...c, email: e.target.value }));
+              }}
               placeholder="customer@example.com"
               style={{
                 width: "100%",
@@ -948,8 +1010,11 @@ export default function ProposalWorkspace({
             </label>
             <input
               type="tel"
-              value={customer?.phone ?? ""}
-              onChange={(e) => setCustomer((c: any) => ({ ...c, phone: e.target.value }))}
+              value={draftCustomer.phone}
+              onChange={(e) => {
+                isDirtyRef.current = true;
+                setDraftCustomer((c: any) => ({ ...c, phone: e.target.value }));
+              }}
               placeholder="(555) 123-4567"
               style={{
                 width: "100%",
@@ -965,14 +1030,15 @@ export default function ProposalWorkspace({
         </div>
 
         <button
+          type="button"
           onClick={async () => {
             if (!customer?.id) return;
             const { error } = await supabase
               .from("customers")
               .update(sanitizePatch({
-                full_name: customer.full_name,
-                email: customer.email,
-                phone: customer.phone,
+                full_name: draftCustomer.full_name.trim(),
+                email: draftCustomer.email.trim(),
+                phone: draftCustomer.phone.trim(),
               }))
               .eq("id", customer.id);
 
@@ -980,6 +1046,8 @@ export default function ProposalWorkspace({
               console.error("Failed to save customer:", error);
               alert("Failed to save customer information");
             } else {
+              setCustomer((c: any) => ({ ...c, ...draftCustomer }));
+              isDirtyRef.current = false;
               alert("Customer information saved successfully!");
             }
           }}
@@ -1029,12 +1097,13 @@ export default function ProposalWorkspace({
             <input
               type="number"
               value={proposalDraft.annual_consumption ?? ""}
-              onChange={(e) =>
+              onChange={(e) => {
+                isDirtyRef.current = true;
                 setProposalDraft((p: any) => ({
                   ...p,
                   annual_consumption: Number(e.target.value),
-                }))
-              }
+                }));
+              }}
               placeholder="23000"
               style={{
                 width: "100%",
@@ -1050,13 +1119,22 @@ export default function ProposalWorkspace({
         </div>
 
         <button
+          type="button"
           onClick={async () => {
-            await supabase
+            const { error } = await supabase
               .from("proposals")
-              .update({
+              .update(sanitizePatch({
                 annual_consumption: proposalDraft.annual_consumption ?? null,
-              })
+              }))
               .eq("id", proposalId);
+
+            if (error) {
+              alert("Failed to save electricity usage");
+            } else {
+              setProposal((p: any) => ({ ...p, ...proposalDraft }));
+              isDirtyRef.current = false;
+              alert("Electricity usage saved successfully!");
+            }
           }}
           style={{
             marginTop: 16,
@@ -1200,12 +1278,13 @@ export default function ProposalWorkspace({
             <input
               type="number"
               value={proposalDraft.total_price ?? ""}
-              onChange={(e) =>
+              onChange={(e) => {
+                isDirtyRef.current = true;
                 setProposalDraft((p: any) => ({
                   ...p,
                   total_price: Number(e.target.value),
-                }))
-              }
+                }));
+              }}
               placeholder="Enter total price"
               style={{
                 width: "100%",
@@ -1227,12 +1306,13 @@ export default function ProposalWorkspace({
               type="number"
               step="0.01"
               value={proposalDraft.price_per_watt ?? ""}
-              onChange={(e) =>
+              onChange={(e) => {
+                isDirtyRef.current = true;
                 setProposalDraft((p: any) => ({
                   ...p,
                   price_per_watt: Number(e.target.value),
-                }))
-              }
+                }));
+              }}
               placeholder="Enter price per watt"
               style={{
                 width: "100%",
@@ -1257,14 +1337,23 @@ export default function ProposalWorkspace({
         )}
 
         <button
+          type="button"
           onClick={async () => {
-            await supabase
+            const { error } = await supabase
               .from("proposals")
-              .update({
+              .update(sanitizePatch({
                 total_price: proposalDraft.total_price ?? null,
                 price_per_watt: proposalDraft.price_per_watt ?? null,
-              })
+              }))
               .eq("id", proposalId);
+
+            if (error) {
+              alert("Failed to save pricing");
+            } else {
+              setProposal((p: any) => ({ ...p, ...proposalDraft }));
+              isDirtyRef.current = false;
+              alert("Pricing saved successfully!");
+            }
           }}
           style={{
             marginTop: 16,
