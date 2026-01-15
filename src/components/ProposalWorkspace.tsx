@@ -1631,13 +1631,13 @@ export default function ProposalWorkspace({
   useEffect(() => {
     if (!mapRef.current || !isGoogleReady()) return;
 
+    const google = (window as any).google;
+
     obstructionShapesRef.current.forEach((shape) => {
       google.maps.event.clearInstanceListeners(shape);
       shape.setMap(null);
     });
     obstructionShapesRef.current.clear();
-
-    const google = (window as any).google;
 
     obstructions.forEach((obs) => {
       let shape: any = null;
