@@ -30,11 +30,24 @@ export default function CustomerPricing({
   const { options: financingOptions } = useFinancingOptions();
 
   const [customer, setCustomer] = useState<any>(null);
-  const [customerFullName, setCustomerFullName] = useState("");
-  const [customerEmail, setCustomerEmail] = useState("");
-  const [customerPhone, setCustomerPhone] = useState("");
-  const [proposalDraft, setProposalDraft] = useState<any>({});
-  const [loadedCustomerId, setLoadedCustomerId] = useState<string | null>(null);
+  const lastLoadedProposalId = React.useRef<string | null>(null);
+
+  const [draft, setDraft] = useState({
+    customerFullName: "",
+    customerEmail: "",
+    customerPhone: "",
+    annualConsumption: 0,
+    utilityCompany: "",
+    electricityRate: 0,
+    pricePerWatt: 0,
+    systemPrice: 0,
+    cashDownPayment: 0,
+    cashSecondPayment: 0,
+    cashFinalPayment: 0,
+    financeType: "cash" as string,
+    financeOptionId: null as string | null,
+  });
+
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
     customer: true,
     electricity: true,
@@ -47,36 +60,61 @@ export default function CustomerPricing({
   const [activeTab, setActiveTab] = useState<string>("manage");
 
   useEffect(() => {
-    if (!proposal?.customer_id || loadedCustomerId === proposal.customer_id) return;
+    if (!proposal?.id) return;
+    if (lastLoadedProposalId.current === proposal.id) return;
+
+    lastLoadedProposalId.current = proposal.id;
 
     (async () => {
-      const { data } = await supabase
-        .from("customers")
-        .select("*")
-        .eq("id", proposal.customer_id)
-        .maybeSingle();
+      if (proposal.customer_id) {
+        const { data } = await supabase
+          .from("customers")
+          .select("*")
+          .eq("id", proposal.customer_id)
+          .maybeSingle();
 
-      if (data) {
-        setCustomer(data);
-        setCustomerFullName(data.full_name || "");
-        setCustomerEmail(data.email || "");
-        setCustomerPhone(data.phone || "");
-        setLoadedCustomerId(proposal.customer_id);
+        if (data) {
+          setCustomer(data);
+          setDraft((d) => ({
+            ...d,
+            customerFullName: data.full_name || "",
+            customerEmail: data.email || "",
+            customerPhone: data.phone || "",
+          }));
+        }
       }
-    })();
-  }, [proposal?.customer_id, loadedCustomerId]);
 
-  useEffect(() => {
-    if (proposal && !proposalDraft.id) {
-      setProposalDraft(proposal);
-    }
+      setDraft((d) => ({
+        ...d,
+        annualConsumption: Number(proposal.annual_consumption ?? 0),
+        utilityCompany: proposal.utility_company ?? "",
+        electricityRate: Number(proposal.electricity_rate ?? 0),
+        pricePerWatt: Number(proposal.price_per_watt ?? 0),
+        systemPrice: Number(proposal.system_price ?? 0),
+        cashDownPayment: Number(proposal.cash_down_payment ?? 0),
+        cashSecondPayment: Number(proposal.cash_second_payment ?? 0),
+        cashFinalPayment: Number(proposal.cash_final_payment ?? 0),
+        financeType: proposal.finance_type ?? "cash",
+        financeOptionId: proposal.finance_option_id ?? null,
+      }));
+    })();
   }, [proposal?.id]);
 
+  const onText = (field: keyof typeof draft) => (e: React.ChangeEvent<HTMLInputElement>) => {
+    const v = e.target.value;
+    setDraft((d) => ({ ...d, [field]: v }));
+  };
+
+  const onNumber = (field: keyof typeof draft) => (e: React.ChangeEvent<HTMLInputElement>) => {
+    const raw = e.target.value;
+    const num = raw === "" ? 0 : Number(raw);
+    setDraft((d) => ({ ...d, [field]: Number.isFinite(num) ? num : 0 }));
+  };
+
   const selectedFinanceValue = useMemo(() => {
-    if (!proposalDraft) return "cash";
-    if ((proposalDraft.finance_type ?? "cash") === "cash") return "cash";
-    return proposalDraft.finance_option_id ?? "cash";
-  }, [proposalDraft]);
+    if (draft.financeType === "cash") return "cash";
+    return draft.financeOptionId ?? "cash";
+  }, [draft.financeType, draft.financeOptionId]);
 
   if (!proposalId)
     return <div style={{ padding: 16 }}>Select a proposal first.</div>;
@@ -211,8 +249,8 @@ export default function CustomerPricing({
                 Full Name
               </label>
               <input
-                value={customerFullName}
-                onChange={(e) => setCustomerFullName(e.target.value)}
+                value={draft.customerFullName}
+                onChange={onText("customerFullName")}
                 placeholder="Customer full name"
                 style={{
                   width: "100%",
@@ -232,8 +270,8 @@ export default function CustomerPricing({
               </label>
               <input
                 type="email"
-                value={customerEmail}
-                onChange={(e) => setCustomerEmail(e.target.value)}
+                value={draft.customerEmail}
+                onChange={onText("customerEmail")}
                 placeholder="customer@email.com"
                 style={{
                   width: "100%",
@@ -253,8 +291,8 @@ export default function CustomerPricing({
               </label>
               <input
                 type="tel"
-                value={customerPhone}
-                onChange={(e) => setCustomerPhone(e.target.value)}
+                value={draft.customerPhone}
+                onChange={onText("customerPhone")}
                 placeholder="(555) 123-4567"
                 style={{
                   width: "100%",
@@ -272,14 +310,20 @@ export default function CustomerPricing({
           <button
             onClick={async () => {
               if (!customer?.id) return;
-              await supabase
+              const { error } = await supabase
                 .from("customers")
                 .update({
-                  full_name: customerFullName,
-                  email: customerEmail,
-                  phone: customerPhone,
+                  full_name: draft.customerFullName,
+                  email: draft.customerEmail,
+                  phone: draft.customerPhone,
                 })
                 .eq("id", customer.id);
+
+              if (error) {
+                alert("Failed to save: " + error.message);
+              } else {
+                alert("Customer information saved successfully!");
+              }
             }}
             style={{
               marginTop: 16,
@@ -326,13 +370,8 @@ export default function CustomerPricing({
               </label>
               <input
                 type="number"
-                value={proposalDraft.annual_consumption ?? ""}
-                onChange={(e) =>
-                  setProposalDraft((p: any) => ({
-                    ...p,
-                    annual_consumption: Number(e.target.value),
-                  }))
-                }
+                value={draft.annualConsumption}
+                onChange={onNumber("annualConsumption")}
                 placeholder="23000"
                 style={{
                   width: "100%",
@@ -349,13 +388,19 @@ export default function CustomerPricing({
 
           <button
             onClick={async () => {
-              await supabase
+              const { error } = await supabase
                 .from("proposals")
                 .update({
-                  annual_consumption: proposalDraft.annual_consumption ?? null,
+                  annual_consumption: draft.annualConsumption,
                 })
                 .eq("id", proposalId);
-              await refresh();
+
+              if (error) {
+                alert("Failed to save: " + error.message);
+              } else {
+                alert("Electricity usage saved successfully!");
+                await refresh();
+              }
             }}
             style={{
               marginTop: 16,
@@ -381,13 +426,8 @@ export default function CustomerPricing({
               </label>
               <input
                 type="text"
-                value={proposalDraft.utility_company ?? ""}
-                onChange={(e) =>
-                  setProposalDraft((p: any) => ({
-                    ...p,
-                    utility_company: e.target.value,
-                  }))
-                }
+                value={draft.utilityCompany}
+                onChange={onText("utilityCompany")}
                 placeholder="Enter utility company"
                 style={{
                   width: "100%",
@@ -408,13 +448,8 @@ export default function CustomerPricing({
               <input
                 type="number"
                 step="0.01"
-                value={proposalDraft.electricity_rate ?? ""}
-                onChange={(e) =>
-                  setProposalDraft((p: any) => ({
-                    ...p,
-                    electricity_rate: Number(e.target.value),
-                  }))
-                }
+                value={draft.electricityRate}
+                onChange={onNumber("electricityRate")}
                 placeholder="0.12"
                 style={{
                   width: "100%",
@@ -431,14 +466,20 @@ export default function CustomerPricing({
 
           <button
             onClick={async () => {
-              await supabase
+              const { error } = await supabase
                 .from("proposals")
                 .update({
-                  utility_company: proposalDraft.utility_company ?? null,
-                  electricity_rate: proposalDraft.electricity_rate ?? null,
+                  utility_company: draft.utilityCompany,
+                  electricity_rate: draft.electricityRate,
                 })
                 .eq("id", proposalId);
-              await refresh();
+
+              if (error) {
+                alert("Failed to save: " + error.message);
+              } else {
+                alert("Electricity rate saved successfully!");
+                await refresh();
+              }
             }}
             style={{
               marginTop: 16,
@@ -499,13 +540,8 @@ export default function CustomerPricing({
               </label>
               <input
                 type="number"
-                value={proposalDraft.total_price ?? ""}
-                onChange={(e) =>
-                  setProposalDraft((p: any) => ({
-                    ...p,
-                    total_price: Number(e.target.value),
-                  }))
-                }
+                value={draft.systemPrice}
+                onChange={onNumber("systemPrice")}
                 placeholder="Enter total price"
                 style={{
                   width: "100%",
@@ -526,13 +562,8 @@ export default function CustomerPricing({
               <input
                 type="number"
                 step="0.01"
-                value={proposalDraft.price_per_watt ?? ""}
-                onChange={(e) =>
-                  setProposalDraft((p: any) => ({
-                    ...p,
-                    price_per_watt: Number(e.target.value),
-                  }))
-                }
+                value={draft.pricePerWatt}
+                onChange={onNumber("pricePerWatt")}
                 placeholder="Enter price per watt"
                 style={{
                   width: "100%",
@@ -547,11 +578,11 @@ export default function CustomerPricing({
             </div>
           </div>
 
-          {proposalDraft.total_price && systemSummary.systemKw > 0 && (
+          {draft.systemPrice && systemSummary.systemKw > 0 && (
             <div style={{ marginTop: 16, padding: 12, background: "#f9fafb", borderRadius: 6 }}>
               <div style={{ fontSize: 12, color: "#6b7280", marginBottom: 4 }}>Calculated Price Per Watt</div>
               <div style={{ fontSize: 16, fontWeight: 700, color: "#111827" }}>
-                ${(proposalDraft.total_price / (systemSummary.systemKw * 1000)).toFixed(2)}/W
+                ${(draft.systemPrice / (systemSummary.systemKw * 1000)).toFixed(2)}/W
               </div>
             </div>
           )}
@@ -561,8 +592,7 @@ export default function CustomerPricing({
               await supabase
                 .from("proposals")
                 .update({
-                  total_price: proposalDraft.total_price ?? null,
-                  price_per_watt: proposalDraft.price_per_watt ?? null,
+                  price_per_watt: draft.pricePerWatt,
                 })
                 .eq("id", proposalId);
               await refresh();
@@ -594,16 +624,16 @@ export default function CustomerPricing({
                 onChange={(e) => {
                   const v = e.target.value;
                   if (v === "cash") {
-                    setProposalDraft((p: any) => ({
-                      ...p,
-                      finance_type: "cash",
-                      finance_option_id: null,
+                    setDraft((d) => ({
+                      ...d,
+                      financeType: "cash",
+                      financeOptionId: null,
                     }));
                   } else {
-                    setProposalDraft((p: any) => ({
-                      ...p,
-                      finance_type: "finance",
-                      finance_option_id: v,
+                    setDraft((d) => ({
+                      ...d,
+                      financeType: "finance",
+                      financeOptionId: v,
                     }));
                   }
                 }}
@@ -631,8 +661,8 @@ export default function CustomerPricing({
               await supabase
                 .from("proposals")
                 .update({
-                  finance_type: proposalDraft.finance_type ?? "cash",
-                  finance_option_id: proposalDraft.finance_option_id ?? null,
+                  finance_type: draft.financeType,
+                  finance_option_id: draft.financeOptionId,
                 })
                 .eq("id", proposalId);
               await refresh();
@@ -653,7 +683,7 @@ export default function CustomerPricing({
           </button>
         </CollapsibleSection>
 
-        {(proposalDraft.finance_type ?? "cash") === "cash" && (
+        {draft.financeType === "cash" && (
           <CollapsibleSection id="payment" icon={DollarSign} title="Cash Payment Schedule">
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 16 }}>
               <div>
@@ -662,13 +692,8 @@ export default function CustomerPricing({
                 </label>
                 <input
                   type="number"
-                  value={proposalDraft.cash_deposit ?? ""}
-                  onChange={(e) =>
-                    setProposalDraft((p: any) => ({
-                      ...p,
-                      cash_deposit: Number(e.target.value),
-                    }))
-                  }
+                  value={draft.cashDownPayment}
+                  onChange={onNumber("cashDownPayment")}
                   placeholder="0.00"
                   style={{
                     width: "100%",
@@ -688,13 +713,8 @@ export default function CustomerPricing({
                 </label>
                 <input
                   type="number"
-                  value={proposalDraft.cash_second_payment ?? ""}
-                  onChange={(e) =>
-                    setProposalDraft((p: any) => ({
-                      ...p,
-                      cash_second_payment: Number(e.target.value),
-                    }))
-                  }
+                  value={draft.cashSecondPayment}
+                  onChange={onNumber("cashSecondPayment")}
                   placeholder="0.00"
                   style={{
                     width: "100%",
@@ -714,13 +734,8 @@ export default function CustomerPricing({
                 </label>
                 <input
                   type="number"
-                  value={proposalDraft.cash_final_payment ?? ""}
-                  onChange={(e) =>
-                    setProposalDraft((p: any) => ({
-                      ...p,
-                      cash_final_payment: Number(e.target.value),
-                    }))
-                  }
+                  value={draft.cashFinalPayment}
+                  onChange={onNumber("cashFinalPayment")}
                   placeholder="0.00"
                   style={{
                     width: "100%",
@@ -740,9 +755,9 @@ export default function CustomerPricing({
                 await supabase
                   .from("proposals")
                   .update({
-                    cash_deposit: proposalDraft.cash_deposit ?? null,
-                    cash_second_payment: proposalDraft.cash_second_payment ?? null,
-                    cash_final_payment: proposalDraft.cash_final_payment ?? null,
+                    cash_down_payment: draft.cashDownPayment,
+                    cash_second_payment: draft.cashSecondPayment,
+                    cash_final_payment: draft.cashFinalPayment,
                   })
                   .eq("id", proposalId);
                 await refresh();
