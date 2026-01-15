@@ -1,17 +1,65 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { FileText, Plus } from "lucide-react";
 import { supabase } from "../lib/supabaseClient";
 import ProposalWorkspace from "./ProposalWorkspace";
+import { loadGoogleMaps } from "../lib/loadGoogleMaps";
+
+type SelectedPlace = {
+  placeId: string;
+  formattedAddress: string;
+  lat: number;
+  lng: number;
+};
 
 export default function Proposals() {
   const [proposals, setProposals] = useState<any[]>([]);
   const [selectedProposalId, setSelectedProposalId] = useState<string | null>(null);
   const [showNewProposalModal, setShowNewProposalModal] = useState(false);
   const [newAddress, setNewAddress] = useState("");
+  const [selectedPlace, setSelectedPlace] = useState<SelectedPlace | null>(null);
+  const addressInputRef = useRef<HTMLInputElement>(null);
+  const autocompleteRef = useRef<google.maps.places.Autocomplete | null>(null);
 
   useEffect(() => {
     loadProposals();
   }, []);
+
+  useEffect(() => {
+    if (showNewProposalModal && addressInputRef.current) {
+      initializeAutocomplete();
+    }
+  }, [showNewProposalModal]);
+
+  const initializeAutocomplete = async () => {
+    try {
+      await loadGoogleMaps();
+
+      if (!addressInputRef.current || autocompleteRef.current) return;
+
+      const autocomplete = new google.maps.places.Autocomplete(addressInputRef.current, {
+        types: ['address'],
+        fields: ['place_id', 'formatted_address', 'geometry'],
+      });
+
+      autocomplete.addListener('place_changed', () => {
+        const place = autocomplete.getPlace();
+
+        if (place.geometry && place.geometry.location) {
+          setSelectedPlace({
+            placeId: place.place_id || '',
+            formattedAddress: place.formatted_address || '',
+            lat: place.geometry.location.lat(),
+            lng: place.geometry.location.lng(),
+          });
+          setNewAddress(place.formatted_address || '');
+        }
+      });
+
+      autocompleteRef.current = autocomplete;
+    } catch (error) {
+      console.error('Failed to initialize Google Maps autocomplete:', error);
+    }
+  };
 
   const loadProposals = async () => {
     const { data } = await supabase
@@ -28,7 +76,7 @@ export default function Proposals() {
   };
 
   const createNewProposal = async () => {
-    if (!newAddress.trim()) return;
+    if (!newAddress.trim() || !selectedPlace) return;
 
     const { data: customerData } = await supabase
       .from("customers")
@@ -36,7 +84,7 @@ export default function Proposals() {
         name: "New Customer",
         email: "",
         phone: "",
-        address: newAddress,
+        address: selectedPlace.formattedAddress,
       })
       .select()
       .single();
@@ -46,9 +94,10 @@ export default function Proposals() {
         .from("proposals")
         .insert({
           customer_id: customerData.id,
-          formatted_address: newAddress,
-          lat: 0,
-          lng: 0,
+          place_id: selectedPlace.placeId,
+          formatted_address: selectedPlace.formattedAddress,
+          lat: selectedPlace.lat,
+          lng: selectedPlace.lng,
           status: "draft",
         })
         .select()
@@ -59,8 +108,17 @@ export default function Proposals() {
         setSelectedProposalId(proposalData.id);
         setShowNewProposalModal(false);
         setNewAddress("");
+        setSelectedPlace(null);
+        autocompleteRef.current = null;
       }
     }
+  };
+
+  const handleModalClose = () => {
+    setShowNewProposalModal(false);
+    setNewAddress("");
+    setSelectedPlace(null);
+    autocompleteRef.current = null;
   };
 
   return (
@@ -159,7 +217,7 @@ export default function Proposals() {
             justifyContent: "center",
             zIndex: 1000,
           }}
-          onClick={() => setShowNewProposalModal(false)}
+          onClick={handleModalClose}
         >
           <div
             onClick={(e) => e.stopPropagation()}
@@ -180,10 +238,11 @@ export default function Proposals() {
                 Property Address
               </label>
               <input
+                ref={addressInputRef}
                 type="text"
                 value={newAddress}
                 onChange={(e) => setNewAddress(e.target.value)}
-                placeholder="Enter property address"
+                placeholder="Start typing address..."
                 style={{
                   width: "100%",
                   padding: "10px 12px",
@@ -192,14 +251,16 @@ export default function Proposals() {
                   fontSize: 14,
                 }}
               />
+              {newAddress && !selectedPlace && (
+                <div style={{ fontSize: 11, color: "#9ca3af", marginTop: 6 }}>
+                  Please select an address from the dropdown suggestions
+                </div>
+              )}
             </div>
 
             <div style={{ display: "flex", gap: 12, justifyContent: "flex-end" }}>
               <button
-                onClick={() => {
-                  setShowNewProposalModal(false);
-                  setNewAddress("");
-                }}
+                onClick={handleModalClose}
                 style={{
                   padding: "10px 20px",
                   background: "#fff",
@@ -215,14 +276,14 @@ export default function Proposals() {
               </button>
               <button
                 onClick={createNewProposal}
-                disabled={!newAddress.trim()}
+                disabled={!selectedPlace}
                 style={{
                   padding: "10px 20px",
-                  background: newAddress.trim() ? "#f97316" : "#e5e7eb",
-                  color: newAddress.trim() ? "#fff" : "#9ca3af",
+                  background: selectedPlace ? "#f97316" : "#e5e7eb",
+                  color: selectedPlace ? "#fff" : "#9ca3af",
                   border: "none",
                   borderRadius: 6,
-                  cursor: newAddress.trim() ? "pointer" : "not-allowed",
+                  cursor: selectedPlace ? "pointer" : "not-allowed",
                   fontWeight: 600,
                   fontSize: 13,
                 }}
