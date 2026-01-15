@@ -1,9 +1,11 @@
 import React, { useMemo, useRef, useEffect, useState } from "react";
 import { useProposalDesign } from "../hooks/useProposalDesign";
+import { useFinancingOptions } from "../hooks/useFinancingOptions";
 import { supabase } from "../lib/supabaseClient";
 import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
 import ProposalDesignMap from "./ProposalDesignMap";
+import { ChevronDown, ChevronUp } from "lucide-react";
 
 const fmt = (n?: number | null, digits = 0) =>
   typeof n === "number" && Number.isFinite(n)
@@ -16,13 +18,16 @@ type CreateProposalProps = {
 };
 
 export default function CreateProposal({ proposalId, onBack }: CreateProposalProps) {
-  const { proposal, planes, obstructions, panels, panelModels, systemSummary, loading } =
+  const { proposal, planes, obstructions, panels, panelModels, systemSummary, loading, refresh } =
     useProposalDesign(proposalId);
+  const { options: financingOptions } = useFinancingOptions();
   const printRef = useRef<HTMLDivElement>(null);
 
   const [customer, setCustomer] = useState<any>(null);
   const [rep, setRep] = useState<any>(null);
   const [generating, setGenerating] = useState(false);
+  const [proposalDraft, setProposalDraft] = useState<any>({});
+  const [expandedSection, setExpandedSection] = useState<string | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -49,8 +54,19 @@ export default function CreateProposal({ proposalId, onBack }: CreateProposalPro
       const [{ data: c }, { data: r }] = await Promise.all(queries);
       setCustomer(c);
       setRep(r);
+      setProposalDraft(proposal);
     })();
   }, [proposal]);
+
+  const selectedFinanceValue = useMemo(() => {
+    if (!proposalDraft) return "cash";
+    if ((proposalDraft.finance_type ?? "cash") === "cash") return "cash";
+    return proposalDraft.finance_option_id ?? "cash";
+  }, [proposalDraft]);
+
+  const toggleSection = (section: string) => {
+    setExpandedSection(expandedSection === section ? null : section);
+  };
 
   const selectedModel = useMemo(
     () => panelModels.find((m) => m.id === proposal?.panel_model_id) ?? null,
@@ -261,6 +277,306 @@ export default function CreateProposal({ proposalId, onBack }: CreateProposalPro
             </div>
           </div>
         )}
+
+        <div style={{ marginTop: 24, borderTop: "2px solid #e5e7eb", paddingTop: 16 }}>
+          <div style={{ fontSize: 16, fontWeight: 800, marginBottom: 12 }}>Customer & Pricing</div>
+
+          <div style={{ marginBottom: 12 }}>
+            <button
+              onClick={() => toggleSection('customer')}
+              style={{
+                width: "100%",
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                padding: 12,
+                background: expandedSection === 'customer' ? "#f9fafb" : "#fff",
+                border: "1px solid #e5e7eb",
+                borderRadius: 8,
+                cursor: "pointer",
+                fontWeight: 600,
+                fontSize: 13,
+              }}
+            >
+              <span>Customer Information</span>
+              {expandedSection === 'customer' ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+            </button>
+            {expandedSection === 'customer' && customer && (
+              <div style={{ padding: 12, background: "#f9fafb", border: "1px solid #e5e7eb", borderTop: "none", borderRadius: "0 0 8px 8px" }}>
+                <label style={{ display: "block", fontSize: 11, fontWeight: 600, color: "#374151", marginBottom: 4 }}>Name</label>
+                <input
+                  value={customer.name ?? ""}
+                  onChange={(e) => setCustomer((c: any) => ({ ...c, name: e.target.value }))}
+                  style={{
+                    width: "100%",
+                    padding: "6px 10px",
+                    background: "#fff",
+                    border: "1px solid #d1d5db",
+                    borderRadius: 6,
+                    fontSize: 12,
+                    marginBottom: 8,
+                  }}
+                />
+                <label style={{ display: "block", fontSize: 11, fontWeight: 600, color: "#374151", marginBottom: 4 }}>Email</label>
+                <input
+                  type="email"
+                  value={customer.email ?? ""}
+                  onChange={(e) => setCustomer((c: any) => ({ ...c, email: e.target.value }))}
+                  style={{
+                    width: "100%",
+                    padding: "6px 10px",
+                    background: "#fff",
+                    border: "1px solid #d1d5db",
+                    borderRadius: 6,
+                    fontSize: 12,
+                    marginBottom: 8,
+                  }}
+                />
+                <label style={{ display: "block", fontSize: 11, fontWeight: 600, color: "#374151", marginBottom: 4 }}>Phone</label>
+                <input
+                  type="tel"
+                  value={customer.phone ?? ""}
+                  onChange={(e) => setCustomer((c: any) => ({ ...c, phone: e.target.value }))}
+                  style={{
+                    width: "100%",
+                    padding: "6px 10px",
+                    background: "#fff",
+                    border: "1px solid #d1d5db",
+                    borderRadius: 6,
+                    fontSize: 12,
+                    marginBottom: 8,
+                  }}
+                />
+                <button
+                  onClick={async () => {
+                    if (!customer?.id) return;
+                    await supabase
+                      .from("customers")
+                      .update({
+                        name: customer.name,
+                        email: customer.email,
+                        phone: customer.phone,
+                      })
+                      .eq("id", customer.id);
+                  }}
+                  style={{
+                    width: "100%",
+                    background: "#f97316",
+                    color: "#fff",
+                    padding: "8px 12px",
+                    borderRadius: 6,
+                    border: "none",
+                    cursor: "pointer",
+                    fontWeight: 600,
+                    fontSize: 12,
+                  }}
+                >
+                  Save Customer
+                </button>
+              </div>
+            )}
+          </div>
+
+          <div style={{ marginBottom: 12 }}>
+            <button
+              onClick={() => toggleSection('financing')}
+              style={{
+                width: "100%",
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                padding: 12,
+                background: expandedSection === 'financing' ? "#f9fafb" : "#fff",
+                border: "1px solid #e5e7eb",
+                borderRadius: 8,
+                cursor: "pointer",
+                fontWeight: 600,
+                fontSize: 13,
+              }}
+            >
+              <span>Financing Options</span>
+              {expandedSection === 'financing' ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+            </button>
+            {expandedSection === 'financing' && (
+              <div style={{ padding: 12, background: "#f9fafb", border: "1px solid #e5e7eb", borderTop: "none", borderRadius: "0 0 8px 8px" }}>
+                <label style={{ display: "block", fontSize: 11, fontWeight: 600, color: "#374151", marginBottom: 4 }}>Financing Option</label>
+                <select
+                  value={selectedFinanceValue}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    if (v === "cash") {
+                      setProposalDraft((p: any) => ({
+                        ...p,
+                        finance_type: "cash",
+                        finance_option_id: null,
+                      }));
+                    } else {
+                      setProposalDraft((p: any) => ({
+                        ...p,
+                        finance_type: "finance",
+                        finance_option_id: v,
+                      }));
+                    }
+                  }}
+                  style={{
+                    width: "100%",
+                    padding: "6px 10px",
+                    background: "#fff",
+                    border: "1px solid #d1d5db",
+                    borderRadius: 6,
+                    fontSize: 12,
+                    marginBottom: 8,
+                  }}
+                >
+                  {financingOptions.map((opt: any) => (
+                    <option key={opt.id} value={opt.id}>
+                      {opt.name}
+                    </option>
+                  ))}
+                </select>
+                <button
+                  onClick={async () => {
+                    await supabase
+                      .from("proposals")
+                      .update({
+                        finance_type: proposalDraft.finance_type ?? "cash",
+                        finance_option_id: proposalDraft.finance_option_id ?? null,
+                      })
+                      .eq("id", proposalId);
+                    await refresh();
+                  }}
+                  style={{
+                    width: "100%",
+                    background: "#f97316",
+                    color: "#fff",
+                    padding: "8px 12px",
+                    borderRadius: 6,
+                    border: "none",
+                    cursor: "pointer",
+                    fontWeight: 600,
+                    fontSize: 12,
+                  }}
+                >
+                  Save Financing
+                </button>
+              </div>
+            )}
+          </div>
+
+          {(proposalDraft.finance_type ?? "cash") === "cash" && (
+            <div style={{ marginBottom: 12 }}>
+              <button
+                onClick={() => toggleSection('payments')}
+                style={{
+                  width: "100%",
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  padding: 12,
+                  background: expandedSection === 'payments' ? "#f9fafb" : "#fff",
+                  border: "1px solid #e5e7eb",
+                  borderRadius: 8,
+                  cursor: "pointer",
+                  fontWeight: 600,
+                  fontSize: 13,
+                }}
+              >
+                <span>Payment Schedule</span>
+                {expandedSection === 'payments' ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+              </button>
+              {expandedSection === 'payments' && (
+                <div style={{ padding: 12, background: "#f9fafb", border: "1px solid #e5e7eb", borderTop: "none", borderRadius: "0 0 8px 8px" }}>
+                  <label style={{ display: "block", fontSize: 11, fontWeight: 600, color: "#374151", marginBottom: 4 }}>Deposit</label>
+                  <input
+                    type="number"
+                    value={proposalDraft.cash_deposit ?? ""}
+                    onChange={(e) =>
+                      setProposalDraft((p: any) => ({
+                        ...p,
+                        cash_deposit: Number(e.target.value),
+                      }))
+                    }
+                    style={{
+                      width: "100%",
+                      padding: "6px 10px",
+                      background: "#fff",
+                      border: "1px solid #d1d5db",
+                      borderRadius: 6,
+                      fontSize: 12,
+                      marginBottom: 8,
+                    }}
+                  />
+                  <label style={{ display: "block", fontSize: 11, fontWeight: 600, color: "#374151", marginBottom: 4 }}>2nd Payment</label>
+                  <input
+                    type="number"
+                    value={proposalDraft.cash_second_payment ?? ""}
+                    onChange={(e) =>
+                      setProposalDraft((p: any) => ({
+                        ...p,
+                        cash_second_payment: Number(e.target.value),
+                      }))
+                    }
+                    style={{
+                      width: "100%",
+                      padding: "6px 10px",
+                      background: "#fff",
+                      border: "1px solid #d1d5db",
+                      borderRadius: 6,
+                      fontSize: 12,
+                      marginBottom: 8,
+                    }}
+                  />
+                  <label style={{ display: "block", fontSize: 11, fontWeight: 600, color: "#374151", marginBottom: 4 }}>Final Payment</label>
+                  <input
+                    type="number"
+                    value={proposalDraft.cash_final_payment ?? ""}
+                    onChange={(e) =>
+                      setProposalDraft((p: any) => ({
+                        ...p,
+                        cash_final_payment: Number(e.target.value),
+                      }))
+                    }
+                    style={{
+                      width: "100%",
+                      padding: "6px 10px",
+                      background: "#fff",
+                      border: "1px solid #d1d5db",
+                      borderRadius: 6,
+                      fontSize: 12,
+                      marginBottom: 8,
+                    }}
+                  />
+                  <button
+                    onClick={async () => {
+                      await supabase
+                        .from("proposals")
+                        .update({
+                          cash_deposit: proposalDraft.cash_deposit ?? null,
+                          cash_second_payment: proposalDraft.cash_second_payment ?? null,
+                          cash_final_payment: proposalDraft.cash_final_payment ?? null,
+                        })
+                        .eq("id", proposalId);
+                      await refresh();
+                    }}
+                    style={{
+                      width: "100%",
+                      background: "#f97316",
+                      color: "#fff",
+                      padding: "8px 12px",
+                      borderRadius: 6,
+                      border: "none",
+                      cursor: "pointer",
+                      fontWeight: 600,
+                      fontSize: 12,
+                    }}
+                  >
+                    Save Payment Schedule
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
       </div>
 
       <div style={{ flex: 1, overflow: "auto", padding: 24, background: "#f7f7f7" }}>

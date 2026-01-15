@@ -2601,26 +2601,8 @@ export default function Proposals({ onOpenCreateProposal, onOpenCustomerPricing 
                     boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
                   }}
                 >
-                  Next: Inline Pricing →
+                  Next: Pricing & PDF →
                 </button>
-                {onOpenCustomerPricing && (
-                  <button
-                    onClick={() => onOpenCustomerPricing(proposal.id)}
-                    style={{
-                      width: "100%",
-                      height: 48,
-                      borderRadius: 12,
-                      border: "2px solid #111827",
-                      background: "white",
-                      color: "#111827",
-                      fontWeight: 800,
-                      fontSize: 15,
-                      cursor: "pointer",
-                    }}
-                  >
-                    Customer & Pricing (Full Screen) →
-                  </button>
-                )}
               </div>
             )}
 
