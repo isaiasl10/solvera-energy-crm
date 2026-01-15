@@ -295,16 +295,19 @@ const PricingDetailsInputs = React.memo(({
   initialData,
   onChange,
   systemSummary,
+  salesRepRedline,
 }: {
   initialData: { total_price: number | null; price_per_watt: number | null };
   onChange: (data: { total_price: number | null; price_per_watt: number | null }) => void;
   systemSummary: any;
+  salesRepRedline?: number;
 }) => {
   const renderCount = useRef(0);
   renderCount.current++;
 
   const [localData, setLocalData] = useState(initialData);
   const dataRef = useRef(localData);
+  const [validationError, setValidationError] = useState<string | null>(null);
 
   useEffect(() => {
     setLocalData(initialData);
@@ -312,16 +315,26 @@ const PricingDetailsInputs = React.memo(({
   }, [initialData]);
 
   const handlePricePerWattChange = useCallback((value: string) => {
+    const numValue = value === "" ? null : Number(value);
+
+    if (numValue !== null && salesRepRedline && numValue < salesRepRedline) {
+      setValidationError(`Cannot go below redline: $${salesRepRedline.toFixed(2)}/W`);
+      return;
+    }
+
+    setValidationError(null);
     setLocalData((prev: any) => {
-      const updated = { ...prev, price_per_watt: value === "" ? null : Number(value) };
+      const updated = { ...prev, price_per_watt: numValue };
       dataRef.current = updated;
       return updated;
     });
-  }, []);
+  }, [salesRepRedline]);
 
   const handleBlur = useCallback(() => {
-    onChange(dataRef.current);
-  }, [onChange]);
+    if (!validationError) {
+      onChange(dataRef.current);
+    }
+  }, [onChange, validationError]);
 
   console.log("PricingDetailsInputs render", renderCount.current);
 
@@ -334,6 +347,7 @@ const PricingDetailsInputs = React.memo(({
         <input
           type="number"
           step="0.01"
+          min={salesRepRedline || undefined}
           value={localData.price_per_watt ?? ""}
           onChange={(e) => handlePricePerWattChange(e.target.value)}
           onBlur={handleBlur}
@@ -342,65 +356,77 @@ const PricingDetailsInputs = React.memo(({
             width: "100%",
             padding: "10px 12px",
             background: "#fff",
-            border: "1px solid #d1d5db",
+            border: validationError ? "2px solid #ef4444" : "1px solid #d1d5db",
             borderRadius: 6,
             fontSize: 14,
             color: "#111827",
           }}
         />
+        {validationError ? (
+          <div style={{ fontSize: 11, color: "#ef4444", marginTop: 4, fontWeight: 600 }}>
+            {validationError}
+          </div>
+        ) : (
+          <div style={{ fontSize: 11, color: "#6b7280", marginTop: 4 }}>
+            {salesRepRedline
+              ? `Your redline: $${salesRepRedline.toFixed(2)}/W. You can increase above this.`
+              : "This is your base price per watt."}
+          </div>
+        )}
       </div>
 
-      {systemSummary.systemWatts > 0 && (
-        <div style={{ marginTop: 16, padding: 16, background: "#f9fafb", borderRadius: 6, border: "1px solid #e5e7eb" }}>
-          <div style={{ fontSize: 13, fontWeight: 600, color: "#111827", marginBottom: 12 }}>Pricing Breakdown</div>
+      <div style={{ marginTop: 16, padding: 16, background: "#f9fafb", borderRadius: 6, border: "1px solid #e5e7eb" }}>
+        <div style={{ fontSize: 13, fontWeight: 600, color: "#111827", marginBottom: 12 }}>Pricing Summary</div>
 
-          <div style={{ display: "grid", gap: 8 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: "#6b7280" }}>
-              <span>Base System ({systemSummary.systemWatts.toFixed(0)} W × ${systemSummary.basePPW.toFixed(2)}/W)</span>
-              <span style={{ fontWeight: 600, color: "#111827" }}>${fmt(systemSummary.baseSystemPrice, 2)}</span>
+        <div style={{ display: "grid", gap: 10 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 0", borderBottom: "1px solid #e5e7eb" }}>
+            <div>
+              <div style={{ fontSize: 13, fontWeight: 600, color: "#111827" }}>Total Contract Price</div>
+              <div style={{ fontSize: 11, color: "#6b7280" }}>
+                {systemSummary.systemWatts > 0 ? `Base system + adders` : `No panels placed yet`}
+              </div>
             </div>
+            <div style={{ fontSize: 18, fontWeight: 700, color: "#059669" }}>${fmt(systemSummary.totalContractPrice, 2)}</div>
+          </div>
 
-            {systemSummary.totalAdderCost > 0 && (
-              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: "#6b7280" }}>
-                <span>Adders</span>
-                <span style={{ fontWeight: 600, color: "#111827" }}>+${fmt(systemSummary.totalAdderCost, 2)}</span>
-              </div>
-            )}
+          <div style={{ display: "grid", gap: 6, fontSize: 12 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", paddingLeft: 8 }}>
+              <span style={{ color: "#6b7280" }}>Base System Price</span>
+              <span style={{ fontWeight: 600, color: systemSummary.systemWatts > 0 ? "#111827" : "#9ca3af" }}>
+                ${fmt(systemSummary.baseSystemPrice, 2)}
+              </span>
+            </div>
+            <div style={{ display: "flex", justifyContent: "space-between", paddingLeft: 8 }}>
+              <span style={{ color: "#6b7280" }}>Total Adders</span>
+              <span style={{ fontWeight: 600, color: systemSummary.totalAdderCost > 0 ? "#111827" : "#9ca3af" }}>
+                {systemSummary.totalAdderCost > 0 ? `+$${fmt(systemSummary.totalAdderCost, 2)}` : "$0.00"}
+              </span>
+            </div>
+          </div>
 
-            <div style={{ borderTop: "1px solid #d1d5db", marginTop: 4, paddingTop: 8 }}>
-              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13 }}>
-                <span style={{ fontWeight: 600, color: "#111827" }}>Total Contract Price</span>
-                <span style={{ fontWeight: 700, color: "#111827" }}>${fmt(systemSummary.totalContractPrice, 2)}</span>
+          <div style={{ borderTop: "1px solid #d1d5db", paddingTop: 12, marginTop: 8 }}>
+            <div style={{ fontSize: 12, fontWeight: 600, color: "#111827", marginBottom: 8 }}>Price Per Watt Breakdown</div>
+            <div style={{ display: "grid", gap: 4, fontSize: 12 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", paddingLeft: 8 }}>
+                <span style={{ color: "#6b7280" }}>Base Price Per Watt</span>
+                <span style={{ fontWeight: 600, color: "#111827" }}>${systemSummary.basePPW.toFixed(3)}/W</span>
               </div>
-              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: "#6b7280", marginTop: 4 }}>
-                <span>Effective PPW</span>
+              <div style={{ display: "flex", justifyContent: "space-between", paddingLeft: 8 }}>
+                <span style={{ color: "#6b7280" }}>PPW w/ Adders</span>
                 <span style={{ fontWeight: 600, color: "#111827" }}>${systemSummary.effectivePPW.toFixed(3)}/W</span>
               </div>
+              <div style={{ display: "flex", justifyContent: "space-between", paddingLeft: 8 }}>
+                <span style={{ color: "#9ca3af" }}>PPW w/ Financing</span>
+                <span style={{ fontWeight: 600, color: "#9ca3af" }}>TBD</span>
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between", paddingLeft: 8, paddingTop: 6, borderTop: "1px solid #e5e7eb", marginTop: 4 }}>
+                <span style={{ color: "#111827", fontWeight: 600 }}>Total PPW</span>
+                <span style={{ fontWeight: 700, color: "#059669" }}>${systemSummary.effectivePPW.toFixed(3)}/W</span>
+              </div>
             </div>
           </div>
         </div>
-      )}
-
-      {systemSummary.totalContractPrice > 0 && (
-        <div style={{ marginTop: 16, padding: 16, background: "#fef3c7", borderRadius: 6, border: "1px solid #fbbf24" }}>
-          <div style={{ fontSize: 13, fontWeight: 600, color: "#92400e", marginBottom: 12 }}>Cash Payment Schedule</div>
-
-          <div style={{ display: "grid", gap: 6 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: "#92400e" }}>
-              <span>1. Deposit (Signing)</span>
-              <span style={{ fontWeight: 600 }}>${fmt(systemSummary.cashDeposit, 2)}</span>
-            </div>
-            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: "#92400e" }}>
-              <span>2. Progress Payment</span>
-              <span style={{ fontWeight: 600 }}>${fmt(systemSummary.cashProgress, 2)}</span>
-            </div>
-            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: "#92400e" }}>
-              <span>3. Final Payment (Completion)</span>
-              <span style={{ fontWeight: 600 }}>${fmt(systemSummary.cashFinal, 2)}</span>
-            </div>
-          </div>
-        </div>
-      )}
+      </div>
     </>
   );
 });
@@ -2022,6 +2048,7 @@ export default function ProposalWorkspace({
           }}
           onChange={handlePricingChange}
           systemSummary={systemSummary}
+          salesRepRedline={salesRep?.ppw_redline}
         />
 
         <button
