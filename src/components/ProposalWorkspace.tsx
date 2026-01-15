@@ -1051,7 +1051,17 @@ export default function ProposalWorkspace({
         }));
       }
     }
-  }, [systemSummary.totalContractPrice, proposalDraft.finance_type, proposal?.finance_type]);
+  }, [
+    systemSummary.totalContractPrice,
+    proposalDraft.finance_type,
+    proposalDraft.cash_deposit,
+    proposalDraft.cash_second_payment,
+    proposalDraft.cash_final_payment,
+    proposal?.finance_type,
+    proposal?.cash_deposit,
+    proposal?.cash_second_payment,
+    proposal?.cash_final_payment
+  ]);
 
   useEffect(() => {
     if (!proposal || panels.length === 0 || calculatingProduction) return;
