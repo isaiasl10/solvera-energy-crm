@@ -73,6 +73,10 @@ export default function ProposalWorkspace({
   proposalId: string | null;
   onBack?: () => void;
 }) {
+  const renders = useRef(0);
+  renders.current++;
+  console.log("ProposalConfig render", Date.now(), "| Render count:", renders.current);
+
   const { options: financingOptions } = useFinancingOptions();
 
   const mapDivRef = useRef<HTMLDivElement | null>(null);
@@ -1003,6 +1007,7 @@ export default function ProposalWorkspace({
                 type="text"
                 value={draftCustomer.full_name}
                 onChange={(e) => {
+                  console.log("CHANGE full_name", e.target.value, "| renders:", renders.current);
                   isDirtyRef.current = true;
                   setDraftCustomer((prev: any) => ({ ...prev, full_name: e.target.value }));
                 }}
