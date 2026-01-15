@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { supabase } from "../lib/supabaseClient";
+import { sanitizePatch } from "../lib/supabasePatch";
 import { useProposalDesign } from "../hooks/useProposalDesign";
 import { useFinancingOptions } from "../hooks/useFinancingOptions";
 import { User, DollarSign, ArrowLeft, Zap, Package, ChevronDown, ChevronUp, FileText, CreditCard, File } from "lucide-react";
@@ -314,13 +315,15 @@ export default function CustomerPricing({
                 return;
               }
 
+              const patch = sanitizePatch({
+                full_name: draft.customerFullName,
+                email: draft.customerEmail,
+                phone: draft.customerPhone,
+              });
+
               const { error } = await supabase
                 .from("customers")
-                .update({
-                  full_name: draft.customerFullName,
-                  email: draft.customerEmail,
-                  phone: draft.customerPhone,
-                })
+                .update(patch)
                 .eq("id", customer.id);
 
               if (error) {
@@ -398,11 +401,13 @@ export default function CustomerPricing({
                 return;
               }
 
+              const patch = sanitizePatch({
+                annual_consumption: draft.annualConsumption,
+              });
+
               const { error } = await supabase
                 .from("proposals")
-                .update({
-                  annual_consumption: draft.annualConsumption,
-                })
+                .update(patch)
                 .eq("id", proposalId);
 
               if (error) {
@@ -482,12 +487,14 @@ export default function CustomerPricing({
                 return;
               }
 
+              const patch = sanitizePatch({
+                utility_company: draft.utilityCompany,
+                electricity_rate: draft.electricityRate,
+              });
+
               const { error } = await supabase
                 .from("proposals")
-                .update({
-                  utility_company: draft.utilityCompany,
-                  electricity_rate: draft.electricityRate,
-                })
+                .update(patch)
                 .eq("id", proposalId);
 
               if (error) {
@@ -611,11 +618,13 @@ export default function CustomerPricing({
                 return;
               }
 
+              const patch = sanitizePatch({
+                price_per_watt: draft.pricePerWatt,
+              });
+
               const { error } = await supabase
                 .from("proposals")
-                .update({
-                  price_per_watt: draft.pricePerWatt,
-                })
+                .update(patch)
                 .eq("id", proposalId);
 
               if (error) {
@@ -692,12 +701,14 @@ export default function CustomerPricing({
                 return;
               }
 
+              const patch = sanitizePatch({
+                finance_type: draft.financeType,
+                finance_option_id: draft.financeOptionId,
+              });
+
               const { error } = await supabase
                 .from("proposals")
-                .update({
-                  finance_type: draft.financeType,
-                  finance_option_id: draft.financeOptionId,
-                })
+                .update(patch)
                 .eq("id", proposalId);
 
               if (error) {
@@ -798,13 +809,15 @@ export default function CustomerPricing({
                   return;
                 }
 
+                const patch = sanitizePatch({
+                  cash_down_payment: draft.cashDownPayment,
+                  cash_second_payment: draft.cashSecondPayment,
+                  cash_final_payment: draft.cashFinalPayment,
+                });
+
                 const { error } = await supabase
                   .from("proposals")
-                  .update({
-                    cash_down_payment: draft.cashDownPayment,
-                    cash_second_payment: draft.cashSecondPayment,
-                    cash_final_payment: draft.cashFinalPayment,
-                  })
+                  .update(patch)
                   .eq("id", proposalId);
 
                 if (error) {
