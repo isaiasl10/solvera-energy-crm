@@ -19,15 +19,15 @@ export default function Proposals() {
   const [selectedPlace, setSelectedPlace] = useState<SelectedPlace | null>(null);
   const [isCreating, setIsCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const addressInputRef = useRef<HTMLInputElement>(null);
-  const autocompleteRef = useRef<google.maps.places.Autocomplete | null>(null);
+  const addressContainerRef = useRef<HTMLDivElement>(null);
+  const autocompleteElementRef = useRef<any>(null);
 
   useEffect(() => {
     loadProposals();
   }, []);
 
   useEffect(() => {
-    if (showNewProposalModal && addressInputRef.current) {
+    if (showNewProposalModal && addressContainerRef.current) {
       initializeAutocomplete();
     }
   }, [showNewProposalModal]);
@@ -36,37 +36,54 @@ export default function Proposals() {
     try {
       await loadGoogleMaps();
 
-      if (!addressInputRef.current || autocompleteRef.current) return;
+      if (!addressContainerRef.current || autocompleteElementRef.current) return;
 
-      const autocomplete = new google.maps.places.Autocomplete(addressInputRef.current, {
-        types: ['address'],
-        fields: ['place_id', 'formatted_address', 'geometry'],
+      const { PlaceAutocompleteElement } = await google.maps.importLibrary("places") as any;
+
+      const autocompleteElement = new PlaceAutocompleteElement();
+      autocompleteElement.id = 'place-autocomplete-input';
+
+      Object.assign(autocompleteElement.style, {
+        width: '100%',
+        padding: '10px 12px',
+        border: '1px solid #d1d5db',
+        borderRadius: '6px',
+        fontSize: '14px',
+        fontFamily: 'inherit',
       });
 
-      autocomplete.addListener('place_changed', () => {
-        const place = autocomplete.getPlace();
-        console.log('Place changed:', place);
+      addressContainerRef.current.innerHTML = '';
+      addressContainerRef.current.appendChild(autocompleteElement);
 
-        if (place.geometry && place.geometry.location) {
+      autocompleteElement.addEventListener('gmp-placeselect', async (event: any) => {
+        const place = event.place;
+        console.log('Place selected:', place);
+
+        await place.fetchFields({
+          fields: ['displayName', 'formattedAddress', 'location'],
+        });
+
+        if (place.location) {
           const placeData = {
-            placeId: place.place_id || '',
-            formattedAddress: place.formatted_address || '',
-            lat: place.geometry.location.lat(),
-            lng: place.geometry.location.lng(),
+            placeId: place.id || '',
+            formattedAddress: place.formattedAddress || '',
+            lat: place.location.lat(),
+            lng: place.location.lng(),
           };
           console.log('Setting selected place:', placeData);
           setSelectedPlace(placeData);
-          setNewAddress(place.formatted_address || '');
+          setNewAddress(place.formattedAddress || '');
           setError(null);
         } else {
-          console.warn('Place selected but no geometry:', place);
+          console.warn('Place selected but no location:', place);
           setError('Please select a valid address from the dropdown');
         }
       });
 
-      autocompleteRef.current = autocomplete;
+      autocompleteElementRef.current = autocompleteElement;
     } catch (error) {
       console.error('Failed to initialize Google Maps autocomplete:', error);
+      setError('Failed to load address autocomplete. Please check your internet connection.');
     }
   };
 
@@ -145,7 +162,10 @@ export default function Proposals() {
           setNewAddress("");
           setSelectedPlace(null);
           setError(null);
-          autocompleteRef.current = null;
+          if (autocompleteElementRef.current) {
+            autocompleteElementRef.current.remove();
+            autocompleteElementRef.current = null;
+          }
         }
       }
     } catch (err: any) {
@@ -162,7 +182,10 @@ export default function Proposals() {
     setSelectedPlace(null);
     setError(null);
     setIsCreating(false);
-    autocompleteRef.current = null;
+    if (autocompleteElementRef.current) {
+      autocompleteElementRef.current.remove();
+      autocompleteElementRef.current = null;
+    }
   };
 
   return (
@@ -281,23 +304,15 @@ export default function Proposals() {
               <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#374151", marginBottom: 8 }}>
                 Property Address
               </label>
-              <input
-                ref={addressInputRef}
-                type="text"
-                value={newAddress}
-                onChange={(e) => setNewAddress(e.target.value)}
-                placeholder="Start typing address..."
-                style={{
-                  width: "100%",
-                  padding: "10px 12px",
-                  border: "1px solid #d1d5db",
-                  borderRadius: 6,
-                  fontSize: 14,
-                }}
-              />
-              {newAddress && !selectedPlace && (
+              <div ref={addressContainerRef} style={{ minHeight: 40 }} />
+              {!selectedPlace && (
                 <div style={{ fontSize: 11, color: "#9ca3af", marginTop: 6 }}>
-                  Please select an address from the dropdown suggestions
+                  Start typing to search for an address
+                </div>
+              )}
+              {selectedPlace && (
+                <div style={{ fontSize: 11, color: "#10b981", marginTop: 6 }}>
+                  ✓ Address selected: {selectedPlace.formattedAddress}
                 </div>
               )}
               {error && (
