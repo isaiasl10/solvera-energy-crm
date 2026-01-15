@@ -1631,7 +1631,10 @@ export default function ProposalWorkspace({
   useEffect(() => {
     if (!mapRef.current || !isGoogleReady()) return;
 
-    obstructionShapesRef.current.forEach((shape) => shape.setMap(null));
+    obstructionShapesRef.current.forEach((shape) => {
+      google.maps.event.clearInstanceListeners(shape);
+      shape.setMap(null);
+    });
     obstructionShapesRef.current.clear();
 
     const google = (window as any).google;
@@ -1650,7 +1653,38 @@ export default function ProposalWorkspace({
           strokeWeight: isSelected ? 3 : 2,
           fillColor: isSelected ? "#FFA500" : "#FF0000",
           fillOpacity: isSelected ? 0.5 : 0.35,
+          editable: isSelected,
+          draggable: isSelected,
+          clickable: true,
         });
+
+        if (isSelected) {
+          google.maps.event.addListener(shape, "radius_changed", () => {
+            const newRadius = shape.getRadius() / 0.3048;
+            const updatedObs = { ...obs, radius_ft: newRadius };
+            setObstructions((prev) =>
+              prev.map((o) =>
+                o.id === obs.id ? updatedObs : o
+              )
+            );
+            setSelectedObstruction(updatedObs);
+          });
+
+          google.maps.event.addListener(shape, "center_changed", () => {
+            const newCenter = shape.getCenter();
+            const updatedObs = {
+              ...obs,
+              center_lat: newCenter.lat(),
+              center_lng: newCenter.lng()
+            };
+            setObstructions((prev) =>
+              prev.map((o) =>
+                o.id === obs.id ? updatedObs : o
+              )
+            );
+            setSelectedObstruction(updatedObs);
+          });
+        }
       } else if ((obs.type === "rect" || obs.type === "tree") && obs.width_ft && obs.height_ft) {
         const widthMeters = obs.width_ft * 0.3048;
         const heightMeters = obs.height_ft * 0.3048;
@@ -1671,14 +1705,53 @@ export default function ProposalWorkspace({
           strokeWeight: isSelected ? 3 : 2,
           fillColor: isSelected ? "#FFA500" : baseColor,
           fillOpacity: isSelected ? 0.5 : 0.35,
+          editable: isSelected,
+          draggable: isSelected,
+          clickable: true,
         });
+
+        if (isSelected) {
+          google.maps.event.addListener(shape, "bounds_changed", () => {
+            const newBounds = shape.getBounds();
+            const ne = newBounds.getNorthEast();
+            const sw = newBounds.getSouthWest();
+
+            const newCenterLat = (ne.lat() + sw.lat()) / 2;
+            const newCenterLng = (ne.lng() + sw.lng()) / 2;
+
+            const latDiff = ne.lat() - sw.lat();
+            const lngDiff = ne.lng() - sw.lng();
+
+            const newHeightMeters = latDiff * 111320;
+            const newWidthMeters = lngDiff * 111320 * Math.cos((newCenterLat * Math.PI) / 180);
+
+            const newHeightFt = newHeightMeters / 0.3048;
+            const newWidthFt = newWidthMeters / 0.3048;
+
+            const updatedObs = {
+              ...obs,
+              center_lat: newCenterLat,
+              center_lng: newCenterLng,
+              width_ft: Math.abs(newWidthFt),
+              height_ft: Math.abs(newHeightFt),
+            };
+
+            setObstructions((prev) =>
+              prev.map((o) =>
+                o.id === obs.id ? updatedObs : o
+              )
+            );
+            setSelectedObstruction(updatedObs);
+          });
+        }
       }
 
       if (shape) {
         shape.setMap(mapRef.current);
         obstructionShapesRef.current.set(obs.id, shape);
 
-        google.maps.event.addListener(shape, "click", () => {
+        google.maps.event.addListener(shape, "click", (e: any) => {
+          e.stop();
           setSelectedObstruction(obs);
           setToolMode("none");
         });
@@ -3230,7 +3303,7 @@ export default function ProposalWorkspace({
             minWidth: 280,
             zIndex: 999,
           }}>
-            <div style={{ fontSize: 13, fontWeight: 600, color: "#111827", marginBottom: 12, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <div style={{ fontSize: 13, fontWeight: 600, color: "#111827", marginBottom: 8, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <span>Obstruction Selected</span>
               <button
                 onClick={() => setSelectedObstruction(null)}
@@ -3246,92 +3319,42 @@ export default function ProposalWorkspace({
                 ×
               </button>
             </div>
+
+            <div style={{
+              fontSize: 11,
+              color: "#059669",
+              background: "#d1fae5",
+              padding: "6px 10px",
+              borderRadius: 4,
+              marginBottom: 12,
+              border: "1px solid #a7f3d0"
+            }}>
+              Drag handles to resize • Drag shape to move
+            </div>
+
             <div style={{ fontSize: 12, color: "#6b7280", marginBottom: 12 }}>
               Type: <span style={{ fontWeight: 600, color: "#111827" }}>{selectedObstruction.type}</span>
             </div>
             {selectedObstruction.type === "circle" ? (
               <div style={{ marginBottom: 12 }}>
                 <label style={{ fontSize: 11, fontWeight: 600, color: "#6b7280", display: "block", marginBottom: 4 }}>Radius (ft)</label>
-                <input
-                  type="number"
-                  step="0.5"
-                  min="1"
-                  value={selectedObstruction.radius_ft ?? 5}
-                  onChange={(e) => {
-                    const newRadius = Math.max(1, Number(e.target.value));
-                    setObstructions((prev) =>
-                      prev.map((o) =>
-                        o.id === selectedObstruction.id
-                          ? { ...o, radius_ft: newRadius }
-                          : o
-                      )
-                    );
-                    setSelectedObstruction((prev) => prev ? { ...prev, radius_ft: newRadius } : null);
-                  }}
-                  style={{
-                    width: "100%",
-                    padding: "6px 8px",
-                    border: "1px solid #d1d5db",
-                    borderRadius: 4,
-                    fontSize: 12,
-                  }}
-                />
+                <div style={{ fontSize: 13, fontWeight: 600, color: "#111827", padding: "6px 0" }}>
+                  {(selectedObstruction.radius_ft ?? 5).toFixed(1)} ft
+                </div>
               </div>
             ) : (
               <>
                 <div style={{ marginBottom: 12 }}>
                   <label style={{ fontSize: 11, fontWeight: 600, color: "#6b7280", display: "block", marginBottom: 4 }}>Width (ft)</label>
-                  <input
-                    type="number"
-                    step="0.5"
-                    min="1"
-                    value={selectedObstruction.width_ft ?? 5}
-                    onChange={(e) => {
-                      const newWidth = Math.max(1, Number(e.target.value));
-                      setObstructions((prev) =>
-                        prev.map((o) =>
-                          o.id === selectedObstruction.id
-                            ? { ...o, width_ft: newWidth }
-                            : o
-                        )
-                      );
-                      setSelectedObstruction((prev) => prev ? { ...prev, width_ft: newWidth } : null);
-                    }}
-                    style={{
-                      width: "100%",
-                      padding: "6px 8px",
-                      border: "1px solid #d1d5db",
-                      borderRadius: 4,
-                      fontSize: 12,
-                    }}
-                  />
+                  <div style={{ fontSize: 13, fontWeight: 600, color: "#111827", padding: "6px 0" }}>
+                    {(selectedObstruction.width_ft ?? 5).toFixed(1)} ft
+                  </div>
                 </div>
                 <div style={{ marginBottom: 12 }}>
                   <label style={{ fontSize: 11, fontWeight: 600, color: "#6b7280", display: "block", marginBottom: 4 }}>Height (ft)</label>
-                  <input
-                    type="number"
-                    step="0.5"
-                    min="1"
-                    value={selectedObstruction.height_ft ?? 5}
-                    onChange={(e) => {
-                      const newHeight = Math.max(1, Number(e.target.value));
-                      setObstructions((prev) =>
-                        prev.map((o) =>
-                          o.id === selectedObstruction.id
-                            ? { ...o, height_ft: newHeight }
-                            : o
-                        )
-                      );
-                      setSelectedObstruction((prev) => prev ? { ...prev, height_ft: newHeight } : null);
-                    }}
-                    style={{
-                      width: "100%",
-                      padding: "6px 8px",
-                      border: "1px solid #d1d5db",
-                      borderRadius: 4,
-                      fontSize: 12,
-                    }}
-                  />
+                  <div style={{ fontSize: 13, fontWeight: 600, color: "#111827", padding: "6px 0" }}>
+                    {(selectedObstruction.height_ft ?? 5).toFixed(1)} ft
+                  </div>
                 </div>
               </>
             )}
