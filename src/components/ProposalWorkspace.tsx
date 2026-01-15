@@ -2011,6 +2011,34 @@ export default function ProposalWorkspace({
             />
           </div>
 
+          <div style={{ marginTop: 16 }}>
+            <label style={{ display: "block", fontSize: 11, fontWeight: 600, color: "#374151", marginBottom: 6 }}>
+              Monthly Meter Fee (Optional)
+            </label>
+            <input
+              type="number"
+              step="0.01"
+              value={proposalDraft.meter_fee ?? ""}
+              onChange={(e) => {
+                const value = e.target.value ? parseFloat(e.target.value) : null;
+                setProposalDraft((p: any) => ({ ...p, meter_fee: value }));
+              }}
+              placeholder="0.00"
+              style={{
+                width: "200px",
+                padding: "7px 10px",
+                background: "#fff",
+                border: "1px solid #d1d5db",
+                borderRadius: 4,
+                fontSize: 13,
+                color: "#111827",
+              }}
+            />
+            <div style={{ fontSize: 10, color: "#6b7280", marginTop: 4 }}>
+              Monthly utility connection fee (typically $10-20)
+            </div>
+          </div>
+
           <button
             type="button"
             onClick={async () => {
@@ -2020,6 +2048,7 @@ export default function ProposalWorkspace({
                   annual_consumption: proposalDraft.annual_consumption ?? null,
                   utility_company: proposalDraft.utility_company ?? null,
                   electricity_rate: proposalDraft.electricity_rate ?? null,
+                  meter_fee: proposalDraft.meter_fee ?? null,
                 }))
                 .eq("id", proposalId);
 
@@ -3249,10 +3278,16 @@ export default function ProposalWorkspace({
     const annualProduction = systemSummary.annualProductionKwh || 0;
     const totalContractPrice = systemSummary.totalContractPrice || 0;
     const financeType = proposalDraft?.finance_type || proposal?.finance_type || "cash";
+    const meterFee = proposalDraft?.meter_fee || proposal?.meter_fee || 0;
 
     const monthlyConsumptionKwh = annualConsumption / 12;
     const monthlyUtilityBill = monthlyConsumptionKwh * electricityRate;
     const annualUtilityBill = monthlyUtilityBill * 12;
+
+    const systemOffsetPercent = annualConsumption > 0 ? (annualProduction / annualConsumption) * 100 : 0;
+    const monthlyProductionKwh = annualProduction / 12;
+    const uncoveredMonthlyKwh = Math.max(0, monthlyConsumptionKwh - monthlyProductionKwh);
+    const monthlyRemainingUtility = uncoveredMonthlyKwh * electricityRate;
 
     let monthlySolarPayment = 0;
     if (financeType === "loan") {
@@ -3266,7 +3301,8 @@ export default function ProposalWorkspace({
       monthlySolarPayment = 0;
     }
 
-    const monthlySavings = monthlyUtilityBill - monthlySolarPayment;
+    const totalMonthlyWithSolar = monthlySolarPayment + monthlyRemainingUtility + meterFee;
+    const monthlySavings = monthlyUtilityBill - totalMonthlyWithSolar;
 
     let total25YearUtilityBill = 0;
     let currentAnnualBill = annualUtilityBill;
@@ -3275,7 +3311,16 @@ export default function ProposalWorkspace({
       currentAnnualBill *= 1.03;
     }
 
-    const total25YearSolarCost = financeType === "loan" ? monthlySolarPayment * 300 : totalContractPrice;
+    let total25YearRemainingUtility = 0;
+    let currentAnnualRemainingUtility = monthlyRemainingUtility * 12;
+    for (let year = 0; year < 25; year++) {
+      total25YearRemainingUtility += currentAnnualRemainingUtility;
+      currentAnnualRemainingUtility *= 1.03;
+    }
+
+    const total25YearMeterFees = meterFee * 12 * 25;
+    const total25YearSolarPayments = financeType === "loan" ? monthlySolarPayment * 300 : totalContractPrice;
+    const total25YearSolarCost = total25YearSolarPayments + total25YearRemainingUtility + total25YearMeterFees;
     const total25YearSavings = total25YearUtilityBill - total25YearSolarCost;
     const roi = totalContractPrice > 0 ? (total25YearSavings / totalContractPrice) * 100 : 0;
 
@@ -3298,11 +3343,22 @@ export default function ProposalWorkspace({
               <div style={{ fontSize: 12, fontWeight: 600, color: "#6b7280", marginBottom: 8 }}>WITH SOLAR</div>
               <div style={{ background: "#dcfce7", padding: 16, borderRadius: 6, border: "1px solid #22c55e" }}>
                 <div style={{ fontSize: 11, color: "#14532d", marginBottom: 4 }}>
-                  {financeType === "cash" ? "Monthly Solar Cost" : "Monthly Solar Payment"}
+                  Total Monthly Cost
                 </div>
-                <div style={{ fontSize: 28, fontWeight: 700, color: "#14532d" }}>${fmt(monthlySolarPayment, 2)}</div>
-                <div style={{ fontSize: 11, color: "#14532d", marginTop: 8 }}>
-                  {financeType === "cash" ? "Paid upfront" : "300 months (25 years)"}
+                <div style={{ fontSize: 28, fontWeight: 700, color: "#14532d" }}>${fmt(totalMonthlyWithSolar, 2)}</div>
+                <div style={{ fontSize: 10, color: "#14532d", marginTop: 8, paddingTop: 8, borderTop: "1px solid #86efac" }}>
+                  {financeType === "loan" && monthlySolarPayment > 0 && (
+                    <div style={{ marginBottom: 3 }}>Solar Payment: ${fmt(monthlySolarPayment, 2)}</div>
+                  )}
+                  {monthlyRemainingUtility > 0 && (
+                    <div style={{ marginBottom: 3 }}>Remaining Utility: ${fmt(monthlyRemainingUtility, 2)}</div>
+                  )}
+                  {meterFee > 0 && (
+                    <div style={{ marginBottom: 3 }}>Meter Fee: ${fmt(meterFee, 2)}</div>
+                  )}
+                  {financeType === "cash" && (
+                    <div style={{ fontStyle: "italic" }}>Solar paid upfront</div>
+                  )}
                 </div>
               </div>
             </div>
