@@ -56,14 +56,19 @@ export default function CustomerPricing({
         .maybeSingle();
 
       setCustomer(data);
-      if (data) {
+      if (data && !customerFullName) {
         setCustomerFullName(data.full_name || "");
         setCustomerEmail(data.email || "");
         setCustomerPhone(data.phone || "");
       }
-      setProposalDraft(proposal);
     })();
   }, [proposal?.customer_id]);
+
+  useEffect(() => {
+    if (proposal && !proposalDraft.id) {
+      setProposalDraft(proposal);
+    }
+  }, [proposal?.id]);
 
   const selectedFinanceValue = useMemo(() => {
     if (!proposalDraft) return "cash";

@@ -77,6 +77,7 @@ export default function ProposalWorkspace({
   const mapDivRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<google.maps.Map | null>(null);
   const drawingRef = useRef<google.maps.drawing.DrawingManager | null>(null);
+  const homeMarkerRef = useRef<google.maps.Marker | null>(null);
 
   const [customer, setCustomer] = useState<any>(null);
   const [proposal, setProposal] = useState<any>(null);
@@ -107,8 +108,8 @@ export default function ProposalWorkspace({
   const [selectedPanelModelId, setSelectedPanelModelId] = useState<string | null>(null);
   const [panelOrientation, setPanelOrientation] = useState<"portrait" | "landscape">("portrait");
   const [panelRotation, setPanelRotation] = useState<number>(0);
-  const [rowSpacing, setRowSpacing] = useState<number>(0.5);
-  const [colSpacing, setColSpacing] = useState<number>(0.5);
+  const [rowSpacing, setRowSpacing] = useState<number>(0.01);
+  const [colSpacing, setColSpacing] = useState<number>(0.01);
 
   const [mapsError, setMapsError] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
@@ -123,6 +124,8 @@ export default function ProposalWorkspace({
     () => panelModels.find((m) => m.id === selectedPanelModelId) ?? null,
     [panelModels, selectedPanelModelId]
   );
+
+  const [calculatingProduction, setCalculatingProduction] = useState(false);
 
   const systemSummary = useMemo(() => {
     const panelCount = panels.length;
@@ -150,6 +153,66 @@ export default function ProposalWorkspace({
       offsetPercent,
     };
   }, [panels, panelModels, proposal]);
+
+  useEffect(() => {
+    if (!proposal || panels.length === 0 || calculatingProduction) return;
+
+    const calculateProduction = async () => {
+      setCalculatingProduction(true);
+
+      try {
+        const systemKw = panels.reduce((sum, panel) => {
+          const model = panelModels.find((m) => m.id === panel.panel_model_id);
+          return sum + (model ? model.watts / 1000 : 0);
+        }, 0);
+
+        if (systemKw === 0) {
+          setCalculatingProduction(false);
+          return;
+        }
+
+        const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+        const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+        const response = await fetch(`${supabaseUrl}/functions/v1/pvwatts`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${supabaseAnonKey}`,
+          },
+          body: JSON.stringify({
+            lat: proposal.lat,
+            lon: proposal.lng,
+            system_capacity: systemKw,
+            azimuth: 180,
+            tilt: 20,
+          }),
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          const annualKwh = data.annual_kwh;
+
+          await supabase
+            .from("proposals")
+            .update({ annual_production_estimate: annualKwh })
+            .eq("id", proposalId);
+
+          setProposal((prev: any) => ({
+            ...prev,
+            annual_production_estimate: annualKwh,
+          }));
+        }
+      } catch (error) {
+        console.error("Failed to calculate production:", error);
+      } finally {
+        setCalculatingProduction(false);
+      }
+    };
+
+    const timer = setTimeout(calculateProduction, 2000);
+    return () => clearTimeout(timer);
+  }, [panels.length, panelModels, proposal?.lat, proposal?.lng, proposalId]);
 
   useEffect(() => {
     let attempts = 0;
@@ -275,6 +338,21 @@ export default function ProposalWorkspace({
 
       mapRef.current = map;
 
+      const homeMarker = new google.maps.Marker({
+        position: { lat: proposal.lat, lng: proposal.lng },
+        map: map,
+        title: "Property Location",
+        icon: {
+          path: google.maps.SymbolPath.CIRCLE,
+          fillColor: "#ef4444",
+          fillOpacity: 1,
+          strokeColor: "#ffffff",
+          strokeWeight: 2,
+          scale: 8,
+        },
+      });
+      homeMarkerRef.current = homeMarker;
+
       const drawingManager = new google.maps.drawing.DrawingManager({
         drawingMode: null,
         drawingControl: false,
@@ -309,9 +387,70 @@ export default function ProposalWorkspace({
         setToolMode("none");
       });
 
-      google.maps.event.addListener(map, "click", (e: any) => {
+      google.maps.event.addListener(map, "click", async (e: any) => {
+        const lat = e.latLng.lat();
+        const lng = e.latLng.lng();
+
         if (toolMode === "add-panel" && selectedRoofId && selectedPanelModelId) {
-          addPanelAt(e.latLng.lat(), e.latLng.lng());
+          addPanelAt(lat, lng);
+        } else if (toolMode === "circle") {
+          const { data, error } = await supabase
+            .from("proposal_obstructions")
+            .insert({
+              proposal_id: proposalId,
+              type: "circle",
+              roof_plane_id: selectedRoofId,
+              center_lat: lat,
+              center_lng: lng,
+              radius_ft: 5,
+            })
+            .select()
+            .single();
+
+          if (!error && data) {
+            setObstructions((prev) => [...prev, data]);
+          }
+          setToolMode("none");
+        } else if (toolMode === "rect") {
+          const { data, error } = await supabase
+            .from("proposal_obstructions")
+            .insert({
+              proposal_id: proposalId,
+              type: "rect",
+              roof_plane_id: selectedRoofId,
+              center_lat: lat,
+              center_lng: lng,
+              width_ft: 5,
+              height_ft: 5,
+              rotation_deg: 0,
+            })
+            .select()
+            .single();
+
+          if (!error && data) {
+            setObstructions((prev) => [...prev, data]);
+          }
+          setToolMode("none");
+        } else if (toolMode === "tree") {
+          const { data, error } = await supabase
+            .from("proposal_obstructions")
+            .insert({
+              proposal_id: proposalId,
+              type: "tree",
+              roof_plane_id: selectedRoofId,
+              center_lat: lat,
+              center_lng: lng,
+              width_ft: 8,
+              height_ft: 8,
+              rotation_deg: 0,
+            })
+            .select()
+            .single();
+
+          if (!error && data) {
+            setObstructions((prev) => [...prev, data]);
+          }
+          setToolMode("none");
         }
       });
     }
@@ -426,12 +565,19 @@ export default function ProposalWorkspace({
         strokeWeight: 1,
         fillColor: "#0000FF",
         fillOpacity: 0.3,
+        clickable: true,
+      });
+
+      google.maps.event.addListener(rect, "click", () => {
+        if (toolMode === "delete-panel") {
+          deletePanelById(panel.id);
+        }
       });
 
       rect.setMap(mapRef.current);
       panelRectanglesRef.current.set(panel.id, rect);
     });
-  }, [panels, panelModels]);
+  }, [panels, panelModels, toolMode]);
 
   useEffect(() => {
     if (!drawingRef.current) return;
@@ -445,8 +591,24 @@ export default function ProposalWorkspace({
     }
   }, [toolMode]);
 
+  const deletePanelById = async (panelId: string) => {
+    await supabase.from("proposal_panels").delete().eq("id", panelId);
+    setPanels((prev) => prev.filter((p) => p.id !== panelId));
+  };
+
   const addPanelAt = async (lat: number, lng: number) => {
     if (!selectedRoofId || !selectedPanelModelId) return;
+
+    const roof = roofPlanes.find((r) => r.id === selectedRoofId);
+    if (!roof) return;
+
+    const point = { lat, lng };
+    const isInside = isPointInPolygon(point, roof.path);
+
+    if (!isInside) {
+      alert("Panel must be placed within the selected roof plane");
+      return;
+    }
 
     const { data, error } = await supabase
       .from("proposal_panels")
@@ -1422,6 +1584,53 @@ export default function ProposalWorkspace({
           </button>
 
           <button
+            onClick={() => setToolMode(toolMode === "add-panel" ? "none" : "add-panel")}
+            disabled={!selectedRoofId || !selectedPanelModelId}
+            style={{
+              width: "100%",
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+              justifyContent: "center",
+              padding: "10px 14px",
+              background: toolMode === "add-panel" ? "#f97316" : (selectedRoofId && selectedPanelModelId ? "#3b82f6" : "#e5e7eb"),
+              color: (toolMode === "add-panel" || (selectedRoofId && selectedPanelModelId)) ? "#fff" : "#9ca3af",
+              border: "none",
+              borderRadius: 6,
+              cursor: (selectedRoofId && selectedPanelModelId) ? "pointer" : "not-allowed",
+              fontWeight: 600,
+              fontSize: 13,
+              marginBottom: 8,
+            }}
+          >
+            <Pencil size={16} />
+            {toolMode === "add-panel" ? "Stop Adding" : "Add Manually"}
+          </button>
+
+          <button
+            onClick={() => setToolMode(toolMode === "delete-panel" ? "none" : "delete-panel")}
+            style={{
+              width: "100%",
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+              justifyContent: "center",
+              padding: "10px 14px",
+              background: toolMode === "delete-panel" ? "#f97316" : "#ef4444",
+              color: "#fff",
+              border: "none",
+              borderRadius: 6,
+              cursor: "pointer",
+              fontWeight: 600,
+              fontSize: 13,
+              marginBottom: 8,
+            }}
+          >
+            <Trash2 size={16} />
+            {toolMode === "delete-panel" ? "Stop Deleting" : "Delete Panels"}
+          </button>
+
+          <button
             onClick={clearAllPanels}
             disabled={!selectedRoofId}
             style={{
@@ -1431,7 +1640,7 @@ export default function ProposalWorkspace({
               gap: 8,
               justifyContent: "center",
               padding: "10px 14px",
-              background: selectedRoofId ? "#ef4444" : "#e5e7eb",
+              background: selectedRoofId ? "#991b1b" : "#e5e7eb",
               color: selectedRoofId ? "#fff" : "#9ca3af",
               border: "none",
               borderRadius: 6,
@@ -1441,7 +1650,7 @@ export default function ProposalWorkspace({
             }}
           >
             <Trash2 size={16} />
-            Clear Panels
+            Clear All Panels
           </button>
         </div>
 
