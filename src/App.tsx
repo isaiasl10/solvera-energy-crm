@@ -7,7 +7,6 @@ import QueueDetailView from './components/QueueDetailView';
 import ServiceTicketsQueue from './components/ServiceTicketsQueue';
 import UserManagement from './components/UserManagement';
 import Proposals from './components/Proposals';
-import ProposalWorkspace from './components/ProposalWorkspace';
 import Analytics from './components/admin/Analytics';
 import Payroll from './components/admin/Payroll';
 import CustomAdders from './components/admin/CustomAdders';
@@ -36,7 +35,6 @@ function App() {
   const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(() => {
     return localStorage.getItem('selectedCustomerId') || null;
   });
-  const [activeProposalId, setActiveProposalId] = useState<string | null>(null);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
 
   useEffect(() => {
@@ -79,11 +77,6 @@ function App() {
   const handleViewCustomerProject = (customerId: string) => {
     setSelectedCustomerId(customerId);
     setCurrentView('customers');
-  };
-
-  const handleOpenProposal = (proposalId: string) => {
-    setActiveProposalId(proposalId);
-    setCurrentView('proposalWorkspace');
   };
 
   if (currentPath === '/reset-password') {
@@ -129,9 +122,7 @@ function App() {
       case 'customers':
         return <CustomerQueue initialCustomerId={selectedCustomerId} onCustomerChange={() => setSelectedCustomerId(null)} />;
       case 'proposals':
-        return <Proposals onOpenProposal={handleOpenProposal} />;
-      case 'proposalWorkspace':
-        return <ProposalWorkspace proposalId={activeProposalId} onBack={() => setCurrentView('proposals')} />;
+        return <Proposals />;
       case 'user-management':
         if (!isAdmin && !isManagement) {
           setCurrentView('calendar');
