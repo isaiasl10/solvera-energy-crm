@@ -135,7 +135,7 @@ function App() {
       case 'customers':
         return <CustomerQueue initialCustomerId={selectedCustomerId} onCustomerChange={() => setSelectedCustomerId(null)} />;
       case 'proposals':
-        return <Proposals onOpenCreateProposal={handleOpenCreateProposal} />;
+        return <Proposals onOpenCreateProposal={handleOpenCreateProposal} onOpenCustomerPricing={handleOpenCustomerPricing} />;
       case 'createProposal':
         return <CreateProposal proposalId={activeProposalId || ''} onBack={() => setCurrentView('proposals')} />;
       case 'customerPricing':

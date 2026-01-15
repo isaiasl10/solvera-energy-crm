@@ -103,9 +103,10 @@ type ToolMode = "none" | "roof" | "circle" | "rect" | "tree" | "add-panel" | "de
 
 type ProposalsProps = {
   onOpenCreateProposal?: (proposalId: string) => void;
+  onOpenCustomerPricing?: (proposalId: string) => void;
 };
 
-export default function Proposals({ onOpenCreateProposal }: ProposalsProps = {}) {
+export default function Proposals({ onOpenCreateProposal, onOpenCustomerPricing }: ProposalsProps = {}) {
   const { user } = useAuth();
 
   const mapDivRef = useRef<HTMLDivElement | null>(null);
@@ -2584,24 +2585,43 @@ export default function Proposals({ onOpenCreateProposal }: ProposalsProps = {})
             )}
 
             {systemSummary && proposalStep === "design" && (
-              <button
-                onClick={() => setProposalStep("pricing")}
-                style={{
-                  width: "100%",
-                  height: 48,
-                  borderRadius: 12,
-                  border: "none",
-                  background: "linear-gradient(135deg, #111827 0%, #1f2937 100%)",
-                  color: "white",
-                  fontWeight: 800,
-                  fontSize: 15,
-                  cursor: "pointer",
-                  marginTop: 12,
-                  boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
-                }}
-              >
-                Next: Customer & Pricing →
-              </button>
+              <div style={{ marginTop: 12, display: "flex", flexDirection: "column", gap: 8 }}>
+                <button
+                  onClick={() => setProposalStep("pricing")}
+                  style={{
+                    width: "100%",
+                    height: 48,
+                    borderRadius: 12,
+                    border: "none",
+                    background: "linear-gradient(135deg, #111827 0%, #1f2937 100%)",
+                    color: "white",
+                    fontWeight: 800,
+                    fontSize: 15,
+                    cursor: "pointer",
+                    boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
+                  }}
+                >
+                  Next: Inline Pricing →
+                </button>
+                {onOpenCustomerPricing && (
+                  <button
+                    onClick={() => onOpenCustomerPricing(proposal.id)}
+                    style={{
+                      width: "100%",
+                      height: 48,
+                      borderRadius: 12,
+                      border: "2px solid #111827",
+                      background: "white",
+                      color: "#111827",
+                      fontWeight: 800,
+                      fontSize: 15,
+                      cursor: "pointer",
+                    }}
+                  >
+                    Customer & Pricing (Full Screen) →
+                  </button>
+                )}
+              </div>
             )}
 
             {busy && (
