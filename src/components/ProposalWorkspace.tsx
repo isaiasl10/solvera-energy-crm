@@ -42,74 +42,150 @@ const CustomerFormInputs = React.memo(({
   console.log("CustomerFormInputs render", renderCount.current);
 
   return (
-    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
       <div>
-        <label style={{ display: "block", fontSize: 11, fontWeight: 600, color: "#374151", marginBottom: 6 }}>
-          Full Name
-        </label>
-        <input
-          type="text"
-          value={localData.full_name || ''}
-          onChange={(e) => {
-            console.log("CHANGE full_name", e.target.value, "| form renders:", renderCount.current);
-            handleChange('full_name', e.target.value);
-          }}
-          onBlur={handleBlur}
-          placeholder="Enter customer name"
-          style={{
-            width: "100%",
-            padding: "7px 10px",
-            background: "#fff",
-            border: "1px solid #d1d5db",
-            borderRadius: 4,
-            fontSize: 13,
-            color: "#111827",
-          }}
-        />
+        <div style={{ fontSize: 12, fontWeight: 600, color: "#111827", marginBottom: 10 }}>Primary Homeowner</div>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
+          <div>
+            <label style={{ display: "block", fontSize: 11, fontWeight: 600, color: "#374151", marginBottom: 6 }}>
+              Full Name
+            </label>
+            <input
+              type="text"
+              value={localData.full_name || ''}
+              onChange={(e) => {
+                console.log("CHANGE full_name", e.target.value, "| form renders:", renderCount.current);
+                handleChange('full_name', e.target.value);
+              }}
+              onBlur={handleBlur}
+              placeholder="Enter customer name"
+              style={{
+                width: "100%",
+                padding: "7px 10px",
+                background: "#fff",
+                border: "1px solid #d1d5db",
+                borderRadius: 4,
+                fontSize: 13,
+                color: "#111827",
+              }}
+            />
+          </div>
+
+          <div>
+            <label style={{ display: "block", fontSize: 11, fontWeight: 600, color: "#374151", marginBottom: 6 }}>
+              Email Address
+            </label>
+            <input
+              type="email"
+              value={localData.email || ''}
+              onChange={(e) => handleChange('email', e.target.value)}
+              onBlur={handleBlur}
+              placeholder="customer@example.com"
+              style={{
+                width: "100%",
+                padding: "7px 10px",
+                background: "#fff",
+                border: "1px solid #d1d5db",
+                borderRadius: 4,
+                fontSize: 13,
+                color: "#111827",
+              }}
+            />
+          </div>
+
+          <div>
+            <label style={{ display: "block", fontSize: 11, fontWeight: 600, color: "#374151", marginBottom: 6 }}>
+              Phone Number
+            </label>
+            <input
+              type="tel"
+              value={localData.phone || ''}
+              onChange={(e) => handleChange('phone', e.target.value)}
+              onBlur={handleBlur}
+              placeholder="(555) 123-4567"
+              style={{
+                width: "100%",
+                padding: "7px 10px",
+                background: "#fff",
+                border: "1px solid #d1d5db",
+                borderRadius: 4,
+                fontSize: 13,
+                color: "#111827",
+              }}
+            />
+          </div>
+        </div>
       </div>
 
       <div>
-        <label style={{ display: "block", fontSize: 11, fontWeight: 600, color: "#374151", marginBottom: 6 }}>
-          Email Address
-        </label>
-        <input
-          type="email"
-          value={localData.email || ''}
-          onChange={(e) => handleChange('email', e.target.value)}
-          onBlur={handleBlur}
-          placeholder="customer@example.com"
-          style={{
-            width: "100%",
-            padding: "7px 10px",
-            background: "#fff",
-            border: "1px solid #d1d5db",
-            borderRadius: 4,
-            fontSize: 13,
-            color: "#111827",
-          }}
-        />
-      </div>
+        <div style={{ fontSize: 12, fontWeight: 600, color: "#111827", marginBottom: 10 }}>Second Homeowner (Optional)</div>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
+          <div>
+            <label style={{ display: "block", fontSize: 11, fontWeight: 600, color: "#374151", marginBottom: 6 }}>
+              Full Name
+            </label>
+            <input
+              type="text"
+              value={localData.second_homeowner_name || ''}
+              onChange={(e) => handleChange('second_homeowner_name', e.target.value)}
+              onBlur={handleBlur}
+              placeholder="Enter second homeowner name"
+              style={{
+                width: "100%",
+                padding: "7px 10px",
+                background: "#fff",
+                border: "1px solid #d1d5db",
+                borderRadius: 4,
+                fontSize: 13,
+                color: "#111827",
+              }}
+            />
+          </div>
 
-      <div>
-        <label style={{ display: "block", fontSize: 11, fontWeight: 600, color: "#374151", marginBottom: 6 }}>
-          Phone Number
-        </label>
-        <input
-          type="tel"
-          value={localData.phone || ''}
-          onChange={(e) => handleChange('phone', e.target.value)}
-          onBlur={handleBlur}
-          placeholder="(555) 123-4567"
-          style={{
-            width: "100%",
-            padding: "7px 10px",
-            background: "#fff",
-            border: "1px solid #d1d5db",
-            borderRadius: 4,
-            fontSize: 13,
-            color: "#111827",
-          }}
-        />
+          <div>
+            <label style={{ display: "block", fontSize: 11, fontWeight: 600, color: "#374151", marginBottom: 6 }}>
+              Email Address
+            </label>
+            <input
+              type="email"
+              value={localData.second_homeowner_email || ''}
+              onChange={(e) => handleChange('second_homeowner_email', e.target.value)}
+              onBlur={handleBlur}
+              placeholder="second@example.com"
+              style={{
+                width: "100%",
+                padding: "7px 10px",
+                background: "#fff",
+                border: "1px solid #d1d5db",
+                borderRadius: 4,
+                fontSize: 13,
+                color: "#111827",
+              }}
+            />
+          </div>
+
+          <div>
+            <label style={{ display: "block", fontSize: 11, fontWeight: 600, color: "#374151", marginBottom: 6 }}>
+              Phone Number
+            </label>
+            <input
+              type="tel"
+              value={localData.second_homeowner_phone || ''}
+              onChange={(e) => handleChange('second_homeowner_phone', e.target.value)}
+              onBlur={handleBlur}
+              placeholder="(555) 123-4567"
+              style={{
+                width: "100%",
+                padding: "7px 10px",
+                background: "#fff",
+                border: "1px solid #d1d5db",
+                borderRadius: 4,
+                fontSize: 13,
+                color: "#111827",
+              }}
+            />
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -739,7 +815,14 @@ export default function ProposalWorkspace({
   const [proposalDraft, setProposalDraft] = useState<any>({});
   const [salesRep, setSalesRep] = useState<any>(null);
 
-  const [draftCustomer, setDraftCustomer] = useState<any>({ full_name: "", email: "", phone: "" });
+  const [draftCustomer, setDraftCustomer] = useState<any>({
+    full_name: "",
+    email: "",
+    phone: "",
+    second_homeowner_name: "",
+    second_homeowner_email: "",
+    second_homeowner_phone: "",
+  });
   const didInitDraftRef = useRef(false);
   const isDirtyRef = useRef(false);
   const lastInitCustomerIdRef = useRef<string | null>(null);
@@ -792,6 +875,15 @@ export default function ProposalWorkspace({
     adders: false,
     financing: false,
   });
+  const [saveSuccess, setSaveSuccess] = useState<Record<string, boolean>>({});
+
+  const showSaveSuccess = (section: string) => {
+    setSaveSuccess(prev => ({ ...prev, [section]: true }));
+    setTimeout(() => {
+      setSaveSuccess(prev => ({ ...prev, [section]: false }));
+    }, 3000);
+  };
+
   const [activeTab, setActiveTab] = useState<string>("manage");
   const lastLoadedProposalId = useRef<string | null>(null);
 
@@ -1216,6 +1308,9 @@ export default function ProposalWorkspace({
       full_name: customer.full_name ?? "",
       email: customer.email ?? "",
       phone: customer.phone ?? "",
+      second_homeowner_name: customer.second_homeowner_name ?? "",
+      second_homeowner_email: customer.second_homeowner_email ?? "",
+      second_homeowner_phone: customer.second_homeowner_phone ?? "",
     });
 
     lastInitCustomerIdRef.current = customer.id;
@@ -1863,32 +1958,39 @@ export default function ProposalWorkspace({
                   full_name: draftCustomer.full_name.trim(),
                   email: draftCustomer.email.trim(),
                   phone: draftCustomer.phone.trim(),
+                  second_homeowner_name: draftCustomer.second_homeowner_name?.trim() || null,
+                  second_homeowner_email: draftCustomer.second_homeowner_email?.trim() || null,
+                  second_homeowner_phone: draftCustomer.second_homeowner_phone?.trim() || null,
                 }))
                 .eq("id", customer.id);
 
               if (error) {
                 console.error("Failed to save customer:", error);
-                alert("Failed to save customer information");
               } else {
                 setCustomer((c: any) => ({ ...c, ...draftCustomer }));
                 isDirtyRef.current = false;
-                alert("Customer information saved successfully!");
+                showSaveSuccess("customer");
               }
             }}
             style={{
               marginTop: 16,
               background: "#f97316",
               color: "#fff",
-              padding: "10px 20px",
-              borderRadius: 6,
+              padding: "8px 16px",
+              borderRadius: 4,
               border: "none",
               cursor: "pointer",
               fontWeight: 600,
-              fontSize: 13,
+              fontSize: 12,
             }}
           >
             Save Customer Information
           </button>
+          {saveSuccess.customer && (
+            <span style={{ marginLeft: 12, color: "#059669", fontSize: 12, fontWeight: 600 }}>
+              ✓ Saved successfully
+            </span>
+          )}
         </form>
       </CollapsibleSection>
 
@@ -1922,27 +2024,32 @@ export default function ProposalWorkspace({
                 .eq("id", proposalId);
 
               if (error) {
-                alert("Failed to save electricity information");
+                console.error("Failed to save electricity information:", error);
               } else {
                 setProposal((p: any) => ({ ...p, ...proposalDraft }));
                 isDirtyRef.current = false;
-                alert("Electricity usage and rate saved successfully!");
+                showSaveSuccess("electricity");
               }
             }}
             style={{
               marginTop: 16,
               background: "#f97316",
               color: "#fff",
-              padding: "10px 20px",
-              borderRadius: 6,
+              padding: "8px 16px",
+              borderRadius: 4,
               border: "none",
               cursor: "pointer",
               fontWeight: 600,
-              fontSize: 13,
+              fontSize: 12,
             }}
           >
             Save Electricity Information
           </button>
+          {saveSuccess.electricity && (
+            <span style={{ marginLeft: 12, color: "#059669", fontSize: 12, fontWeight: 600 }}>
+              ✓ Saved successfully
+            </span>
+          )}
         </form>
       </CollapsibleSection>
 
@@ -2171,27 +2278,32 @@ export default function ProposalWorkspace({
                   .eq("id", proposalId);
 
                 if (error) {
-                  alert("Failed to save system details");
+                  console.error("Failed to save system details:", error);
                 } else {
                   setProposal((p: any) => ({ ...p, ...proposalDraft }));
                   isDirtyRef.current = false;
-                  alert("System details saved successfully!");
+                  showSaveSuccess("system-details");
                 }
               }}
               style={{
                 marginTop: 16,
                 background: "#f97316",
                 color: "#fff",
-                padding: "10px 20px",
-                borderRadius: 6,
+                padding: "8px 16px",
+                borderRadius: 4,
                 border: "none",
                 cursor: "pointer",
                 fontWeight: 600,
-                fontSize: 13,
+                fontSize: 12,
               }}
             >
               Save System Details
             </button>
+            {saveSuccess["system-details"] && (
+              <span style={{ marginLeft: 12, color: "#059669", fontSize: 12, fontWeight: 600 }}>
+                ✓ Saved successfully
+              </span>
+            )}
           </form>
         </CollapsibleSection>
 
@@ -2222,7 +2334,7 @@ export default function ProposalWorkspace({
               .eq("id", proposalId);
 
             if (error) {
-              alert("Failed to save pricing");
+              console.error("Failed to save pricing:", error);
             } else {
               setProposal((p: any) => ({
                 ...p,
@@ -2234,23 +2346,28 @@ export default function ProposalWorkspace({
                 cash_final_payment: systemSummary.cashFinal,
               }));
               isDirtyRef.current = false;
-              alert("Pricing and payment schedule saved successfully!");
+              showSaveSuccess("pricing");
             }
           }}
           style={{
             marginTop: 16,
             background: "#f97316",
             color: "#fff",
-            padding: "10px 20px",
-            borderRadius: 6,
+            padding: "8px 16px",
+            borderRadius: 4,
             border: "none",
             cursor: "pointer",
             fontWeight: 600,
-            fontSize: 13,
+            fontSize: 12,
           }}
         >
           Save Pricing & Payment Schedule
         </button>
+        {saveSuccess.pricing && (
+          <span style={{ marginLeft: 12, color: "#059669", fontSize: 12, fontWeight: 600 }}>
+            ✓ Saved successfully
+          </span>
+        )}
       </CollapsibleSection>
 
       <CollapsibleSection id="adders" icon={Package} title="System Adders">
@@ -2357,26 +2474,30 @@ export default function ProposalWorkspace({
                 }
               }
 
-              alert("Adders saved successfully!");
+              showSaveSuccess("adders");
             } catch (error: any) {
               console.error("Failed to save adders:", error);
-              alert("Failed to save adders");
             }
           }}
           style={{
             marginTop: 16,
             background: "#f97316",
             color: "#fff",
-            padding: "10px 20px",
-            borderRadius: 6,
+            padding: "8px 16px",
+            borderRadius: 4,
             border: "none",
             cursor: "pointer",
             fontWeight: 600,
-            fontSize: 13,
+            fontSize: 12,
           }}
         >
           Save Adders
         </button>
+        {saveSuccess.adders && (
+          <span style={{ marginLeft: 12, color: "#059669", fontSize: 12, fontWeight: 600 }}>
+            ✓ Saved successfully
+          </span>
+        )}
       </CollapsibleSection>
 
       <CollapsibleSection id="financing" icon={CreditCard} title="Financing Options">
@@ -2462,27 +2583,36 @@ export default function ProposalWorkspace({
               updates.cash_final_payment = proposalDraft.cash_final_payment ?? null;
             }
 
-            await supabase
+            const { error } = await supabase
               .from("proposals")
               .update(updates)
               .eq("id", proposalId);
 
-            alert("Financing option saved successfully!");
+            if (error) {
+              console.error("Failed to save financing:", error);
+            } else {
+              showSaveSuccess("financing");
+            }
           }}
           style={{
             marginTop: 16,
             background: "#f97316",
             color: "#fff",
-            padding: "10px 20px",
-            borderRadius: 6,
+            padding: "8px 16px",
+            borderRadius: 4,
             border: "none",
             cursor: "pointer",
             fontWeight: 600,
-            fontSize: 13,
+            fontSize: 12,
           }}
         >
           Save Financing & Payment Schedule
         </button>
+        {saveSuccess.financing && (
+          <span style={{ marginLeft: 12, color: "#059669", fontSize: 12, fontWeight: 600 }}>
+            ✓ Saved successfully
+          </span>
+        )}
       </CollapsibleSection>
       </div>
     );
@@ -3112,14 +3242,153 @@ export default function ProposalWorkspace({
     </div>
   );
 
-  const renderEnergyTab = () => (
-    <div style={{ padding: 20 }}>
-      <div style={{ background: "#fff", padding: 20, borderRadius: 8, border: "1px solid #e5e7eb" }}>
-        <div style={{ fontSize: 15, fontWeight: 600, color: "#111827", marginBottom: 16 }}>Energy Usage Analysis</div>
-        <div style={{ color: "#6b7280", fontSize: 14 }}>Energy usage details and charts will be displayed here.</div>
+  const renderEnergyTab = () => {
+    const annualConsumption = proposalDraft?.annual_consumption || proposal?.annual_consumption || 0;
+    const electricityRate = proposalDraft?.electricity_rate || proposal?.electricity_rate || 0;
+    const systemKw = systemSummary.systemKw || 0;
+    const annualProduction = systemSummary.annualProductionKwh || 0;
+    const totalContractPrice = systemSummary.totalContractPrice || 0;
+    const financeType = proposalDraft?.finance_type || proposal?.finance_type || "cash";
+
+    const monthlyConsumptionKwh = annualConsumption / 12;
+    const monthlyUtilityBill = monthlyConsumptionKwh * electricityRate;
+    const annualUtilityBill = monthlyUtilityBill * 12;
+
+    let monthlySolarPayment = 0;
+    if (financeType === "loan") {
+      const loanAmount = totalContractPrice;
+      const loanRate = 0.0599 / 12;
+      const loanTermMonths = 300;
+      if (loanAmount > 0) {
+        monthlySolarPayment = (loanAmount * loanRate * Math.pow(1 + loanRate, loanTermMonths)) / (Math.pow(1 + loanRate, loanTermMonths) - 1);
+      }
+    } else if (financeType === "cash") {
+      monthlySolarPayment = 0;
+    }
+
+    const monthlySavings = monthlyUtilityBill - monthlySolarPayment;
+
+    let total25YearUtilityBill = 0;
+    let currentAnnualBill = annualUtilityBill;
+    for (let year = 0; year < 25; year++) {
+      total25YearUtilityBill += currentAnnualBill;
+      currentAnnualBill *= 1.03;
+    }
+
+    const total25YearSolarCost = financeType === "loan" ? monthlySolarPayment * 300 : totalContractPrice;
+    const total25YearSavings = total25YearUtilityBill - total25YearSolarCost;
+    const roi = totalContractPrice > 0 ? (total25YearSavings / totalContractPrice) * 100 : 0;
+
+    return (
+      <div style={{ padding: 20, maxWidth: 1200, margin: "0 auto" }}>
+        <div style={{ background: "#fff", padding: 24, borderRadius: 8, border: "1px solid #e5e7eb", marginBottom: 20 }}>
+          <div style={{ fontSize: 18, fontWeight: 700, color: "#111827", marginBottom: 20 }}>Energy Usage Analysis</div>
+
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24, marginBottom: 24 }}>
+            <div>
+              <div style={{ fontSize: 12, fontWeight: 600, color: "#6b7280", marginBottom: 8 }}>CURRENT UTILITY</div>
+              <div style={{ background: "#fef3c7", padding: 16, borderRadius: 6, border: "1px solid #fbbf24" }}>
+                <div style={{ fontSize: 11, color: "#78350f", marginBottom: 4 }}>Monthly Utility Bill</div>
+                <div style={{ fontSize: 28, fontWeight: 700, color: "#78350f" }}>${fmt(monthlyUtilityBill, 2)}</div>
+                <div style={{ fontSize: 11, color: "#78350f", marginTop: 8 }}>Annual: ${fmt(annualUtilityBill, 2)}</div>
+              </div>
+            </div>
+
+            <div>
+              <div style={{ fontSize: 12, fontWeight: 600, color: "#6b7280", marginBottom: 8 }}>WITH SOLAR</div>
+              <div style={{ background: "#dcfce7", padding: 16, borderRadius: 6, border: "1px solid #22c55e" }}>
+                <div style={{ fontSize: 11, color: "#14532d", marginBottom: 4 }}>
+                  {financeType === "cash" ? "Monthly Solar Cost" : "Monthly Solar Payment"}
+                </div>
+                <div style={{ fontSize: 28, fontWeight: 700, color: "#14532d" }}>${fmt(monthlySolarPayment, 2)}</div>
+                <div style={{ fontSize: 11, color: "#14532d", marginTop: 8 }}>
+                  {financeType === "cash" ? "Paid upfront" : "300 months (25 years)"}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div style={{ background: "#f0fdf4", padding: 20, borderRadius: 8, border: "2px solid #22c55e", marginBottom: 24 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <div>
+                <div style={{ fontSize: 12, fontWeight: 600, color: "#166534", marginBottom: 4 }}>ESTIMATED MONTHLY SAVINGS</div>
+                <div style={{ fontSize: 36, fontWeight: 700, color: "#059669" }}>${fmt(monthlySavings, 2)}</div>
+              </div>
+              <div style={{ textAlign: "right" }}>
+                <div style={{ fontSize: 11, color: "#166534" }}>Savings compared to utility</div>
+                <div style={{ fontSize: 11, color: "#166534", marginTop: 2 }}>
+                  {monthlyUtilityBill > 0 ? ((monthlySavings / monthlyUtilityBill) * 100).toFixed(1) : 0}% reduction
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div style={{ borderTop: "1px solid #e5e7eb", paddingTop: 24 }}>
+            <div style={{ fontSize: 16, fontWeight: 700, color: "#111827", marginBottom: 16 }}>25-Year Financial Projection</div>
+            <div style={{ fontSize: 11, color: "#6b7280", marginBottom: 16 }}>
+              Includes 3% annual utility rate escalation
+            </div>
+
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 16, marginBottom: 20 }}>
+              <div style={{ background: "#fef2f2", padding: 16, borderRadius: 6, border: "1px solid #fca5a5" }}>
+                <div style={{ fontSize: 11, fontWeight: 600, color: "#991b1b", marginBottom: 8 }}>WITHOUT SOLAR</div>
+                <div style={{ fontSize: 11, color: "#991b1b", marginBottom: 4 }}>25-Year Utility Costs</div>
+                <div style={{ fontSize: 20, fontWeight: 700, color: "#dc2626" }}>${fmt(total25YearUtilityBill, 0)}</div>
+              </div>
+
+              <div style={{ background: "#dbeafe", padding: 16, borderRadius: 6, border: "1px solid #60a5fa" }}>
+                <div style={{ fontSize: 11, fontWeight: 600, color: "#1e40af", marginBottom: 8 }}>WITH SOLAR</div>
+                <div style={{ fontSize: 11, color: "#1e40af", marginBottom: 4 }}>25-Year Solar Costs</div>
+                <div style={{ fontSize: 20, fontWeight: 700, color: "#2563eb" }}>${fmt(total25YearSolarCost, 0)}</div>
+              </div>
+
+              <div style={{ background: "#d1fae5", padding: 16, borderRadius: 6, border: "1px solid #34d399" }}>
+                <div style={{ fontSize: 11, fontWeight: 600, color: "#065f46", marginBottom: 8 }}>TOTAL SAVINGS</div>
+                <div style={{ fontSize: 11, color: "#065f46", marginBottom: 4 }}>25-Year Savings</div>
+                <div style={{ fontSize: 20, fontWeight: 700, color: "#059669" }}>${fmt(total25YearSavings, 0)}</div>
+              </div>
+            </div>
+
+            <div style={{ background: "#f9fafb", padding: 16, borderRadius: 6, border: "1px solid #e5e7eb" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div>
+                  <div style={{ fontSize: 11, fontWeight: 600, color: "#374151", marginBottom: 4 }}>RETURN ON INVESTMENT (ROI)</div>
+                  <div style={{ fontSize: 13, color: "#6b7280" }}>
+                    Based on 25-year savings vs. system cost
+                  </div>
+                </div>
+                <div style={{ textAlign: "right" }}>
+                  <div style={{ fontSize: 32, fontWeight: 700, color: roi >= 0 ? "#059669" : "#dc2626" }}>
+                    {fmt(roi, 1)}%
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div style={{ marginTop: 20, padding: 16, background: "#fefce8", borderRadius: 6, border: "1px solid #facc15" }}>
+            <div style={{ fontSize: 11, fontWeight: 600, color: "#854d0e", marginBottom: 8 }}>SYSTEM DETAILS</div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, fontSize: 11, color: "#713f12" }}>
+              <div>
+                <div style={{ marginBottom: 4 }}>System Size</div>
+                <div style={{ fontWeight: 600 }}>{fmt(systemKw, 2)} kW</div>
+              </div>
+              <div>
+                <div style={{ marginBottom: 4 }}>Annual Production</div>
+                <div style={{ fontWeight: 600 }}>{fmt(annualProduction, 0)} kWh</div>
+              </div>
+              <div>
+                <div style={{ marginBottom: 4 }}>System Offset</div>
+                <div style={{ fontWeight: 600 }}>
+                  {annualConsumption > 0 ? fmt((annualProduction / annualConsumption) * 100, 1) : 0}%
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   const renderPaymentsTab = () => (
     <div style={{ padding: 20 }}>
