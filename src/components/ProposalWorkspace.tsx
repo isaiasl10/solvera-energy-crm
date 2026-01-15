@@ -668,10 +668,19 @@ export default function ProposalWorkspace({
 
     for (let lat = minLat + latStep / 2; lat < maxLat; lat += latStep) {
       for (let lng = minLng + lngStep / 2; lng < maxLng; lng += lngStep) {
-        const point = { lat, lng };
-        const isInside = isPointInPolygon(point, roofPath);
+        const latOffset = lengthMeters / 111320;
+        const lngOffset = widthMeters / (111320 * Math.cos((lat * Math.PI) / 180));
 
-        if (isInside) {
+        const corners = [
+          { lat: lat - latOffset / 2, lng: lng - lngOffset / 2 },
+          { lat: lat - latOffset / 2, lng: lng + lngOffset / 2 },
+          { lat: lat + latOffset / 2, lng: lng - lngOffset / 2 },
+          { lat: lat + latOffset / 2, lng: lng + lngOffset / 2 },
+        ];
+
+        const allCornersInside = corners.every((corner) => isPointInPolygon(corner, roofPath));
+
+        if (allCornersInside) {
           newPanels.push({
             proposal_id: proposalId,
             roof_plane_id: selectedRoofId,

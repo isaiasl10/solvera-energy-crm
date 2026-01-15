@@ -34,6 +34,7 @@ export default function CustomerPricing({
   const [customerEmail, setCustomerEmail] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
   const [proposalDraft, setProposalDraft] = useState<any>({});
+  const [loadedCustomerId, setLoadedCustomerId] = useState<string | null>(null);
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
     customer: true,
     electricity: true,
@@ -46,7 +47,7 @@ export default function CustomerPricing({
   const [activeTab, setActiveTab] = useState<string>("manage");
 
   useEffect(() => {
-    if (!proposal?.customer_id) return;
+    if (!proposal?.customer_id || loadedCustomerId === proposal.customer_id) return;
 
     (async () => {
       const { data } = await supabase
@@ -55,14 +56,15 @@ export default function CustomerPricing({
         .eq("id", proposal.customer_id)
         .maybeSingle();
 
-      setCustomer(data);
-      if (data && !customerFullName) {
+      if (data) {
+        setCustomer(data);
         setCustomerFullName(data.full_name || "");
         setCustomerEmail(data.email || "");
         setCustomerPhone(data.phone || "");
+        setLoadedCustomerId(proposal.customer_id);
       }
     })();
-  }, [proposal?.customer_id]);
+  }, [proposal?.customer_id, loadedCustomerId]);
 
   useEffect(() => {
     if (proposal && !proposalDraft.id) {
