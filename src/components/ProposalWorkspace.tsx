@@ -669,6 +669,8 @@ export default function ProposalWorkspace({
   const [selectedPanelModelId, setSelectedPanelModelId] = useState<string | null>(null);
   const [panelOrientation, setPanelOrientation] = useState<"portrait" | "landscape">("portrait");
   const [panelRotation, setPanelRotation] = useState<number>(0);
+  const [obstructionWidth, setObstructionWidth] = useState<number>(5);
+  const [obstructionHeight, setObstructionHeight] = useState<number>(5);
   const [rowSpacing, setRowSpacing] = useState<number>(0.01);
   const [colSpacing, setColSpacing] = useState<number>(0.01);
 
@@ -720,7 +722,7 @@ export default function ProposalWorkspace({
       annualProductionKwh = proposal.annual_production_estimate;
     }
 
-    const annualConsumption = proposal?.annual_consumption || 0;
+    const annualConsumption = proposalDraft?.annual_consumption || proposal?.annual_consumption || 0;
     const offsetPercent = annualConsumption > 0 ? (annualProductionKwh / annualConsumption) * 100 : 0;
 
     return {
@@ -729,7 +731,7 @@ export default function ProposalWorkspace({
       annualProductionKwh,
       offsetPercent,
     };
-  }, [panels, panelModels, proposal]);
+  }, [panels, panelModels, proposal, proposalDraft]);
 
   useEffect(() => {
     if (!proposal || panels.length === 0 || calculatingProduction) return;
@@ -1051,8 +1053,8 @@ export default function ProposalWorkspace({
             center_lat: lat,
             center_lng: lng,
             radius_ft: null,
-            width_ft: 5,
-            height_ft: 5,
+            width_ft: obstructionWidth,
+            height_ft: obstructionHeight,
             rotation_deg: 0,
           };
           console.log("MAP CLICK: Adding rect obstruction", newObstruction);
@@ -1071,8 +1073,8 @@ export default function ProposalWorkspace({
             center_lat: lat,
             center_lng: lng,
             radius_ft: null,
-            width_ft: 8,
-            height_ft: 8,
+            width_ft: obstructionWidth,
+            height_ft: obstructionHeight,
             rotation_deg: 0,
           };
           console.log("MAP CLICK: Adding tree obstruction", newObstruction);
@@ -1085,7 +1087,7 @@ export default function ProposalWorkspace({
         }
       });
     }
-  }, [activeTab, mapsLoading, proposal?.lat, proposal?.lng, proposalId]);
+  }, [activeTab, mapsLoading, proposal?.lat, proposal?.lng, proposalId, obstructionWidth, obstructionHeight]);
 
   useEffect(() => {
     if (!mapRef.current || !isGoogleReady()) return;
@@ -1642,13 +1644,20 @@ export default function ProposalWorkspace({
 
         <button
           onClick={async () => {
-            await supabase
+            const { error } = await supabase
               .from("proposals")
-              .update({
+              .update(sanitizePatch({
                 utility_company: proposalDraft.utility_company ?? null,
                 electricity_rate: proposalDraft.electricity_rate ?? null,
-              })
+              }))
               .eq("id", proposalId);
+
+            if (error) {
+              alert("Failed to save electricity rate");
+            } else {
+              setProposal((p: any) => ({ ...p, ...proposalDraft }));
+              alert("Electricity rate saved successfully!");
+            }
           }}
           style={{
             marginTop: 16,
@@ -1964,6 +1973,56 @@ export default function ProposalWorkspace({
             <TreeDeciduous size={16} />
             Add Tree
           </button>
+
+          {(toolMode === "rect" || toolMode === "tree") && (
+            <div style={{ marginTop: 12, padding: 12, background: "#f9fafb", borderRadius: 6 }}>
+              <div style={{ fontSize: 12, fontWeight: 600, color: "#374151", marginBottom: 8 }}>
+                Obstruction Size (feet)
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                <div>
+                  <label style={{ display: "block", fontSize: 11, color: "#6b7280", marginBottom: 4 }}>
+                    Width
+                  </label>
+                  <input
+                    type="number"
+                    value={obstructionWidth}
+                    onChange={(e) => setObstructionWidth(Number(e.target.value))}
+                    min="1"
+                    step="1"
+                    style={{
+                      width: "100%",
+                      padding: "6px 8px",
+                      background: "#fff",
+                      border: "1px solid #d1d5db",
+                      borderRadius: 4,
+                      fontSize: 13,
+                    }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: "block", fontSize: 11, color: "#6b7280", marginBottom: 4 }}>
+                    Height
+                  </label>
+                  <input
+                    type="number"
+                    value={obstructionHeight}
+                    onChange={(e) => setObstructionHeight(Number(e.target.value))}
+                    min="1"
+                    step="1"
+                    style={{
+                      width: "100%",
+                      padding: "6px 8px",
+                      background: "#fff",
+                      border: "1px solid #d1d5db",
+                      borderRadius: 4,
+                      fontSize: 13,
+                    }}
+                  />
+                </div>
+              </div>
+            </div>
+          )}
 
           {toolMode !== "none" && (
             <button
