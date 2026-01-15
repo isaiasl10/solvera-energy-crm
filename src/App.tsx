@@ -139,7 +139,7 @@ function App() {
       case 'createProposal':
         return <CreateProposal proposalId={activeProposalId || ''} onBack={() => setCurrentView('proposals')} />;
       case 'customerPricing':
-        return <CustomerPricing proposalId={activeProposalId} />;
+        return <CustomerPricing proposalId={activeProposalId} onBack={() => setCurrentView('proposals')} />;
       case 'user-management':
         if (!isAdmin && !isManagement) {
           setCurrentView('calendar');

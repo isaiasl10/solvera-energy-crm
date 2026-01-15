@@ -3,7 +3,7 @@ import { supabase } from "../lib/supabaseClient";
 import { useProposalDesign } from "../hooks/useProposalDesign";
 import { useFinancingOptions } from "../hooks/useFinancingOptions";
 import ProposalDesignMap from "./ProposalDesignMap";
-import { User, DollarSign, MapPin, FileText } from "lucide-react";
+import { User, DollarSign, MapPin, FileText, ArrowLeft } from "lucide-react";
 
 const fmt = (n?: number | null, digits = 0) =>
   typeof n === "number" && Number.isFinite(n)
@@ -12,8 +12,10 @@ const fmt = (n?: number | null, digits = 0) =>
 
 export default function CustomerPricing({
   proposalId,
+  onBack,
 }: {
   proposalId: string | null;
+  onBack?: () => void;
 }) {
   const {
     proposal,
@@ -65,11 +67,33 @@ export default function CustomerPricing({
 
   return (
     <div style={{ padding: 24, height: "calc(100vh - 64px)", overflow: "auto" }}>
-      <div style={{ fontSize: 22, fontWeight: 900, marginBottom: 8 }}>
-        Customer & Pricing
-      </div>
-      <div style={{ opacity: 0.7, marginBottom: 24 }}>
-        Confirm customer, financing, and payments
+      <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 16 }}>
+        {onBack && (
+          <button
+            onClick={onBack}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+              padding: "8px 16px",
+              background: "#f3f4f6",
+              border: "none",
+              borderRadius: 8,
+              cursor: "pointer",
+              fontWeight: 600,
+              color: "#374151",
+            }}
+          >
+            <ArrowLeft size={18} />
+            Back
+          </button>
+        )}
+        <div>
+          <div style={{ fontSize: 22, fontWeight: 900 }}>Customer & Pricing</div>
+          <div style={{ opacity: 0.7, fontSize: 14 }}>
+            Confirm customer, financing, and payments
+          </div>
+        </div>
       </div>
 
       <div
@@ -134,28 +158,39 @@ export default function CustomerPricing({
               <User size={18} /> Customer Information
             </div>
 
-            <label>Name</label>
+            <label className="block text-sm font-semibold text-slate-700 mb-2">
+              Name
+            </label>
             <input
               value={customer?.name ?? ""}
               onChange={(e) =>
                 setCustomer((c: any) => ({ ...c, name: e.target.value }))
               }
+              className="w-full px-4 py-3 bg-white border-2 border-slate-200 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all duration-200 text-slate-900 mb-4"
             />
 
-            <label>Email</label>
+            <label className="block text-sm font-semibold text-slate-700 mb-2">
+              Email
+            </label>
             <input
+              type="email"
               value={customer?.email ?? ""}
               onChange={(e) =>
                 setCustomer((c: any) => ({ ...c, email: e.target.value }))
               }
+              className="w-full px-4 py-3 bg-white border-2 border-slate-200 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all duration-200 text-slate-900 mb-4"
             />
 
-            <label>Phone</label>
+            <label className="block text-sm font-semibold text-slate-700 mb-2">
+              Phone
+            </label>
             <input
+              type="tel"
               value={customer?.phone ?? ""}
               onChange={(e) =>
                 setCustomer((c: any) => ({ ...c, phone: e.target.value }))
               }
+              className="w-full px-4 py-3 bg-white border-2 border-slate-200 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all duration-200 text-slate-900 mb-4"
             />
 
             <button
@@ -170,6 +205,7 @@ export default function CustomerPricing({
                   })
                   .eq("id", customer.id);
               }}
+              className="w-full bg-orange-600 text-white py-3 px-4 rounded-lg hover:bg-orange-700 transition-colors duration-200 font-semibold"
             >
               Save Customer
             </button>
@@ -180,7 +216,9 @@ export default function CustomerPricing({
               <DollarSign size={18} /> Financing
             </div>
 
-            <label>Financing Option</label>
+            <label className="block text-sm font-semibold text-slate-700 mb-2">
+              Financing Option
+            </label>
             <select
               value={selectedFinanceValue}
               onChange={(e) => {
@@ -199,6 +237,7 @@ export default function CustomerPricing({
                   }));
                 }
               }}
+              className="w-full px-4 py-3 bg-white border-2 border-slate-200 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all duration-200 text-slate-900 mb-4"
             >
               {financingOptions.map((opt: any) => (
                 <option key={opt.id} value={opt.id}>
@@ -219,6 +258,7 @@ export default function CustomerPricing({
                   .eq("id", proposalId);
                 await refresh();
               }}
+              className="w-full bg-orange-600 text-white py-3 px-4 rounded-lg hover:bg-orange-700 transition-colors duration-200 font-semibold"
             >
               Save Financing
             </button>
@@ -228,7 +268,9 @@ export default function CustomerPricing({
             <div className="card">
               <div className="card-title">Cash Payment Schedule</div>
 
-              <label>Deposit</label>
+              <label className="block text-sm font-semibold text-slate-700 mb-2">
+                Deposit
+              </label>
               <input
                 type="number"
                 value={proposalDraft.cash_deposit ?? ""}
@@ -238,9 +280,12 @@ export default function CustomerPricing({
                     cash_deposit: Number(e.target.value),
                   }))
                 }
+                className="w-full px-4 py-3 bg-white border-2 border-slate-200 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all duration-200 text-slate-900 mb-4"
               />
 
-              <label>2nd Payment</label>
+              <label className="block text-sm font-semibold text-slate-700 mb-2">
+                2nd Payment
+              </label>
               <input
                 type="number"
                 value={proposalDraft.cash_second_payment ?? ""}
@@ -250,9 +295,12 @@ export default function CustomerPricing({
                     cash_second_payment: Number(e.target.value),
                   }))
                 }
+                className="w-full px-4 py-3 bg-white border-2 border-slate-200 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all duration-200 text-slate-900 mb-4"
               />
 
-              <label>Final Payment</label>
+              <label className="block text-sm font-semibold text-slate-700 mb-2">
+                Final Payment
+              </label>
               <input
                 type="number"
                 value={proposalDraft.cash_final_payment ?? ""}
@@ -262,6 +310,7 @@ export default function CustomerPricing({
                     cash_final_payment: Number(e.target.value),
                   }))
                 }
+                className="w-full px-4 py-3 bg-white border-2 border-slate-200 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all duration-200 text-slate-900 mb-4"
               />
 
               <button
@@ -278,6 +327,7 @@ export default function CustomerPricing({
                     .eq("id", proposalId);
                   await refresh();
                 }}
+                className="w-full bg-orange-600 text-white py-3 px-4 rounded-lg hover:bg-orange-700 transition-colors duration-200 font-semibold"
               >
                 Save Cash Schedule
               </button>
