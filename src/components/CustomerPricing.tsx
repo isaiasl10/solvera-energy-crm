@@ -30,6 +30,9 @@ export default function CustomerPricing({
   const { options: financingOptions } = useFinancingOptions();
 
   const [customer, setCustomer] = useState<any>(null);
+  const [customerFullName, setCustomerFullName] = useState("");
+  const [customerEmail, setCustomerEmail] = useState("");
+  const [customerPhone, setCustomerPhone] = useState("");
   const [proposalDraft, setProposalDraft] = useState<any>({});
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
     customer: true,
@@ -53,6 +56,11 @@ export default function CustomerPricing({
         .maybeSingle();
 
       setCustomer(data);
+      if (data) {
+        setCustomerFullName(data.full_name || "");
+        setCustomerEmail(data.email || "");
+        setCustomerPhone(data.phone || "");
+      }
       setProposalDraft(proposal);
     })();
   }, [proposal]);
@@ -196,9 +204,9 @@ export default function CustomerPricing({
                 Full Name
               </label>
               <input
-                value={customer?.full_name ?? ""}
-                onChange={(e) => setCustomer((c: any) => ({ ...c, full_name: e.target.value }))}
-                placeholder="Enter customer name"
+                value={customerFullName}
+                onChange={(e) => setCustomerFullName(e.target.value)}
+                placeholder="Customer full name"
                 style={{
                   width: "100%",
                   padding: "10px 12px",
@@ -213,13 +221,13 @@ export default function CustomerPricing({
 
             <div>
               <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#374151", marginBottom: 8 }}>
-                Email Address
+                Email
               </label>
               <input
                 type="email"
-                value={customer?.email ?? ""}
-                onChange={(e) => setCustomer((c: any) => ({ ...c, email: e.target.value }))}
-                placeholder="customer@example.com"
+                value={customerEmail}
+                onChange={(e) => setCustomerEmail(e.target.value)}
+                placeholder="customer@email.com"
                 style={{
                   width: "100%",
                   padding: "10px 12px",
@@ -234,12 +242,12 @@ export default function CustomerPricing({
 
             <div>
               <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#374151", marginBottom: 8 }}>
-                Phone Number
+                Phone
               </label>
               <input
                 type="tel"
-                value={customer?.phone ?? ""}
-                onChange={(e) => setCustomer((c: any) => ({ ...c, phone: e.target.value }))}
+                value={customerPhone}
+                onChange={(e) => setCustomerPhone(e.target.value)}
                 placeholder="(555) 123-4567"
                 style={{
                   width: "100%",
@@ -260,9 +268,9 @@ export default function CustomerPricing({
               await supabase
                 .from("customers")
                 .update({
-                  full_name: customer.full_name,
-                  email: customer.email,
-                  phone: customer.phone,
+                  full_name: customerFullName,
+                  email: customerEmail,
+                  phone: customerPhone,
                 })
                 .eq("id", customer.id);
             }}
