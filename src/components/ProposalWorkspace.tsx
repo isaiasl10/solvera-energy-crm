@@ -918,6 +918,11 @@ export default function ProposalWorkspace({
   const toolModeRef = useRef<ToolMode>("none");
   const selectedRoofIdRef = useRef<string | null>(null);
   const selectedPanelModelIdRef = useRef<string | null>(null);
+  const roofPlanesRef = useRef<RoofPlaneRow[]>([]);
+
+  useEffect(() => {
+    roofPlanesRef.current = roofPlanes;
+  }, [roofPlanes]);
 
   useEffect(() => {
     toolModeRef.current = toolMode;
@@ -1433,27 +1438,33 @@ export default function ProposalWorkspace({
 
         if (currentToolMode === "fill-roof") {
           // Determine which roof plane was clicked
-          const clickedRoof = roofPlanes.find((roof) => {
+          const currentRoofPlanes = roofPlanesRef.current;
+          const clickedRoof = currentRoofPlanes.find((roof) => {
             return isPointInPolygon({ lat, lng }, roof.path);
           });
 
           if (clickedRoof && currentPanelModelId) {
             console.log("Filling roof plane:", clickedRoof.id);
-            setSelectedRoofId(clickedRoof.id);
-            // Trigger auto-fill for this roof
-            setTimeout(() => {
-              const roof = roofPlanes.find(r => r.id === clickedRoof.id);
-              if (roof) {
-                fillRoofWithPanels(roof);
-              }
-            }, 100);
+            fillRoofWithPanels(clickedRoof);
             setToolMode("none");
+          } else {
+            console.log("No roof plane found at click location or no panel model selected");
           }
         } else if (currentToolMode === "add-panel") {
-          if (currentRoofId && currentPanelModelId) {
-            addPanelAt(lat, lng);
+          if (currentPanelModelId) {
+            // Find which roof plane was clicked
+            const currentRoofPlanes = roofPlanesRef.current;
+            const clickedRoof = currentRoofPlanes.find((roof) => {
+              return isPointInPolygon({ lat, lng }, roof.path);
+            });
+
+            if (clickedRoof) {
+              addPanelAt(lat, lng, clickedRoof.id);
+            } else {
+              console.log("MAP CLICK: Clicked outside of any roof plane");
+            }
           } else {
-            console.log("MAP CLICK: Missing roofId or panelModelId for add-panel");
+            console.log("MAP CLICK: Missing panelModelId for add-panel");
           }
         } else if (currentToolMode === "circle" || currentToolMode === "rect" || currentToolMode === "tree") {
           setDrawingStart((prev) => {
@@ -1954,24 +1965,14 @@ export default function ProposalWorkspace({
     }
   };
 
-  const addPanelAt = (lat: number, lng: number) => {
-    if (!selectedRoofId || !selectedPanelModelId) return;
-
-    const roof = roofPlanes.find((r) => r.id === selectedRoofId);
-    if (!roof) return;
-
-    const point = { lat, lng };
-    const isInside = isPointInPolygon(point, roof.path);
-
-    if (!isInside) {
-      alert("Panel must be placed within the selected roof plane");
-      return;
-    }
+  const addPanelAt = (lat: number, lng: number, roofPlaneId?: string) => {
+    const roofId = roofPlaneId || selectedRoofId;
+    if (!roofId || !selectedPanelModelId) return;
 
     const newPanel = {
       id: `temp-${Date.now()}-${Math.random()}`,
       proposal_id: proposalId,
-      roof_plane_id: selectedRoofId,
+      roof_plane_id: roofId,
       panel_model_id: selectedPanelModelId,
       center_lat: lat,
       center_lng: lng,
@@ -3594,6 +3595,84 @@ export default function ProposalWorkspace({
         </div>
       )}
     </div>
+    );
+  };
+
+  const renderEnergyTab = () => {
+    return (
+      <div style={{ padding: 20, maxWidth: 1200, margin: "0 auto" }}>
+        <div style={{ background: "#fff", borderRadius: 12, padding: 24, boxShadow: "0 1px 3px rgba(0,0,0,0.1)" }}>
+          <div style={{ fontSize: 18, fontWeight: 600, color: "#111827", marginBottom: 16 }}>
+            Energy Usage & Production
+          </div>
+          <div style={{ color: "#6b7280", fontSize: 14 }}>
+            Energy analysis and production calculations will be displayed here.
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const renderPaymentsTab = () => {
+    const { financingOptions } = useFinancingOptions();
+
+    return (
+      <div style={{ padding: 20, maxWidth: 1200, margin: "0 auto" }}>
+        <div style={{ background: "#fff", borderRadius: 12, padding: 24, boxShadow: "0 1px 3px rgba(0,0,0,0.1)" }}>
+          <div style={{ fontSize: 18, fontWeight: 600, color: "#111827", marginBottom: 16 }}>
+            Payment Options
+          </div>
+
+          {financingOptions && financingOptions.length > 0 ? (
+            <div style={{ display: "grid", gap: 16 }}>
+              {financingOptions.map((option: any) => (
+                <div key={option.id} style={{ padding: 16, border: "1px solid #e5e7eb", borderRadius: 8 }}>
+                  <div style={{ fontSize: 16, fontWeight: 600, color: "#111827", marginBottom: 8 }}>
+                    {option.lender_name} - {option.product_name}
+                  </div>
+                  <div style={{ fontSize: 14, color: "#6b7280" }}>
+                    Term: {option.term_years} years | APR: {option.apr}%
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div style={{ color: "#6b7280", fontSize: 14 }}>
+              No financing options configured. Contact administrator to set up payment options.
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
+
+  const renderOnlineProposalTab = () => {
+    return (
+      <div style={{ padding: 20, maxWidth: 1200, margin: "0 auto" }}>
+        <div style={{ background: "#fff", borderRadius: 12, padding: 24, boxShadow: "0 1px 3px rgba(0,0,0,0.1)" }}>
+          <div style={{ fontSize: 18, fontWeight: 600, color: "#111827", marginBottom: 16 }}>
+            Online Proposal
+          </div>
+          <div style={{ color: "#6b7280", fontSize: 14 }}>
+            Interactive online proposal preview will be displayed here.
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const renderPDFProposalTab = () => {
+    return (
+      <div style={{ padding: 20, maxWidth: 1200, margin: "0 auto" }}>
+        <div style={{ background: "#fff", borderRadius: 12, padding: 24, boxShadow: "0 1px 3px rgba(0,0,0,0.1)" }}>
+          <div style={{ fontSize: 18, fontWeight: 600, color: "#111827", marginBottom: 16 }}>
+            PDF Proposal
+          </div>
+          <div style={{ color: "#6b7280", fontSize: 14 }}>
+            Generate and download PDF proposal documents here.
+          </div>
+        </div>
+      </div>
     );
   };
 
