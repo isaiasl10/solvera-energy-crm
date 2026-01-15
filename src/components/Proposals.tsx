@@ -17,6 +17,8 @@ export default function Proposals() {
   const [showNewProposalModal, setShowNewProposalModal] = useState(false);
   const [newAddress, setNewAddress] = useState("");
   const [selectedPlace, setSelectedPlace] = useState<SelectedPlace | null>(null);
+  const [isCreating, setIsCreating] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const addressInputRef = useRef<HTMLInputElement>(null);
   const autocompleteRef = useRef<google.maps.places.Autocomplete | null>(null);
 
@@ -43,15 +45,22 @@ export default function Proposals() {
 
       autocomplete.addListener('place_changed', () => {
         const place = autocomplete.getPlace();
+        console.log('Place changed:', place);
 
         if (place.geometry && place.geometry.location) {
-          setSelectedPlace({
+          const placeData = {
             placeId: place.place_id || '',
             formattedAddress: place.formatted_address || '',
             lat: place.geometry.location.lat(),
             lng: place.geometry.location.lng(),
-          });
+          };
+          console.log('Setting selected place:', placeData);
+          setSelectedPlace(placeData);
           setNewAddress(place.formatted_address || '');
+          setError(null);
+        } else {
+          console.warn('Place selected but no geometry:', place);
+          setError('Please select a valid address from the dropdown');
         }
       });
 
@@ -76,41 +85,74 @@ export default function Proposals() {
   };
 
   const createNewProposal = async () => {
-    if (!newAddress.trim() || !selectedPlace) return;
+    console.log('Create proposal clicked', { newAddress, selectedPlace });
 
-    const { data: customerData } = await supabase
-      .from("customers")
-      .insert({
-        name: "New Customer",
-        email: "",
-        phone: "",
-        address: selectedPlace.formattedAddress,
-      })
-      .select()
-      .single();
+    if (!newAddress.trim() || !selectedPlace) {
+      console.log('Validation failed', { hasAddress: !!newAddress.trim(), hasPlace: !!selectedPlace });
+      setError('Please select an address from the dropdown');
+      return;
+    }
 
-    if (customerData) {
-      const { data: proposalData } = await supabase
-        .from("proposals")
+    setIsCreating(true);
+    setError(null);
+
+    try {
+      console.log('Creating customer...');
+      const { data: customerData, error: customerError } = await supabase
+        .from("customers")
         .insert({
-          customer_id: customerData.id,
-          place_id: selectedPlace.placeId,
-          formatted_address: selectedPlace.formattedAddress,
-          lat: selectedPlace.lat,
-          lng: selectedPlace.lng,
-          status: "draft",
+          name: "New Customer",
+          email: "",
+          phone: "",
+          address: selectedPlace.formattedAddress,
         })
         .select()
         .single();
 
-      if (proposalData) {
-        await loadProposals();
-        setSelectedProposalId(proposalData.id);
-        setShowNewProposalModal(false);
-        setNewAddress("");
-        setSelectedPlace(null);
-        autocompleteRef.current = null;
+      if (customerError) {
+        console.error('Customer creation error:', customerError);
+        throw customerError;
       }
+
+      console.log('Customer created:', customerData);
+
+      if (customerData) {
+        console.log('Creating proposal...');
+        const { data: proposalData, error: proposalError } = await supabase
+          .from("proposals")
+          .insert({
+            customer_id: customerData.id,
+            place_id: selectedPlace.placeId,
+            formatted_address: selectedPlace.formattedAddress,
+            lat: selectedPlace.lat,
+            lng: selectedPlace.lng,
+            status: "draft",
+          })
+          .select()
+          .single();
+
+        if (proposalError) {
+          console.error('Proposal creation error:', proposalError);
+          throw proposalError;
+        }
+
+        console.log('Proposal created:', proposalData);
+
+        if (proposalData) {
+          await loadProposals();
+          setSelectedProposalId(proposalData.id);
+          setShowNewProposalModal(false);
+          setNewAddress("");
+          setSelectedPlace(null);
+          setError(null);
+          autocompleteRef.current = null;
+        }
+      }
+    } catch (err: any) {
+      console.error('Error creating proposal:', err);
+      setError(err.message || 'Failed to create proposal. Please try again.');
+    } finally {
+      setIsCreating(false);
     }
   };
 
@@ -118,6 +160,8 @@ export default function Proposals() {
     setShowNewProposalModal(false);
     setNewAddress("");
     setSelectedPlace(null);
+    setError(null);
+    setIsCreating(false);
     autocompleteRef.current = null;
   };
 
@@ -256,6 +300,11 @@ export default function Proposals() {
                   Please select an address from the dropdown suggestions
                 </div>
               )}
+              {error && (
+                <div style={{ fontSize: 12, color: "#ef4444", marginTop: 6, padding: 8, background: "#fee", borderRadius: 4 }}>
+                  {error}
+                </div>
+              )}
             </div>
 
             <div style={{ display: "flex", gap: 12, justifyContent: "flex-end" }}>
@@ -276,19 +325,19 @@ export default function Proposals() {
               </button>
               <button
                 onClick={createNewProposal}
-                disabled={!selectedPlace}
+                disabled={!selectedPlace || isCreating}
                 style={{
                   padding: "10px 20px",
-                  background: selectedPlace ? "#f97316" : "#e5e7eb",
-                  color: selectedPlace ? "#fff" : "#9ca3af",
+                  background: selectedPlace && !isCreating ? "#f97316" : "#e5e7eb",
+                  color: selectedPlace && !isCreating ? "#fff" : "#9ca3af",
                   border: "none",
                   borderRadius: 6,
-                  cursor: selectedPlace ? "pointer" : "not-allowed",
+                  cursor: selectedPlace && !isCreating ? "pointer" : "not-allowed",
                   fontWeight: 600,
                   fontSize: 13,
                 }}
               >
-                Create Proposal
+                {isCreating ? "Creating..." : "Create Proposal"}
               </button>
             </div>
           </div>
