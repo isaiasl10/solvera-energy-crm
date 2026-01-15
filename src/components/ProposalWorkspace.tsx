@@ -737,6 +737,7 @@ export default function ProposalWorkspace({
   const [customer, setCustomer] = useState<any>(null);
   const [proposal, setProposal] = useState<any>(null);
   const [proposalDraft, setProposalDraft] = useState<any>({});
+  const [salesRep, setSalesRep] = useState<any>(null);
 
   const [draftCustomer, setDraftCustomer] = useState<any>({ full_name: "", email: "", phone: "" });
   const didInitDraftRef = useRef(false);
@@ -1056,6 +1057,25 @@ export default function ProposalWorkspace({
 
           if (customerData) {
             setCustomer(customerData);
+
+            if (customerData.sales_rep_id) {
+              const { data: salesRepData } = await supabase
+                .from("app_users")
+                .select("ppw_redline")
+                .eq("id", customerData.sales_rep_id)
+                .maybeSingle();
+
+              if (salesRepData) {
+                setSalesRep(salesRepData);
+
+                if (!proposalData.price_per_watt && salesRepData.ppw_redline) {
+                  setProposalDraft((prev: any) => ({
+                    ...prev,
+                    price_per_watt: salesRepData.ppw_redline,
+                  }));
+                }
+              }
+            }
           }
         }
 
