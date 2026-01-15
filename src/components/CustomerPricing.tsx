@@ -309,7 +309,11 @@ export default function CustomerPricing({
 
           <button
             onClick={async () => {
-              if (!customer?.id) return;
+              if (!customer?.id) {
+                alert("No customer loaded");
+                return;
+              }
+
               const { error } = await supabase
                 .from("customers")
                 .update({
@@ -320,6 +324,7 @@ export default function CustomerPricing({
                 .eq("id", customer.id);
 
               if (error) {
+                console.error("Save error:", error);
                 alert("Failed to save: " + error.message);
               } else {
                 alert("Customer information saved successfully!");
@@ -388,6 +393,11 @@ export default function CustomerPricing({
 
           <button
             onClick={async () => {
+              if (!proposalId) {
+                alert("No proposal selected");
+                return;
+              }
+
               const { error } = await supabase
                 .from("proposals")
                 .update({
@@ -396,6 +406,7 @@ export default function CustomerPricing({
                 .eq("id", proposalId);
 
               if (error) {
+                console.error("Save error:", error);
                 alert("Failed to save: " + error.message);
               } else {
                 alert("Electricity usage saved successfully!");
@@ -466,6 +477,11 @@ export default function CustomerPricing({
 
           <button
             onClick={async () => {
+              if (!proposalId) {
+                alert("No proposal selected");
+                return;
+              }
+
               const { error } = await supabase
                 .from("proposals")
                 .update({
@@ -475,6 +491,7 @@ export default function CustomerPricing({
                 .eq("id", proposalId);
 
               if (error) {
+                console.error("Save error:", error);
                 alert("Failed to save: " + error.message);
               } else {
                 alert("Electricity rate saved successfully!");
@@ -589,13 +606,25 @@ export default function CustomerPricing({
 
           <button
             onClick={async () => {
-              await supabase
+              if (!proposalId) {
+                alert("No proposal selected");
+                return;
+              }
+
+              const { error } = await supabase
                 .from("proposals")
                 .update({
                   price_per_watt: draft.pricePerWatt,
                 })
                 .eq("id", proposalId);
-              await refresh();
+
+              if (error) {
+                console.error("Save error:", error);
+                alert("Failed to save: " + error.message);
+              } else {
+                alert("Price per watt saved successfully!");
+                await refresh();
+              }
             }}
             style={{
               marginTop: 16,
@@ -658,14 +687,26 @@ export default function CustomerPricing({
 
           <button
             onClick={async () => {
-              await supabase
+              if (!proposalId) {
+                alert("No proposal selected");
+                return;
+              }
+
+              const { error } = await supabase
                 .from("proposals")
                 .update({
                   finance_type: draft.financeType,
                   finance_option_id: draft.financeOptionId,
                 })
                 .eq("id", proposalId);
-              await refresh();
+
+              if (error) {
+                console.error("Save error:", error);
+                alert("Failed to save: " + error.message);
+              } else {
+                alert("Financing option saved successfully!");
+                await refresh();
+              }
             }}
             style={{
               marginTop: 16,
@@ -752,7 +793,12 @@ export default function CustomerPricing({
 
             <button
               onClick={async () => {
-                await supabase
+                if (!proposalId) {
+                  alert("No proposal selected");
+                  return;
+                }
+
+                const { error } = await supabase
                   .from("proposals")
                   .update({
                     cash_down_payment: draft.cashDownPayment,
@@ -760,7 +806,14 @@ export default function CustomerPricing({
                     cash_final_payment: draft.cashFinalPayment,
                   })
                   .eq("id", proposalId);
-                await refresh();
+
+                if (error) {
+                  console.error("Save error:", error);
+                  alert("Failed to save: " + error.message);
+                } else {
+                  alert("Payment schedule saved successfully!");
+                  await refresh();
+                }
               }}
               style={{
                 marginTop: 16,
