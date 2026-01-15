@@ -642,8 +642,8 @@ export default function ProposalWorkspace({
               Full Name
             </label>
             <input
-              value={customer?.name ?? ""}
-              onChange={(e) => setCustomer((c: any) => ({ ...c, name: e.target.value }))}
+              value={customer?.full_name ?? ""}
+              onChange={(e) => setCustomer((c: any) => ({ ...c, full_name: e.target.value }))}
               placeholder="Enter customer name"
               style={{
                 width: "100%",
@@ -706,7 +706,7 @@ export default function ProposalWorkspace({
             await supabase
               .from("customers")
               .update({
-                name: customer.name,
+                full_name: customer.full_name,
                 email: customer.email,
                 phone: customer.phone,
               })

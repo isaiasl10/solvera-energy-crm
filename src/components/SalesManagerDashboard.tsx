@@ -373,9 +373,9 @@ export default function SalesManagerDashboard() {
 
       return {
         customer_id: commission.customer_id,
-        customer_name: customer?.name || 'Unknown',
+        customer_name: customer?.full_name || 'Unknown',
         sales_rep_id: commission.sales_rep_id,
-        sales_rep_name: rep?.name || 'Unknown',
+        sales_rep_name: rep?.full_name || 'Unknown',
         system_size_kw: systemSizeKw,
         override_per_watt: overridePerWatt,
         total_override_amount: totalOverride,

@@ -210,7 +210,7 @@ export default function Proposals() {
               <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
                 <FileText size={14} color="#f97316" />
                 <div style={{ fontSize: 13, fontWeight: 600, color: "#111827" }}>
-                  {proposal.customers?.name || "Unnamed Customer"}
+                  {proposal.customers?.full_name || "Unnamed Customer"}
                 </div>
               </div>
               <div style={{ fontSize: 11, color: "#6b7280", marginBottom: 4 }}>
