@@ -945,7 +945,7 @@ export default function ProposalWorkspace({
   const [mapsError, setMapsError] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [mapsLoading, setMapsLoading] = useState(true);
-  const [showRoofPlanes, setShowRoofPlanes] = useState(false);
+  const [showRoofPlanes, setShowRoofPlanes] = useState(true);
   const [drawingStart, setDrawingStart] = useState<{ lat: number; lng: number } | null>(null);
   const [previewShape, setPreviewShape] = useState<any>(null);
   const [viewMode, setViewMode] = useState<"map" | "roof">("roof");
@@ -3480,22 +3480,60 @@ export default function ProposalWorkspace({
                 {roofPlanes.map((plane, idx) => (
                   <div
                     key={plane.id}
-                    onClick={() => setSelectedRoofId(plane.id)}
                     style={{
                       padding: "10px 12px",
                       background: selectedRoofId === plane.id ? "#dbeafe" : "#ffffff",
                       border: "1px solid " + (selectedRoofId === plane.id ? "#3b82f6" : "#e2e8f0"),
                       borderRadius: 6,
-                      cursor: "pointer",
                       display: "flex",
                       justifyContent: "space-between",
                       alignItems: "center",
                       transition: "all 0.2s",
                     }}
                   >
-                    <span style={{ fontSize: 12, fontWeight: 600, color: selectedRoofId === plane.id ? "#1e40af" : "#475569" }}>
+                    <span
+                      onClick={() => setSelectedRoofId(plane.id)}
+                      style={{
+                        fontSize: 12,
+                        fontWeight: 600,
+                        color: selectedRoofId === plane.id ? "#1e40af" : "#475569",
+                        cursor: "pointer",
+                        flex: 1,
+                      }}
+                    >
                       Plane {idx + 1}
                     </span>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (confirm(`Delete Roof Plane ${idx + 1}? This will also delete all panels on this plane.`)) {
+                          deleteRoof(plane.id);
+                        }
+                      }}
+                      title="Delete roof plane"
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        padding: 6,
+                        background: "rgba(239, 68, 68, 0.1)",
+                        border: "1px solid rgba(239, 68, 68, 0.3)",
+                        borderRadius: 4,
+                        cursor: "pointer",
+                        color: "#ef4444",
+                        transition: "all 0.2s",
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.background = "#ef4444";
+                        e.currentTarget.style.color = "#ffffff";
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.background = "rgba(239, 68, 68, 0.1)";
+                        e.currentTarget.style.color = "#ef4444";
+                      }}
+                    >
+                      <Trash2 size={14} />
+                    </button>
                   </div>
                 ))}
               </div>
