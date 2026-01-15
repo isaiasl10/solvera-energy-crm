@@ -1424,7 +1424,8 @@ export default function ProposalWorkspace({
         });
 
         if (currentToolMode === "none") {
-          console.log("MAP CLICK: Tool mode is none, ignoring");
+          console.log("MAP CLICK: Tool mode is none, deselecting obstruction if any");
+          setSelectedObstruction(null);
           return;
         }
 
@@ -1467,6 +1468,7 @@ export default function ProposalWorkspace({
                   rotation_deg: null,
                 };
                 setObstructions((obsPrev) => [...obsPrev, newObstruction]);
+                setSelectedObstruction(newObstruction);
               } else {
                 // For rect and tree, use the distance as approximate width/height
                 const width = Math.abs((lng - prev.lng) * R * Math.cos(prev.lat * Math.PI / 180) / R);
@@ -1487,6 +1489,7 @@ export default function ProposalWorkspace({
                   rotation_deg: 0,
                 };
                 setObstructions((obsPrev) => [...obsPrev, newObstruction]);
+                setSelectedObstruction(newObstruction);
               }
 
               // Clear preview shape
@@ -1496,6 +1499,9 @@ export default function ProposalWorkspace({
                 }
                 return null;
               });
+
+              // Reset tool mode to prevent additional placements
+              setToolMode("none");
 
               // Reset drawing
               return null;
@@ -3209,6 +3215,145 @@ export default function ProposalWorkspace({
             zIndex: 999,
           }}>
             Click on the map to complete the {toolMode === "circle" ? "circle" : toolMode === "rect" ? "rectangle" : "tree"} obstruction
+          </div>
+        )}
+
+        {selectedObstruction && (
+          <div style={{
+            position: "absolute",
+            bottom: 20,
+            left: 20,
+            background: "#fff",
+            padding: 16,
+            borderRadius: 8,
+            boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
+            minWidth: 280,
+            zIndex: 999,
+          }}>
+            <div style={{ fontSize: 13, fontWeight: 600, color: "#111827", marginBottom: 12, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <span>Obstruction Selected</span>
+              <button
+                onClick={() => setSelectedObstruction(null)}
+                style={{
+                  background: "none",
+                  border: "none",
+                  cursor: "pointer",
+                  color: "#6b7280",
+                  fontSize: 18,
+                  lineHeight: 1,
+                }}
+              >
+                ×
+              </button>
+            </div>
+            <div style={{ fontSize: 12, color: "#6b7280", marginBottom: 12 }}>
+              Type: <span style={{ fontWeight: 600, color: "#111827" }}>{selectedObstruction.type}</span>
+            </div>
+            {selectedObstruction.type === "circle" ? (
+              <div style={{ marginBottom: 12 }}>
+                <label style={{ fontSize: 11, fontWeight: 600, color: "#6b7280", display: "block", marginBottom: 4 }}>Radius (ft)</label>
+                <input
+                  type="number"
+                  step="0.5"
+                  min="1"
+                  value={selectedObstruction.radius_ft ?? 5}
+                  onChange={(e) => {
+                    const newRadius = Math.max(1, Number(e.target.value));
+                    setObstructions((prev) =>
+                      prev.map((o) =>
+                        o.id === selectedObstruction.id
+                          ? { ...o, radius_ft: newRadius }
+                          : o
+                      )
+                    );
+                    setSelectedObstruction((prev) => prev ? { ...prev, radius_ft: newRadius } : null);
+                  }}
+                  style={{
+                    width: "100%",
+                    padding: "6px 8px",
+                    border: "1px solid #d1d5db",
+                    borderRadius: 4,
+                    fontSize: 12,
+                  }}
+                />
+              </div>
+            ) : (
+              <>
+                <div style={{ marginBottom: 12 }}>
+                  <label style={{ fontSize: 11, fontWeight: 600, color: "#6b7280", display: "block", marginBottom: 4 }}>Width (ft)</label>
+                  <input
+                    type="number"
+                    step="0.5"
+                    min="1"
+                    value={selectedObstruction.width_ft ?? 5}
+                    onChange={(e) => {
+                      const newWidth = Math.max(1, Number(e.target.value));
+                      setObstructions((prev) =>
+                        prev.map((o) =>
+                          o.id === selectedObstruction.id
+                            ? { ...o, width_ft: newWidth }
+                            : o
+                        )
+                      );
+                      setSelectedObstruction((prev) => prev ? { ...prev, width_ft: newWidth } : null);
+                    }}
+                    style={{
+                      width: "100%",
+                      padding: "6px 8px",
+                      border: "1px solid #d1d5db",
+                      borderRadius: 4,
+                      fontSize: 12,
+                    }}
+                  />
+                </div>
+                <div style={{ marginBottom: 12 }}>
+                  <label style={{ fontSize: 11, fontWeight: 600, color: "#6b7280", display: "block", marginBottom: 4 }}>Height (ft)</label>
+                  <input
+                    type="number"
+                    step="0.5"
+                    min="1"
+                    value={selectedObstruction.height_ft ?? 5}
+                    onChange={(e) => {
+                      const newHeight = Math.max(1, Number(e.target.value));
+                      setObstructions((prev) =>
+                        prev.map((o) =>
+                          o.id === selectedObstruction.id
+                            ? { ...o, height_ft: newHeight }
+                            : o
+                        )
+                      );
+                      setSelectedObstruction((prev) => prev ? { ...prev, height_ft: newHeight } : null);
+                    }}
+                    style={{
+                      width: "100%",
+                      padding: "6px 8px",
+                      border: "1px solid #d1d5db",
+                      borderRadius: 4,
+                      fontSize: 12,
+                    }}
+                  />
+                </div>
+              </>
+            )}
+            <button
+              onClick={() => {
+                deleteObstructionById(selectedObstruction.id);
+                setSelectedObstruction(null);
+              }}
+              style={{
+                width: "100%",
+                padding: "8px 12px",
+                background: "#dc2626",
+                color: "#fff",
+                border: "none",
+                borderRadius: 4,
+                cursor: "pointer",
+                fontWeight: 600,
+                fontSize: 12,
+              }}
+            >
+              Delete Obstruction
+            </button>
           </div>
         )}
 
