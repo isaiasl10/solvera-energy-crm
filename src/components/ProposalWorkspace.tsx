@@ -42,9 +42,9 @@ const CustomerFormInputs = React.memo(({
   console.log("CustomerFormInputs render", renderCount.current);
 
   return (
-    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 16 }}>
+    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
       <div>
-        <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#374151", marginBottom: 8 }}>
+        <label style={{ display: "block", fontSize: 11, fontWeight: 600, color: "#374151", marginBottom: 6 }}>
           Full Name
         </label>
         <input
@@ -58,18 +58,18 @@ const CustomerFormInputs = React.memo(({
           placeholder="Enter customer name"
           style={{
             width: "100%",
-            padding: "10px 12px",
+            padding: "7px 10px",
             background: "#fff",
             border: "1px solid #d1d5db",
-            borderRadius: 6,
-            fontSize: 14,
+            borderRadius: 4,
+            fontSize: 13,
             color: "#111827",
           }}
         />
       </div>
 
       <div>
-        <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#374151", marginBottom: 8 }}>
+        <label style={{ display: "block", fontSize: 11, fontWeight: 600, color: "#374151", marginBottom: 6 }}>
           Email Address
         </label>
         <input
@@ -80,18 +80,18 @@ const CustomerFormInputs = React.memo(({
           placeholder="customer@example.com"
           style={{
             width: "100%",
-            padding: "10px 12px",
+            padding: "7px 10px",
             background: "#fff",
             border: "1px solid #d1d5db",
-            borderRadius: 6,
-            fontSize: 14,
+            borderRadius: 4,
+            fontSize: 13,
             color: "#111827",
           }}
         />
       </div>
 
       <div>
-        <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#374151", marginBottom: 8 }}>
+        <label style={{ display: "block", fontSize: 11, fontWeight: 600, color: "#374151", marginBottom: 6 }}>
           Phone Number
         </label>
         <input
@@ -102,11 +102,11 @@ const CustomerFormInputs = React.memo(({
           placeholder="(555) 123-4567"
           style={{
             width: "100%",
-            padding: "10px 12px",
+            padding: "7px 10px",
             background: "#fff",
             border: "1px solid #d1d5db",
-            borderRadius: 6,
-            fontSize: 14,
+            borderRadius: 4,
+            fontSize: 13,
             color: "#111827",
           }}
         />
@@ -150,19 +150,19 @@ const ElectricityUsageInputs = React.memo(({
   console.log("ElectricityUsageInputs render", renderCount.current);
 
   return (
-    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
       <div>
-        <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#374151", marginBottom: 8 }}>
+        <label style={{ display: "block", fontSize: 11, fontWeight: 600, color: "#374151", marginBottom: 6 }}>
           Data source
         </label>
         <select
           style={{
             width: "100%",
-            padding: "10px 12px",
+            padding: "7px 10px",
             background: "#fff",
             border: "1px solid #d1d5db",
-            borderRadius: 6,
-            fontSize: 14,
+            borderRadius: 4,
+            fontSize: 13,
             color: "#111827",
           }}
         >
@@ -173,7 +173,7 @@ const ElectricityUsageInputs = React.memo(({
       </div>
 
       <div>
-        <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#374151", marginBottom: 8 }}>
+        <label style={{ display: "block", fontSize: 11, fontWeight: 600, color: "#374151", marginBottom: 6 }}>
           Annual kWh
         </label>
         <input
@@ -184,11 +184,11 @@ const ElectricityUsageInputs = React.memo(({
           placeholder="23000"
           style={{
             width: "100%",
-            padding: "10px 12px",
+            padding: "7px 10px",
             background: "#fff",
             border: "1px solid #d1d5db",
-            borderRadius: 6,
-            fontSize: 14,
+            borderRadius: 4,
+            fontSize: 13,
             color: "#111827",
           }}
         />
@@ -784,13 +784,13 @@ export default function ProposalWorkspace({
   }, []);
 
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
-    customer: true,
-    electricity: true,
-    rate: false,
-    system: true,
-    pricing: true,
-    financing: true,
-    payment: true,
+    customer: false,
+    electricity: false,
+    "system-specs": false,
+    "system-details": false,
+    pricing: false,
+    adders: false,
+    financing: false,
   });
   const [activeTab, setActiveTab] = useState<string>("manage");
   const lastLoadedProposalId = useRef<string | null>(null);
@@ -943,10 +943,14 @@ export default function ProposalWorkspace({
       const currentFinal = proposalDraft.cash_final_payment ?? proposal?.cash_final_payment ?? 0;
 
       const expectedDeposit = 2000;
-      const expectedSecond = Math.max(0, systemSummary.totalContractPrice - 3000);
+      const expectedSecond = Math.round(Math.max(0, systemSummary.totalContractPrice - 3000) * 100) / 100;
       const expectedFinal = 1000;
 
-      if (currentDeposit !== expectedDeposit || currentSecond !== expectedSecond || currentFinal !== expectedFinal) {
+      const depositsMatch = Math.abs(currentDeposit - expectedDeposit) < 0.01;
+      const secondMatch = Math.abs(currentSecond - expectedSecond) < 0.01;
+      const finalMatch = Math.abs(currentFinal - expectedFinal) < 0.01;
+
+      if (!depositsMatch || !secondMatch || !finalMatch) {
         setProposalDraft((p: any) => ({
           ...p,
           cash_deposit: expectedDeposit,
@@ -1806,7 +1810,7 @@ export default function ProposalWorkspace({
   }) => {
     const isExpanded = expandedSections[id];
     return (
-      <div style={{ background: "#fff", borderRadius: 8, border: "1px solid #e5e7eb", marginBottom: 12, overflow: "hidden" }}>
+      <div style={{ background: "#fff", borderRadius: 6, border: "1px solid #e5e7eb", marginBottom: 8, overflow: "hidden" }}>
         <button
           onClick={() => toggleSection(id)}
           style={{
@@ -1814,20 +1818,21 @@ export default function ProposalWorkspace({
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
-            padding: "16px 20px",
-            background: "transparent",
+            padding: "12px 16px",
+            background: isExpanded ? "#f9fafb" : "#fff",
             border: "none",
             cursor: "pointer",
             borderBottom: isExpanded ? "1px solid #e5e7eb" : "none",
+            transition: "all 0.2s ease",
           }}
         >
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <Icon size={18} style={{ color: "#111827" }} />
-            <span style={{ fontWeight: 600, fontSize: 15, color: "#111827" }}>{title}</span>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <Icon size={16} style={{ color: "#6b7280" }} />
+            <span style={{ fontWeight: 600, fontSize: 13, color: "#111827" }}>{title}</span>
           </div>
-          {isExpanded ? <ChevronUp size={18} color="#6b7280" /> : <ChevronDown size={18} color="#6b7280" />}
+          {isExpanded ? <ChevronUp size={16} color="#9ca3af" /> : <ChevronDown size={16} color="#9ca3af" />}
         </button>
-        {isExpanded && <div style={{ padding: "16px 20px" }}>{children}</div>}
+        {isExpanded && <div style={{ padding: "16px" }}>{children}</div>}
       </div>
     );
   };
@@ -1836,12 +1841,147 @@ export default function ProposalWorkspace({
     const panelModel = panelModels.find((m) => m.id === selectedPanelModelId);
 
     return (
-      <div style={{ padding: 20 }}>
+      <div style={{ padding: 16, maxWidth: 1400, margin: "0 auto" }}>
         <div style={{ position: "fixed", bottom: 10, left: 10, zIndex: 9999, background: "#fff", padding: 8, border: "1px solid #000", borderRadius: 4, fontSize: 11 }}>
           dirty: {String(isDirtyRef.current)} | init: {String(didInitDraftRef.current)}
         </div>
 
-        <CollapsibleSection id="system-details" icon={Zap} title="System Details">
+        <CollapsibleSection id="customer" icon={User} title="Customer Information">
+        <form onSubmit={(e) => e.preventDefault()}>
+          <CustomerFormInputs
+            initialData={draftCustomer}
+            onChange={handleCustomerChange}
+          />
+
+          <button
+            type="button"
+            onClick={async () => {
+              if (!customer?.id) return;
+              const { error } = await supabase
+                .from("customers")
+                .update(sanitizePatch({
+                  full_name: draftCustomer.full_name.trim(),
+                  email: draftCustomer.email.trim(),
+                  phone: draftCustomer.phone.trim(),
+                }))
+                .eq("id", customer.id);
+
+              if (error) {
+                console.error("Failed to save customer:", error);
+                alert("Failed to save customer information");
+              } else {
+                setCustomer((c: any) => ({ ...c, ...draftCustomer }));
+                isDirtyRef.current = false;
+                alert("Customer information saved successfully!");
+              }
+            }}
+            style={{
+              marginTop: 16,
+              background: "#f97316",
+              color: "#fff",
+              padding: "10px 20px",
+              borderRadius: 6,
+              border: "none",
+              cursor: "pointer",
+              fontWeight: 600,
+              fontSize: 13,
+            }}
+          >
+            Save Customer Information
+          </button>
+        </form>
+      </CollapsibleSection>
+
+      <CollapsibleSection id="electricity" icon={Zap} title="Electricity Usage and Rate">
+        <form onSubmit={(e) => e.preventDefault()}>
+          <ElectricityUsageInputs
+            initialData={{ annual_consumption: proposalDraft.annual_consumption ?? null }}
+            onChange={handleElectricityChange}
+          />
+
+          <div style={{ marginTop: 16 }}>
+            <ElectricityRateInputs
+              initialData={{
+                utility_company: proposalDraft.utility_company ?? null,
+                electricity_rate: proposalDraft.electricity_rate ?? null,
+              }}
+              onChange={handleElectricityRateChange}
+            />
+          </div>
+
+          <button
+            type="button"
+            onClick={async () => {
+              const { error } = await supabase
+                .from("proposals")
+                .update(sanitizePatch({
+                  annual_consumption: proposalDraft.annual_consumption ?? null,
+                  utility_company: proposalDraft.utility_company ?? null,
+                  electricity_rate: proposalDraft.electricity_rate ?? null,
+                }))
+                .eq("id", proposalId);
+
+              if (error) {
+                alert("Failed to save electricity information");
+              } else {
+                setProposal((p: any) => ({ ...p, ...proposalDraft }));
+                isDirtyRef.current = false;
+                alert("Electricity usage and rate saved successfully!");
+              }
+            }}
+            style={{
+              marginTop: 16,
+              background: "#f97316",
+              color: "#fff",
+              padding: "10px 20px",
+              borderRadius: 6,
+              border: "none",
+              cursor: "pointer",
+              fontWeight: 600,
+              fontSize: 13,
+            }}
+          >
+            Save Electricity Information
+          </button>
+        </form>
+      </CollapsibleSection>
+
+      <CollapsibleSection id="system-specs" icon={Package} title="System Specifications">
+        <div style={{ display: "grid", gap: 12 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 0", borderBottom: "1px solid #f3f4f6" }}>
+            <span style={{ fontWeight: 500, fontSize: 13, color: "#6b7280" }}>Module Type</span>
+            <span style={{ fontWeight: 600, fontSize: 13, color: "#111827", textAlign: "right" }}>
+              {selectedModel?.brand && selectedModel?.model
+                ? `${selectedModel.brand} ${selectedModel.model} (${selectedModel.watts}W)`
+                : "—"}
+            </span>
+          </div>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 0", borderBottom: "1px solid #f3f4f6" }}>
+            <span style={{ fontWeight: 500, fontSize: 13, color: "#6b7280" }}>Panel Quantity</span>
+            <span style={{ fontWeight: 700, fontSize: 15, color: "#111827" }}>{systemSummary.panelCount}</span>
+          </div>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 0", borderBottom: "1px solid #f3f4f6" }}>
+            <span style={{ fontWeight: 500, fontSize: 13, color: "#6b7280" }}>System Size</span>
+            <span style={{ fontWeight: 700, fontSize: 15, color: "#111827" }}>
+              {fmt(systemSummary.systemKw, 2)} kW
+            </span>
+          </div>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 0", borderBottom: "1px solid #f3f4f6" }}>
+            <span style={{ fontWeight: 500, fontSize: 13, color: "#6b7280" }}>Annual Production</span>
+            <span style={{ fontWeight: 700, fontSize: 15, color: "#111827" }}>
+              {fmt(systemSummary.annualProductionKwh, 0)} kWh
+            </span>
+          </div>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 0" }}>
+            <span style={{ fontWeight: 500, fontSize: 13, color: "#6b7280" }}>Offset</span>
+            <span style={{ fontWeight: 700, fontSize: 15, color: "#10b981" }}>
+              {fmt(systemSummary.offsetPercent, 1)}%
+            </span>
+          </div>
+        </div>
+      </CollapsibleSection>
+
+      <CollapsibleSection id="system-details" icon={Zap} title="System Details">
           <form onSubmit={(e) => e.preventDefault()}>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24 }}>
               <div>
@@ -2055,139 +2195,62 @@ export default function ProposalWorkspace({
           </form>
         </CollapsibleSection>
 
-        <CollapsibleSection id="customer" icon={User} title="Customer Information">
-        <form onSubmit={(e) => e.preventDefault()}>
-          <CustomerFormInputs
-            initialData={draftCustomer}
-            onChange={handleCustomerChange}
-          />
+      <CollapsibleSection id="pricing" icon={DollarSign} title="Pricing Details">
+        <PricingDetailsInputs
+          initialData={{
+            total_price: proposalDraft.total_price ?? null,
+            price_per_watt: proposalDraft.price_per_watt ?? null,
+          }}
+          onChange={handlePricingChange}
+          systemSummary={systemSummary}
+          salesRepRedline={salesRep?.ppw_redline}
+        />
 
-          <button
-            type="button"
-            onClick={async () => {
-              if (!customer?.id) return;
-              const { error } = await supabase
-                .from("customers")
-                .update(sanitizePatch({
-                  full_name: draftCustomer.full_name.trim(),
-                  email: draftCustomer.email.trim(),
-                  phone: draftCustomer.phone.trim(),
-                }))
-                .eq("id", customer.id);
+        <button
+          type="button"
+          onClick={async () => {
+            const { error } = await supabase
+              .from("proposals")
+              .update(sanitizePatch({
+                total_price: systemSummary.totalContractPrice,
+                price_per_watt: proposalDraft.price_per_watt ?? null,
+                system_price: systemSummary.baseSystemPrice,
+                cash_down_payment: systemSummary.cashDeposit,
+                cash_second_payment: systemSummary.cashProgress,
+                cash_final_payment: systemSummary.cashFinal,
+              }))
+              .eq("id", proposalId);
 
-              if (error) {
-                console.error("Failed to save customer:", error);
-                alert("Failed to save customer information");
-              } else {
-                setCustomer((c: any) => ({ ...c, ...draftCustomer }));
-                isDirtyRef.current = false;
-                alert("Customer information saved successfully!");
-              }
-            }}
-            style={{
-              marginTop: 16,
-              background: "#f97316",
-              color: "#fff",
-              padding: "10px 20px",
-              borderRadius: 6,
-              border: "none",
-              cursor: "pointer",
-              fontWeight: 600,
-              fontSize: 13,
-            }}
-          >
-            Save Customer Information
-          </button>
-        </form>
-      </CollapsibleSection>
-
-      <CollapsibleSection id="electricity" icon={Zap} title="Electricity Usage and Rate">
-        <form onSubmit={(e) => e.preventDefault()}>
-          <ElectricityUsageInputs
-            initialData={{ annual_consumption: proposalDraft.annual_consumption ?? null }}
-            onChange={handleElectricityChange}
-          />
-
-          <div style={{ marginTop: 16 }}>
-            <ElectricityRateInputs
-              initialData={{
-                utility_company: proposalDraft.utility_company ?? null,
-                electricity_rate: proposalDraft.electricity_rate ?? null,
-              }}
-              onChange={handleElectricityRateChange}
-            />
-          </div>
-
-          <button
-            type="button"
-            onClick={async () => {
-              const { error } = await supabase
-                .from("proposals")
-                .update(sanitizePatch({
-                  annual_consumption: proposalDraft.annual_consumption ?? null,
-                  utility_company: proposalDraft.utility_company ?? null,
-                  electricity_rate: proposalDraft.electricity_rate ?? null,
-                }))
-                .eq("id", proposalId);
-
-              if (error) {
-                alert("Failed to save electricity information");
-              } else {
-                setProposal((p: any) => ({ ...p, ...proposalDraft }));
-                isDirtyRef.current = false;
-                alert("Electricity usage and rate saved successfully!");
-              }
-            }}
-            style={{
-              marginTop: 16,
-              background: "#f97316",
-              color: "#fff",
-              padding: "10px 20px",
-              borderRadius: 6,
-              border: "none",
-              cursor: "pointer",
-              fontWeight: 600,
-              fontSize: 13,
-            }}
-          >
-            Save Electricity Information
-          </button>
-        </form>
-      </CollapsibleSection>
-
-      <CollapsibleSection id="system-specs" icon={Package} title="System Specifications">
-        <div style={{ display: "grid", gap: 12 }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 0", borderBottom: "1px solid #f3f4f6" }}>
-            <span style={{ fontWeight: 500, fontSize: 13, color: "#6b7280" }}>Module Type</span>
-            <span style={{ fontWeight: 600, fontSize: 13, color: "#111827", textAlign: "right" }}>
-              {selectedModel?.brand && selectedModel?.model
-                ? `${selectedModel.brand} ${selectedModel.model} (${selectedModel.watts}W)`
-                : "—"}
-            </span>
-          </div>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 0", borderBottom: "1px solid #f3f4f6" }}>
-            <span style={{ fontWeight: 500, fontSize: 13, color: "#6b7280" }}>Panel Quantity</span>
-            <span style={{ fontWeight: 700, fontSize: 15, color: "#111827" }}>{systemSummary.panelCount}</span>
-          </div>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 0", borderBottom: "1px solid #f3f4f6" }}>
-            <span style={{ fontWeight: 500, fontSize: 13, color: "#6b7280" }}>System Size</span>
-            <span style={{ fontWeight: 700, fontSize: 15, color: "#111827" }}>
-              {fmt(systemSummary.systemKw, 2)} kW
-            </span>
-          </div>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 0", borderBottom: "1px solid #f3f4f6" }}>
-            <span style={{ fontWeight: 500, fontSize: 13, color: "#6b7280" }}>Annual Production</span>
-            <span style={{ fontWeight: 700, fontSize: 15, color: "#111827" }}>
-              {fmt(systemSummary.annualProductionKwh, 0)} kWh
-            </span>
-          </div>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 0" }}>
-            <span style={{ fontWeight: 500, fontSize: 13, color: "#6b7280" }}>Offset</span>
-            <span style={{ fontWeight: 700, fontSize: 15, color: "#10b981" }}>
-              {fmt(systemSummary.offsetPercent, 1)}%
-            </span>
-          </div>
-        </div>
+            if (error) {
+              alert("Failed to save pricing");
+            } else {
+              setProposal((p: any) => ({
+                ...p,
+                ...proposalDraft,
+                total_price: systemSummary.totalContractPrice,
+                system_price: systemSummary.baseSystemPrice,
+                cash_down_payment: systemSummary.cashDeposit,
+                cash_second_payment: systemSummary.cashProgress,
+                cash_final_payment: systemSummary.cashFinal,
+              }));
+              isDirtyRef.current = false;
+              alert("Pricing and payment schedule saved successfully!");
+            }
+          }}
+          style={{
+            marginTop: 16,
+            background: "#f97316",
+            color: "#fff",
+            padding: "10px 20px",
+            borderRadius: 6,
+            border: "none",
+            cursor: "pointer",
+            fontWeight: 600,
+            fontSize: 13,
+          }}
+        >
+          Save Pricing & Payment Schedule
+        </button>
       </CollapsibleSection>
 
       <CollapsibleSection id="adders" icon={Package} title="System Adders">
@@ -2313,64 +2376,6 @@ export default function ProposalWorkspace({
           }}
         >
           Save Adders
-        </button>
-      </CollapsibleSection>
-
-      <CollapsibleSection id="pricing" icon={DollarSign} title="Pricing Details">
-        <PricingDetailsInputs
-          initialData={{
-            total_price: proposalDraft.total_price ?? null,
-            price_per_watt: proposalDraft.price_per_watt ?? null,
-          }}
-          onChange={handlePricingChange}
-          systemSummary={systemSummary}
-          salesRepRedline={salesRep?.ppw_redline}
-        />
-
-        <button
-          type="button"
-          onClick={async () => {
-            const { error } = await supabase
-              .from("proposals")
-              .update(sanitizePatch({
-                total_price: systemSummary.totalContractPrice,
-                price_per_watt: proposalDraft.price_per_watt ?? null,
-                system_price: systemSummary.baseSystemPrice,
-                cash_down_payment: systemSummary.cashDeposit,
-                cash_second_payment: systemSummary.cashProgress,
-                cash_final_payment: systemSummary.cashFinal,
-              }))
-              .eq("id", proposalId);
-
-            if (error) {
-              alert("Failed to save pricing");
-            } else {
-              setProposal((p: any) => ({
-                ...p,
-                ...proposalDraft,
-                total_price: systemSummary.totalContractPrice,
-                system_price: systemSummary.baseSystemPrice,
-                cash_down_payment: systemSummary.cashDeposit,
-                cash_second_payment: systemSummary.cashProgress,
-                cash_final_payment: systemSummary.cashFinal,
-              }));
-              isDirtyRef.current = false;
-              alert("Pricing and payment schedule saved successfully!");
-            }
-          }}
-          style={{
-            marginTop: 16,
-            background: "#f97316",
-            color: "#fff",
-            padding: "10px 20px",
-            borderRadius: 6,
-            border: "none",
-            cursor: "pointer",
-            fontWeight: 600,
-            fontSize: 13,
-          }}
-        >
-          Save Pricing & Payment Schedule
         </button>
       </CollapsibleSection>
 
