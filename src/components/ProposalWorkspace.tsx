@@ -921,6 +921,12 @@ export default function ProposalWorkspace({
 
   useEffect(() => {
     toolModeRef.current = toolMode;
+    // Clear drawing state when tool mode changes
+    setDrawingStart(null);
+    if (previewShape) {
+      previewShape.setMap(null);
+      setPreviewShape(null);
+    }
   }, [toolMode]);
 
   useEffect(() => {
@@ -935,6 +941,8 @@ export default function ProposalWorkspace({
   const [busy, setBusy] = useState<string | null>(null);
   const [mapsLoading, setMapsLoading] = useState(true);
   const [showRoofPlanes, setShowRoofPlanes] = useState(false);
+  const [drawingStart, setDrawingStart] = useState<{ lat: number; lng: number } | null>(null);
+  const [previewShape, setPreviewShape] = useState<any>(null);
 
   const selectedRoof = useMemo(
     () => roofPlanes.find((r) => r.id === selectedRoofId) ?? null,
@@ -1426,67 +1434,162 @@ export default function ProposalWorkspace({
           } else {
             console.log("MAP CLICK: Missing roofId or panelModelId for add-panel");
           }
-        } else if (currentToolMode === "circle") {
-          const newObstruction = {
-            id: `temp-${Date.now()}-${Math.random()}`,
-            proposal_id: proposalId!,
-            type: "circle" as const,
-            roof_plane_id: currentRoofId,
-            center_lat: lat,
-            center_lng: lng,
-            radius_ft: 5,
-            width_ft: null,
-            height_ft: null,
-            rotation_deg: null,
-          };
-          console.log("MAP CLICK: Adding circle obstruction", newObstruction);
-          setObstructions((prev) => {
-            console.log("MAP CLICK: Obstructions before:", prev.length);
-            const updated = [...prev, newObstruction];
-            console.log("MAP CLICK: Obstructions after:", updated.length);
-            return updated;
-          });
-        } else if (currentToolMode === "rect") {
-          const newObstruction = {
-            id: `temp-${Date.now()}-${Math.random()}`,
-            proposal_id: proposalId!,
-            type: "rect" as const,
-            roof_plane_id: currentRoofId,
-            center_lat: lat,
-            center_lng: lng,
-            radius_ft: null,
-            width_ft: obstructionWidth,
-            height_ft: obstructionHeight,
-            rotation_deg: 0,
-          };
-          console.log("MAP CLICK: Adding rect obstruction", newObstruction);
-          setObstructions((prev) => {
-            console.log("MAP CLICK: Obstructions before:", prev.length);
-            const updated = [...prev, newObstruction];
-            console.log("MAP CLICK: Obstructions after:", updated.length);
-            return updated;
-          });
-        } else if (currentToolMode === "tree") {
-          const newObstruction = {
-            id: `temp-${Date.now()}-${Math.random()}`,
-            proposal_id: proposalId!,
-            type: "tree" as const,
-            roof_plane_id: currentRoofId,
-            center_lat: lat,
-            center_lng: lng,
-            radius_ft: null,
-            width_ft: obstructionWidth,
-            height_ft: obstructionHeight,
-            rotation_deg: 0,
-          };
-          console.log("MAP CLICK: Adding tree obstruction", newObstruction);
-          setObstructions((prev) => {
-            console.log("MAP CLICK: Obstructions before:", prev.length);
-            const updated = [...prev, newObstruction];
-            console.log("MAP CLICK: Obstructions after:", updated.length);
-            return updated;
+        } else if (currentToolMode === "circle" || currentToolMode === "rect" || currentToolMode === "tree") {
+          setDrawingStart((prev) => {
+            if (!prev) {
+              // First click - set the start point
+              return { lat, lng };
+            } else {
+              // Second click - complete the shape
+              const google = (window as any).google;
+              const R = 3959 * 5280; // Earth's radius in feet
+
+              // Calculate distance in feet
+              const dLat = (lat - prev.lat) * Math.PI / 180;
+              const dLng = (lng - prev.lng) * Math.PI / 180;
+              const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                Math.cos(prev.lat * Math.PI / 180) * Math.cos(lat * Math.PI / 180) *
+                Math.sin(dLng / 2) * Math.sin(dLng / 2);
+              const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+              const distance = R * c;
+
+              if (currentToolMode === "circle") {
+                const newObstruction = {
+                  id: `temp-${Date.now()}-${Math.random()}`,
+                  proposal_id: proposalId!,
+                  type: "circle" as const,
+                  roof_plane_id: currentRoofId,
+                  center_lat: prev.lat,
+                  center_lng: prev.lng,
+                  radius_ft: Math.max(1, distance),
+                  width_ft: null,
+                  height_ft: null,
+                  rotation_deg: null,
+                };
+                setObstructions((obsPrev) => [...obsPrev, newObstruction]);
+              } else {
+                // For rect and tree, use the distance as approximate width/height
+                const width = Math.abs((lng - prev.lng) * R * Math.cos(prev.lat * Math.PI / 180) / R);
+                const height = Math.abs((lat - prev.lat) * R / R);
+                const widthFeet = Math.max(1, width * R);
+                const heightFeet = Math.max(1, height * R);
+
+                const newObstruction = {
+                  id: `temp-${Date.now()}-${Math.random()}`,
+                  proposal_id: proposalId!,
+                  type: currentToolMode as "rect" | "tree",
+                  roof_plane_id: currentRoofId,
+                  center_lat: (prev.lat + lat) / 2,
+                  center_lng: (prev.lng + lng) / 2,
+                  radius_ft: null,
+                  width_ft: widthFeet,
+                  height_ft: heightFeet,
+                  rotation_deg: 0,
+                };
+                setObstructions((obsPrev) => [...obsPrev, newObstruction]);
+              }
+
+              // Clear preview shape
+              setPreviewShape((prevShape: any) => {
+                if (prevShape) {
+                  prevShape.setMap(null);
+                }
+                return null;
+              });
+
+              // Reset drawing
+              return null;
+            }
           });
         }
+      });
+
+      // Add mousemove listener for preview
+      google.maps.event.addListener(map, "mousemove", (e: any) => {
+        if (!e?.latLng) return;
+
+        setDrawingStart((prevStart) => {
+          if (!prevStart) return prevStart;
+
+          const lat = e.latLng.lat();
+          const lng = e.latLng.lng();
+          const currentToolMode = toolModeRef.current;
+
+          // Clear previous preview
+          setPreviewShape((prevShape: any) => {
+            if (prevShape) {
+              prevShape.setMap(null);
+            }
+
+            const google = (window as any).google;
+            const R = 3959 * 5280; // Earth's radius in feet
+
+            if (currentToolMode === "circle") {
+              // Calculate distance in feet
+              const dLat = (lat - prevStart.lat) * Math.PI / 180;
+              const dLng = (lng - prevStart.lng) * Math.PI / 180;
+              const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                Math.cos(prevStart.lat * Math.PI / 180) * Math.cos(lat * Math.PI / 180) *
+                Math.sin(dLng / 2) * Math.sin(dLng / 2);
+              const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+              const radiusFt = R * c;
+
+              const radiusMeters = radiusFt * 0.3048;
+
+              const circle = new google.maps.Circle({
+                center: { lat: prevStart.lat, lng: prevStart.lng },
+                radius: radiusMeters,
+                strokeColor: "#666666",
+                strokeOpacity: 0.8,
+                strokeWeight: 2,
+                fillColor: "#999999",
+                fillOpacity: 0.35,
+                clickable: false,
+              });
+
+              circle.setMap(mapRef.current);
+              return circle;
+            } else if (currentToolMode === "rect" || currentToolMode === "tree") {
+              const width = Math.abs((lng - prevStart.lng) * R * Math.cos(prevStart.lat * Math.PI / 180) / R);
+              const height = Math.abs((lat - prevStart.lat) * R / R);
+              const widthFeet = width * R;
+              const heightFeet = height * R;
+
+              const widthMeters = widthFeet * 0.3048;
+              const heightMeters = heightFeet * 0.3048;
+
+              const latOffset = heightMeters / 111320;
+              const lngOffset = widthMeters / (111320 * Math.cos(prevStart.lat * Math.PI / 180));
+
+              const centerLat = (prevStart.lat + lat) / 2;
+              const centerLng = (prevStart.lng + lng) / 2;
+
+              const bounds = {
+                north: centerLat + latOffset / 2,
+                south: centerLat - latOffset / 2,
+                east: centerLng + lngOffset / 2,
+                west: centerLng - lngOffset / 2,
+              };
+
+              const rect = new google.maps.Rectangle({
+                bounds,
+                strokeColor: "#666666",
+                strokeOpacity: 0.8,
+                strokeWeight: 2,
+                fillColor: "#999999",
+                fillOpacity: 0.35,
+                clickable: false,
+              });
+
+              rect.setMap(mapRef.current);
+              return rect;
+            }
+
+            return null;
+          });
+
+          return prevStart;
+        });
       });
     }
   }, [activeTab, mapsLoading, proposal?.lat, proposal?.lng, proposalId, obstructionWidth, obstructionHeight]);
@@ -2999,15 +3102,17 @@ export default function ProposalWorkspace({
       {showRoofPlanes && (
         <div style={{
           position: "absolute",
-          top: 100,
-          left: 16,
+          top: 60,
+          left: "50%",
+          transform: "translateX(-50%)",
           zIndex: 1000,
           background: "#fff",
           borderRadius: 8,
           padding: 16,
           boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
-          maxWidth: 280,
-          maxHeight: 400,
+          minWidth: 320,
+          maxWidth: 400,
+          maxHeight: 500,
           overflowY: "auto",
         }}>
           <div style={{ fontSize: 13, fontWeight: 600, color: "#111827", marginBottom: 12, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -3026,50 +3131,56 @@ export default function ProposalWorkspace({
               ×
             </button>
           </div>
-          {roofPlanes.map((roof) => (
-            <div
-              key={roof.id}
-              onClick={() => {
-                setSelectedRoofId(roof.id);
-                setShowRoofPlanes(false);
-              }}
-              style={{
-                padding: "10px 12px",
-                background: selectedRoofId === roof.id ? "#fef3c7" : "#f9fafb",
-                border: selectedRoofId === roof.id ? "2px solid #f97316" : "1px solid #e5e7eb",
-                borderRadius: 6,
-                cursor: "pointer",
-                marginBottom: 8,
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-              }}
-            >
-              <div>
-                <div style={{ fontSize: 13, fontWeight: 600, color: "#111827" }}>{roof.name}</div>
-                <div style={{ fontSize: 11, color: "#6b7280" }}>
-                  {panels.filter((p) => p.roof_plane_id === roof.id).length} panels
-                </div>
-              </div>
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  deleteRoof(roof.id);
+          {roofPlanes.length === 0 ? (
+            <div style={{ padding: "20px 12px", textAlign: "center", color: "#6b7280", fontSize: 13 }}>
+              No roof planes yet. Click "Roof" and draw on the map to create one.
+            </div>
+          ) : (
+            roofPlanes.map((roof) => (
+              <div
+                key={roof.id}
+                onClick={() => {
+                  setSelectedRoofId(roof.id);
+                  setShowRoofPlanes(false);
                 }}
                 style={{
-                  padding: "4px 8px",
-                  background: "#ef4444",
-                  color: "#fff",
-                  border: "none",
-                  borderRadius: 4,
+                  padding: "10px 12px",
+                  background: selectedRoofId === roof.id ? "#fef3c7" : "#f9fafb",
+                  border: selectedRoofId === roof.id ? "2px solid #f97316" : "1px solid #e5e7eb",
+                  borderRadius: 6,
                   cursor: "pointer",
-                  fontSize: 11,
+                  marginBottom: 8,
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
                 }}
               >
-                Delete
-              </button>
-            </div>
-          ))}
+                <div>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: "#111827" }}>{roof.name}</div>
+                  <div style={{ fontSize: 11, color: "#6b7280" }}>
+                    {panels.filter((p) => p.roof_plane_id === roof.id).length} panels
+                  </div>
+                </div>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    deleteRoof(roof.id);
+                  }}
+                  style={{
+                    padding: "4px 8px",
+                    background: "#ef4444",
+                    color: "#fff",
+                    border: "none",
+                    borderRadius: 4,
+                    cursor: "pointer",
+                    fontSize: 11,
+                  }}
+                >
+                  Delete
+                </button>
+              </div>
+            ))
+          )}
         </div>
       )}
 
@@ -3080,6 +3191,25 @@ export default function ProposalWorkspace({
           <div style={{ padding: 20 }}>Loading map...</div>
         ) : (
           <div ref={mapDivRef} style={{ width: "100%", height: "100%" }} />
+        )}
+
+        {drawingStart && (
+          <div style={{
+            position: "absolute",
+            top: 20,
+            left: "50%",
+            transform: "translateX(-50%)",
+            background: "#f97316",
+            color: "#fff",
+            padding: "8px 16px",
+            borderRadius: 6,
+            boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
+            fontSize: 13,
+            fontWeight: 600,
+            zIndex: 999,
+          }}>
+            Click on the map to complete the {toolMode === "circle" ? "circle" : toolMode === "rect" ? "rectangle" : "tree"} obstruction
+          </div>
         )}
 
         <div style={{ position: "absolute", bottom: 20, left: "50%", transform: "translateX(-50%)", background: "#fff", padding: "12px 24px", borderRadius: 8, boxShadow: "0 4px 12px rgba(0,0,0,0.15)" }}>
