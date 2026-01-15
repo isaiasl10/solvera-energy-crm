@@ -99,6 +99,8 @@ export default function ProposalWorkspace({
   const [obstructions, setObstructions] = useState<ObstructionRow[]>([]);
   const [panelModels, setPanelModels] = useState<PanelModel[]>([]);
   const [panels, setPanels] = useState<ProposalPanel[]>([]);
+  const [deletedPanelIds, setDeletedPanelIds] = useState<string[]>([]);
+  const [deletedObstructionIds, setDeletedObstructionIds] = useState<string[]>([]);
 
   const roofPolysRef = useRef<Map<string, google.maps.Polygon>>(new Map());
   const obstructionShapesRef = useRef<Map<string, any>>(new Map());
@@ -392,70 +394,54 @@ export default function ProposalWorkspace({
         setToolMode("none");
       });
 
-      google.maps.event.addListener(map, "click", async (e: any) => {
+      google.maps.event.addListener(map, "click", (e: any) => {
         const lat = e.latLng.lat();
         const lng = e.latLng.lng();
 
         if (toolMode === "add-panel" && selectedRoofId && selectedPanelModelId) {
           addPanelAt(lat, lng);
         } else if (toolMode === "circle") {
-          const { data, error } = await supabase
-            .from("proposal_obstructions")
-            .insert({
-              proposal_id: proposalId,
-              type: "circle",
-              roof_plane_id: selectedRoofId,
-              center_lat: lat,
-              center_lng: lng,
-              radius_ft: 5,
-            })
-            .select()
-            .single();
-
-          if (!error && data) {
-            setObstructions((prev) => [...prev, data]);
-          }
-          setToolMode("none");
+          const newObstruction = {
+            id: `temp-${Date.now()}-${Math.random()}`,
+            proposal_id: proposalId,
+            type: "circle" as const,
+            roof_plane_id: selectedRoofId,
+            center_lat: lat,
+            center_lng: lng,
+            radius_ft: 5,
+            width_ft: null,
+            height_ft: null,
+            rotation_deg: null,
+          };
+          setObstructions((prev) => [...prev, newObstruction]);
         } else if (toolMode === "rect") {
-          const { data, error } = await supabase
-            .from("proposal_obstructions")
-            .insert({
-              proposal_id: proposalId,
-              type: "rect",
-              roof_plane_id: selectedRoofId,
-              center_lat: lat,
-              center_lng: lng,
-              width_ft: 5,
-              height_ft: 5,
-              rotation_deg: 0,
-            })
-            .select()
-            .single();
-
-          if (!error && data) {
-            setObstructions((prev) => [...prev, data]);
-          }
-          setToolMode("none");
+          const newObstruction = {
+            id: `temp-${Date.now()}-${Math.random()}`,
+            proposal_id: proposalId,
+            type: "rect" as const,
+            roof_plane_id: selectedRoofId,
+            center_lat: lat,
+            center_lng: lng,
+            radius_ft: null,
+            width_ft: 5,
+            height_ft: 5,
+            rotation_deg: 0,
+          };
+          setObstructions((prev) => [...prev, newObstruction]);
         } else if (toolMode === "tree") {
-          const { data, error } = await supabase
-            .from("proposal_obstructions")
-            .insert({
-              proposal_id: proposalId,
-              type: "tree",
-              roof_plane_id: selectedRoofId,
-              center_lat: lat,
-              center_lng: lng,
-              width_ft: 8,
-              height_ft: 8,
-              rotation_deg: 0,
-            })
-            .select()
-            .single();
-
-          if (!error && data) {
-            setObstructions((prev) => [...prev, data]);
-          }
-          setToolMode("none");
+          const newObstruction = {
+            id: `temp-${Date.now()}-${Math.random()}`,
+            proposal_id: proposalId,
+            type: "tree" as const,
+            roof_plane_id: selectedRoofId,
+            center_lat: lat,
+            center_lng: lng,
+            radius_ft: null,
+            width_ft: 8,
+            height_ft: 8,
+            rotation_deg: 0,
+          };
+          setObstructions((prev) => [...prev, newObstruction]);
         }
       });
     }
@@ -536,6 +522,12 @@ export default function ProposalWorkspace({
       if (shape) {
         shape.setMap(mapRef.current);
         obstructionShapesRef.current.set(obs.id, shape);
+
+        google.maps.event.addListener(shape, "click", () => {
+          if (confirm(`Delete this ${obs.type} obstruction?`)) {
+            deleteObstructionById(obs.id);
+          }
+        });
       }
     });
   }, [obstructions]);
@@ -596,12 +588,112 @@ export default function ProposalWorkspace({
     }
   }, [toolMode]);
 
-  const deletePanelById = async (panelId: string) => {
-    await supabase.from("proposal_panels").delete().eq("id", panelId);
+  const deletePanelById = (panelId: string) => {
+    if (!panelId.startsWith('temp-')) {
+      setDeletedPanelIds((prev) => [...prev, panelId]);
+    }
     setPanels((prev) => prev.filter((p) => p.id !== panelId));
   };
 
-  const addPanelAt = async (lat: number, lng: number) => {
+  const deleteObstructionById = (obstructionId: string) => {
+    if (!obstructionId.startsWith('temp-')) {
+      setDeletedObstructionIds((prev) => [...prev, obstructionId]);
+    }
+    setObstructions((prev) => prev.filter((o) => o.id !== obstructionId));
+  };
+
+  const saveDesignChanges = async () => {
+    if (!proposalId) return;
+    setBusy("Saving design...");
+
+    try {
+      if (deletedPanelIds.length > 0) {
+        const { error: deletePanelError } = await supabase
+          .from("proposal_panels")
+          .delete()
+          .in('id', deletedPanelIds);
+
+        if (deletePanelError) throw deletePanelError;
+        setDeletedPanelIds([]);
+      }
+
+      if (deletedObstructionIds.length > 0) {
+        const { error: deleteObstructionError } = await supabase
+          .from("proposal_obstructions")
+          .delete()
+          .in('id', deletedObstructionIds);
+
+        if (deleteObstructionError) throw deleteObstructionError;
+        setDeletedObstructionIds([]);
+      }
+
+      const tempPanels = panels.filter(p => p.id.startsWith('temp-'));
+      const tempObstructions = obstructions.filter(o => o.id.startsWith('temp-'));
+
+      if (tempPanels.length > 0) {
+        const panelsToInsert = tempPanels.map(p => ({
+          proposal_id: p.proposal_id,
+          roof_plane_id: p.roof_plane_id,
+          panel_model_id: p.panel_model_id,
+          center_lat: p.center_lat,
+          center_lng: p.center_lng,
+          rotation_deg: p.rotation_deg,
+          is_portrait: p.is_portrait,
+        }));
+
+        const { data: savedPanels, error: panelError } = await supabase
+          .from("proposal_panels")
+          .insert(panelsToInsert)
+          .select();
+
+        if (panelError) throw panelError;
+
+        if (savedPanels) {
+          setPanels(prev => [
+            ...prev.filter(p => !p.id.startsWith('temp-')),
+            ...savedPanels
+          ]);
+        }
+      }
+
+      if (tempObstructions.length > 0) {
+        const obstructionsToInsert = tempObstructions.map(o => ({
+          proposal_id: o.proposal_id,
+          type: o.type,
+          roof_plane_id: o.roof_plane_id,
+          center_lat: o.center_lat,
+          center_lng: o.center_lng,
+          radius_ft: o.radius_ft,
+          width_ft: o.width_ft,
+          height_ft: o.height_ft,
+          rotation_deg: o.rotation_deg,
+        }));
+
+        const { data: savedObstructions, error: obstructionError } = await supabase
+          .from("proposal_obstructions")
+          .insert(obstructionsToInsert)
+          .select();
+
+        if (obstructionError) throw obstructionError;
+
+        if (savedObstructions) {
+          setObstructions(prev => [
+            ...prev.filter(o => !o.id.startsWith('temp-')),
+            ...savedObstructions
+          ]);
+        }
+      }
+
+      setBusy(null);
+      alert("Design saved successfully!");
+    } catch (error: any) {
+      setBusy(null);
+      alert(`Failed to save design: ${error.message}`);
+      console.error("Save design error:", error);
+    }
+  };
+
+  const addPanelAt = (lat: number, lng: number) => {
     if (!selectedRoofId || !selectedPanelModelId) return;
 
     const roof = roofPlanes.find((r) => r.id === selectedRoofId);
@@ -615,23 +707,18 @@ export default function ProposalWorkspace({
       return;
     }
 
-    const { data, error } = await supabase
-      .from("proposal_panels")
-      .insert({
-        proposal_id: proposalId,
-        roof_plane_id: selectedRoofId,
-        panel_model_id: selectedPanelModelId,
-        center_lat: lat,
-        center_lng: lng,
-        rotation_deg: panelRotation,
-        is_portrait: panelOrientation === "portrait",
-      })
-      .select()
-      .single();
+    const newPanel = {
+      id: `temp-${Date.now()}-${Math.random()}`,
+      proposal_id: proposalId,
+      roof_plane_id: selectedRoofId,
+      panel_model_id: selectedPanelModelId,
+      center_lat: lat,
+      center_lng: lng,
+      rotation_deg: panelRotation,
+      is_portrait: panelOrientation === "portrait",
+    };
 
-    if (!error && data) {
-      setPanels((prev) => [...prev, data]);
-    }
+    setPanels((prev) => [...prev, newPanel]);
   };
 
   const autoFillPanels = async () => {
@@ -1483,6 +1570,51 @@ export default function ProposalWorkspace({
           >
             <TreeDeciduous size={16} />
             Add Tree
+          </button>
+
+          {toolMode !== "none" && (
+            <button
+              onClick={() => setToolMode("none")}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 8,
+                padding: "10px 14px",
+                background: "#dc2626",
+                color: "#fff",
+                border: "1px solid #dc2626",
+                borderRadius: 6,
+                cursor: "pointer",
+                fontWeight: 600,
+                fontSize: 13,
+                marginTop: 8,
+              }}
+            >
+              Stop Tool
+            </button>
+          )}
+
+          <button
+            onClick={saveDesignChanges}
+            disabled={!!busy}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 8,
+              padding: "10px 14px",
+              background: busy ? "#9ca3af" : "#10b981",
+              color: "#fff",
+              border: "none",
+              borderRadius: 6,
+              cursor: busy ? "not-allowed" : "pointer",
+              fontWeight: 600,
+              fontSize: 13,
+              marginTop: 8,
+            }}
+          >
+            {busy ? busy : `Save Design${(panels.filter(p => p.id.startsWith('temp-')).length + obstructions.filter(o => o.id.startsWith('temp-')).length + deletedPanelIds.length + deletedObstructionIds.length) > 0 ? ` (${panels.filter(p => p.id.startsWith('temp-')).length + obstructions.filter(o => o.id.startsWith('temp-')).length + deletedPanelIds.length + deletedObstructionIds.length} changes)` : ''}`}
           </button>
         </div>
 
