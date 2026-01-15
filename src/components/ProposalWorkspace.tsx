@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import { supabase } from "../lib/supabaseClient";
 import { sanitizePatch } from "../lib/supabasePatch";
 import { useFinancingOptions } from "../hooks/useFinancingOptions";
@@ -8,6 +8,114 @@ const fmt = (n?: number | null, digits = 0) =>
   typeof n === "number" && Number.isFinite(n)
     ? n.toLocaleString(undefined, { maximumFractionDigits: digits })
     : "—";
+
+const CustomerFormInputs = React.memo(({
+  initialData,
+  onChange,
+}: {
+  initialData: any;
+  onChange: (data: any) => void;
+}) => {
+  const renderCount = useRef(0);
+  renderCount.current++;
+
+  const [localData, setLocalData] = useState(initialData);
+  const dataRef = useRef(localData);
+
+  useEffect(() => {
+    setLocalData(initialData);
+    dataRef.current = initialData;
+  }, [initialData]);
+
+  const handleChange = useCallback((field: string, value: string) => {
+    setLocalData((prev: any) => {
+      const updated = { ...prev, [field]: value };
+      dataRef.current = updated;
+      return updated;
+    });
+  }, []);
+
+  const handleBlur = useCallback(() => {
+    onChange(dataRef.current);
+  }, [onChange]);
+
+  console.log("CustomerFormInputs render", renderCount.current);
+
+  return (
+    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 16 }}>
+      <div>
+        <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#374151", marginBottom: 8 }}>
+          Full Name
+        </label>
+        <input
+          type="text"
+          value={localData.full_name || ''}
+          onChange={(e) => {
+            console.log("CHANGE full_name", e.target.value, "| form renders:", renderCount.current);
+            handleChange('full_name', e.target.value);
+          }}
+          onBlur={handleBlur}
+          placeholder="Enter customer name"
+          style={{
+            width: "100%",
+            padding: "10px 12px",
+            background: "#fff",
+            border: "1px solid #d1d5db",
+            borderRadius: 6,
+            fontSize: 14,
+            color: "#111827",
+          }}
+        />
+      </div>
+
+      <div>
+        <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#374151", marginBottom: 8 }}>
+          Email Address
+        </label>
+        <input
+          type="email"
+          value={localData.email || ''}
+          onChange={(e) => handleChange('email', e.target.value)}
+          onBlur={handleBlur}
+          placeholder="customer@example.com"
+          style={{
+            width: "100%",
+            padding: "10px 12px",
+            background: "#fff",
+            border: "1px solid #d1d5db",
+            borderRadius: 6,
+            fontSize: 14,
+            color: "#111827",
+          }}
+        />
+      </div>
+
+      <div>
+        <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#374151", marginBottom: 8 }}>
+          Phone Number
+        </label>
+        <input
+          type="tel"
+          value={localData.phone || ''}
+          onChange={(e) => handleChange('phone', e.target.value)}
+          onBlur={handleBlur}
+          placeholder="(555) 123-4567"
+          style={{
+            width: "100%",
+            padding: "10px 12px",
+            background: "#fff",
+            border: "1px solid #d1d5db",
+            borderRadius: 6,
+            fontSize: 14,
+            color: "#111827",
+          }}
+        />
+      </div>
+    </div>
+  );
+});
+
+CustomerFormInputs.displayName = 'CustomerFormInputs';
 
 type ToolMode = "none" | "roof" | "circle" | "rect" | "tree" | "add-panel" | "delete-panel";
 
@@ -92,6 +200,11 @@ export default function ProposalWorkspace({
   const didInitDraftRef = useRef(false);
   const isDirtyRef = useRef(false);
   const lastInitCustomerIdRef = useRef<string | null>(null);
+
+  const handleCustomerChange = useCallback((data: any) => {
+    isDirtyRef.current = true;
+    setDraftCustomer(data);
+  }, []);
 
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
     customer: true,
@@ -998,80 +1111,10 @@ export default function ProposalWorkspace({
 
       <CollapsibleSection id="customer" icon={User} title="Customer Information">
         <form onSubmit={(e) => e.preventDefault()}>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 16 }}>
-            <div>
-              <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#374151", marginBottom: 8 }}>
-                Full Name
-              </label>
-              <input
-                type="text"
-                value={draftCustomer.full_name}
-                onChange={(e) => {
-                  console.log("CHANGE full_name", e.target.value, "| renders:", renders.current);
-                  isDirtyRef.current = true;
-                  setDraftCustomer((prev: any) => ({ ...prev, full_name: e.target.value }));
-                }}
-                placeholder="Enter customer name"
-                style={{
-                  width: "100%",
-                  padding: "10px 12px",
-                  background: "#fff",
-                  border: "1px solid #d1d5db",
-                  borderRadius: 6,
-                  fontSize: 14,
-                  color: "#111827",
-                }}
-              />
-            </div>
-
-            <div>
-              <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#374151", marginBottom: 8 }}>
-                Email Address
-              </label>
-              <input
-                type="email"
-                value={draftCustomer.email}
-                onChange={(e) => {
-                  isDirtyRef.current = true;
-                  setDraftCustomer((prev: any) => ({ ...prev, email: e.target.value }));
-                }}
-                placeholder="customer@example.com"
-                style={{
-                  width: "100%",
-                  padding: "10px 12px",
-                  background: "#fff",
-                  border: "1px solid #d1d5db",
-                  borderRadius: 6,
-                  fontSize: 14,
-                  color: "#111827",
-                }}
-              />
-            </div>
-
-            <div>
-              <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#374151", marginBottom: 8 }}>
-                Phone Number
-              </label>
-              <input
-                type="tel"
-                value={draftCustomer.phone}
-                onChange={(e) => {
-                  isDirtyRef.current = true;
-                  setDraftCustomer((prev: any) => ({ ...prev, phone: e.target.value }));
-                }}
-                placeholder="(555) 123-4567"
-                style={{
-                  width: "100%",
-                  padding: "10px 12px",
-                  background: "#fff",
-                  border: "1px solid #d1d5db",
-                  borderRadius: 6,
-                  fontSize: 14,
-                  color: "#111827",
-                }}
-              />
-            </div>
-          </div>
+          <CustomerFormInputs
+            initialData={draftCustomer}
+            onChange={handleCustomerChange}
+          />
 
           <button
             type="button"
