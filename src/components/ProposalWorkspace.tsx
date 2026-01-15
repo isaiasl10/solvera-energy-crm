@@ -298,6 +298,122 @@ const PricingDetailsInputs = React.memo(({
 }: {
   initialData: { total_price: number | null; price_per_watt: number | null };
   onChange: (data: { total_price: number | null; price_per_watt: number | null }) => void;
+  systemSummary: any;
+}) => {
+  const renderCount = useRef(0);
+  renderCount.current++;
+
+  const [localData, setLocalData] = useState(initialData);
+  const dataRef = useRef(localData);
+
+  useEffect(() => {
+    setLocalData(initialData);
+    dataRef.current = initialData;
+  }, [initialData]);
+
+  const handlePricePerWattChange = useCallback((value: string) => {
+    setLocalData((prev: any) => {
+      const updated = { ...prev, price_per_watt: value === "" ? null : Number(value) };
+      dataRef.current = updated;
+      return updated;
+    });
+  }, []);
+
+  const handleBlur = useCallback(() => {
+    onChange(dataRef.current);
+  }, [onChange]);
+
+  console.log("PricingDetailsInputs render", renderCount.current);
+
+  return (
+    <>
+      <div style={{ marginBottom: 16 }}>
+        <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#374151", marginBottom: 8 }}>
+          Base Price Per Watt ($/W)
+        </label>
+        <input
+          type="number"
+          step="0.01"
+          value={localData.price_per_watt ?? ""}
+          onChange={(e) => handlePricePerWattChange(e.target.value)}
+          onBlur={handleBlur}
+          placeholder="Enter base price per watt"
+          style={{
+            width: "100%",
+            padding: "10px 12px",
+            background: "#fff",
+            border: "1px solid #d1d5db",
+            borderRadius: 6,
+            fontSize: 14,
+            color: "#111827",
+          }}
+        />
+      </div>
+
+      {systemSummary.systemWatts > 0 && (
+        <div style={{ marginTop: 16, padding: 16, background: "#f9fafb", borderRadius: 6, border: "1px solid #e5e7eb" }}>
+          <div style={{ fontSize: 13, fontWeight: 600, color: "#111827", marginBottom: 12 }}>Pricing Breakdown</div>
+
+          <div style={{ display: "grid", gap: 8 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: "#6b7280" }}>
+              <span>Base System ({systemSummary.systemWatts.toFixed(0)} W × ${systemSummary.basePPW.toFixed(2)}/W)</span>
+              <span style={{ fontWeight: 600, color: "#111827" }}>${fmt(systemSummary.baseSystemPrice, 2)}</span>
+            </div>
+
+            {systemSummary.totalAdderCost > 0 && (
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: "#6b7280" }}>
+                <span>Adders</span>
+                <span style={{ fontWeight: 600, color: "#111827" }}>+${fmt(systemSummary.totalAdderCost, 2)}</span>
+              </div>
+            )}
+
+            <div style={{ borderTop: "1px solid #d1d5db", marginTop: 4, paddingTop: 8 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13 }}>
+                <span style={{ fontWeight: 600, color: "#111827" }}>Total Contract Price</span>
+                <span style={{ fontWeight: 700, color: "#111827" }}>${fmt(systemSummary.totalContractPrice, 2)}</span>
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: "#6b7280", marginTop: 4 }}>
+                <span>Effective PPW</span>
+                <span style={{ fontWeight: 600, color: "#111827" }}>${systemSummary.effectivePPW.toFixed(3)}/W</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {systemSummary.totalContractPrice > 0 && (
+        <div style={{ marginTop: 16, padding: 16, background: "#fef3c7", borderRadius: 6, border: "1px solid #fbbf24" }}>
+          <div style={{ fontSize: 13, fontWeight: 600, color: "#92400e", marginBottom: 12 }}>Cash Payment Schedule</div>
+
+          <div style={{ display: "grid", gap: 6 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: "#92400e" }}>
+              <span>1. Deposit (Signing)</span>
+              <span style={{ fontWeight: 600 }}>${fmt(systemSummary.cashDeposit, 2)}</span>
+            </div>
+            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: "#92400e" }}>
+              <span>2. Progress Payment</span>
+              <span style={{ fontWeight: 600 }}>${fmt(systemSummary.cashProgress, 2)}</span>
+            </div>
+            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: "#92400e" }}>
+              <span>3. Final Payment (Completion)</span>
+              <span style={{ fontWeight: 600 }}>${fmt(systemSummary.cashFinal, 2)}</span>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  );
+});
+
+PricingDetailsInputs.displayName = 'PricingDetailsInputs';
+
+const OldPricingDetailsInputs = React.memo(({
+  initialData,
+  onChange,
+  systemSummary,
+}: {
+  initialData: { total_price: number | null; price_per_watt: number | null };
+  onChange: (data: { total_price: number | null; price_per_watt: number | null }) => void;
   systemSummary: { systemKw: number };
 }) => {
   const renderCount = useRef(0);
@@ -658,6 +774,8 @@ export default function ProposalWorkspace({
   const [panels, setPanels] = useState<ProposalPanel[]>([]);
   const [deletedPanelIds, setDeletedPanelIds] = useState<string[]>([]);
   const [deletedObstructionIds, setDeletedObstructionIds] = useState<string[]>([]);
+  const [customAdders, setCustomAdders] = useState<any[]>([]);
+  const [proposalAdders, setProposalAdders] = useState<any[]>([]);
 
   const roofPolysRef = useRef<Map<string, google.maps.Polygon>>(new Map());
   const obstructionShapesRef = useRef<Map<string, any>>(new Map());
@@ -706,6 +824,28 @@ export default function ProposalWorkspace({
 
   const [calculatingProduction, setCalculatingProduction] = useState(false);
 
+  const adderCalculations = useMemo(() => {
+    let totalAdderCost = 0;
+
+    proposalAdders.forEach((pa) => {
+      const adder = pa.custom_adders;
+      if (adder) {
+        const quantity = pa.quantity || 1;
+        if (adder.calculation_type === "flat_rate") {
+          totalAdderCost += Number(adder.rate) * quantity;
+        } else if (adder.calculation_type === "per_kw") {
+          const systemKw = panels.reduce((sum, panel) => {
+            const model = panelModels.find((m) => m.id === panel.panel_model_id);
+            return sum + (model ? model.watts / 1000 : 0);
+          }, 0);
+          totalAdderCost += Number(adder.rate) * systemKw * quantity;
+        }
+      }
+    });
+
+    return { totalAdderCost };
+  }, [proposalAdders, panels, panelModels]);
+
   const systemSummary = useMemo(() => {
     const panelCount = panels.length;
     let systemKw = 0;
@@ -725,13 +865,32 @@ export default function ProposalWorkspace({
     const annualConsumption = proposalDraft?.annual_consumption || proposal?.annual_consumption || 0;
     const offsetPercent = annualConsumption > 0 ? (annualProductionKwh / annualConsumption) * 100 : 0;
 
+    const basePPW = proposalDraft?.price_per_watt || 0;
+    const systemWatts = systemKw * 1000;
+    const baseSystemPrice = basePPW * systemWatts;
+    const totalContractPrice = baseSystemPrice + adderCalculations.totalAdderCost;
+    const effectivePPW = systemWatts > 0 ? totalContractPrice / systemWatts : 0;
+
+    const cashDeposit = 2000;
+    const cashFinal = 1000;
+    const cashProgress = totalContractPrice > 3000 ? totalContractPrice - cashDeposit - cashFinal : 0;
+
     return {
       panelCount,
       systemKw,
+      systemWatts,
       annualProductionKwh,
       offsetPercent,
+      basePPW,
+      baseSystemPrice,
+      totalAdderCost: adderCalculations.totalAdderCost,
+      totalContractPrice,
+      effectivePPW,
+      cashDeposit,
+      cashProgress,
+      cashFinal,
     };
-  }, [panels, panelModels, proposal, proposalDraft]);
+  }, [panels, panelModels, proposal, proposalDraft, adderCalculations]);
 
   useEffect(() => {
     if (!proposal || panels.length === 0 || calculatingProduction) return;
@@ -904,6 +1063,25 @@ export default function ProposalWorkspace({
 
       if (panelsData) {
         setPanels(panelsData);
+      }
+
+      const { data: proposalAddersData } = await supabase
+        .from("proposal_adders")
+        .select("*, custom_adders(*)")
+        .eq("proposal_id", proposalId);
+
+      if (proposalAddersData) {
+        setProposalAdders(proposalAddersData);
+      }
+
+      const { data: customAddersData } = await supabase
+        .from("custom_adders")
+        .select("*")
+        .eq("is_active", true)
+        .order("name");
+
+      if (customAddersData) {
+        setCustomAdders(customAddersData);
       }
     }
 
@@ -1710,6 +1888,132 @@ export default function ProposalWorkspace({
         </div>
       </CollapsibleSection>
 
+      <CollapsibleSection id="adders" icon={Package} title="System Adders">
+        <div style={{ marginBottom: 16 }}>
+          <div style={{ fontSize: 12, color: "#6b7280", marginBottom: 12 }}>
+            Select additional items that apply to this project. Costs will be added to the final contract price.
+          </div>
+
+          {customAdders.map((adder) => {
+            const isSelected = proposalAdders.some((pa) => pa.custom_adder_id === adder.id);
+            const selectedAdder = proposalAdders.find((pa) => pa.custom_adder_id === adder.id);
+
+            return (
+              <div
+                key={adder.id}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  padding: "12px",
+                  background: isSelected ? "#f0fdf4" : "#fff",
+                  border: isSelected ? "2px solid #10b981" : "1px solid #e5e7eb",
+                  borderRadius: 6,
+                  marginBottom: 8,
+                  cursor: "pointer",
+                }}
+                onClick={() => {
+                  if (isSelected) {
+                    setProposalAdders((prev) => prev.filter((pa) => pa.custom_adder_id !== adder.id));
+                  } else {
+                    setProposalAdders((prev) => [
+                      ...prev,
+                      {
+                        id: `temp-${Date.now()}`,
+                        proposal_id: proposalId,
+                        custom_adder_id: adder.id,
+                        quantity: 1,
+                        custom_adders: adder,
+                      },
+                    ]);
+                  }
+                }}
+              >
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: "#111827", marginBottom: 2 }}>
+                    {adder.name}
+                  </div>
+                  <div style={{ fontSize: 11, color: "#6b7280" }}>{adder.description}</div>
+                  <div style={{ fontSize: 11, color: "#6b7280", marginTop: 4 }}>
+                    {adder.calculation_type === "flat_rate"
+                      ? `$${Number(adder.rate).toFixed(2)} flat`
+                      : `$${Number(adder.rate).toFixed(2)}/kW`}
+                  </div>
+                </div>
+                <input
+                  type="checkbox"
+                  checked={isSelected}
+                  onChange={() => {}}
+                  style={{ width: 18, height: 18, cursor: "pointer" }}
+                />
+              </div>
+            );
+          })}
+
+          {customAdders.length === 0 && (
+            <div style={{ textAlign: "center", padding: 20, color: "#9ca3af", fontSize: 13 }}>
+              No adders available. Contact admin to add custom adders.
+            </div>
+          )}
+        </div>
+
+        <button
+          type="button"
+          onClick={async () => {
+            try {
+              const tempAdders = proposalAdders.filter((pa) => pa.id.startsWith("temp-"));
+              const existingAdderIds = proposalAdders.filter((pa) => !pa.id.startsWith("temp-")).map((pa) => pa.custom_adder_id);
+              const currentAdderIds = proposalAdders.map((pa) => pa.custom_adder_id);
+
+              const toDelete = existingAdderIds.filter((id) => !currentAdderIds.includes(id));
+
+              if (toDelete.length > 0) {
+                await supabase
+                  .from("proposal_adders")
+                  .delete()
+                  .eq("proposal_id", proposalId)
+                  .in("custom_adder_id", toDelete);
+              }
+
+              if (tempAdders.length > 0) {
+                const { data: savedAdders } = await supabase
+                  .from("proposal_adders")
+                  .insert(
+                    tempAdders.map((pa) => ({
+                      proposal_id: pa.proposal_id,
+                      custom_adder_id: pa.custom_adder_id,
+                      quantity: pa.quantity,
+                    }))
+                  )
+                  .select("*, custom_adders(*)");
+
+                if (savedAdders) {
+                  setProposalAdders((prev) => [...prev.filter((pa) => !pa.id.startsWith("temp-")), ...savedAdders]);
+                }
+              }
+
+              alert("Adders saved successfully!");
+            } catch (error: any) {
+              console.error("Failed to save adders:", error);
+              alert("Failed to save adders");
+            }
+          }}
+          style={{
+            marginTop: 16,
+            background: "#f97316",
+            color: "#fff",
+            padding: "10px 20px",
+            borderRadius: 6,
+            border: "none",
+            cursor: "pointer",
+            fontWeight: 600,
+            fontSize: 13,
+          }}
+        >
+          Save Adders
+        </button>
+      </CollapsibleSection>
+
       <CollapsibleSection id="pricing" icon={DollarSign} title="Pricing Details">
         <PricingDetailsInputs
           initialData={{
@@ -1726,17 +2030,29 @@ export default function ProposalWorkspace({
             const { error } = await supabase
               .from("proposals")
               .update(sanitizePatch({
-                total_price: proposalDraft.total_price ?? null,
+                total_price: systemSummary.totalContractPrice,
                 price_per_watt: proposalDraft.price_per_watt ?? null,
+                system_price: systemSummary.baseSystemPrice,
+                cash_down_payment: systemSummary.cashDeposit,
+                cash_second_payment: systemSummary.cashProgress,
+                cash_final_payment: systemSummary.cashFinal,
               }))
               .eq("id", proposalId);
 
             if (error) {
               alert("Failed to save pricing");
             } else {
-              setProposal((p: any) => ({ ...p, ...proposalDraft }));
+              setProposal((p: any) => ({
+                ...p,
+                ...proposalDraft,
+                total_price: systemSummary.totalContractPrice,
+                system_price: systemSummary.baseSystemPrice,
+                cash_down_payment: systemSummary.cashDeposit,
+                cash_second_payment: systemSummary.cashProgress,
+                cash_final_payment: systemSummary.cashFinal,
+              }));
               isDirtyRef.current = false;
-              alert("Pricing saved successfully!");
+              alert("Pricing and payment schedule saved successfully!");
             }
           }}
           style={{
@@ -1751,7 +2067,7 @@ export default function ProposalWorkspace({
             fontSize: 13,
           }}
         >
-          Save Pricing
+          Save Pricing & Payment Schedule
         </button>
       </CollapsibleSection>
 
