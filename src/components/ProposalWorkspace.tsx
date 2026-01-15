@@ -2129,10 +2129,18 @@ export default function ProposalWorkspace({
               onChange={(e) => {
                 const v = e.target.value;
                 if (v === "cash") {
+                  const totalContractPrice = systemSummary.totalContractPrice;
+                  const cashDeposit = 2000;
+                  const cashFinal = 1000;
+                  const cashSecond = Math.max(0, totalContractPrice - 3000);
+
                   setProposalDraft((p: any) => ({
                     ...p,
                     finance_type: "cash",
                     finance_option_id: null,
+                    cash_deposit: cashDeposit,
+                    cash_second_payment: cashSecond,
+                    cash_final_payment: cashFinal,
                   }));
                 } else {
                   setProposalDraft((p: any) => ({
@@ -2161,15 +2169,44 @@ export default function ProposalWorkspace({
           </div>
         </div>
 
+        {(proposalDraft.finance_type ?? "cash") === "cash" && (
+          <div style={{ marginTop: 24, padding: 16, background: "#f9fafb", borderRadius: 8, border: "1px solid #e5e7eb" }}>
+            <div style={{ fontSize: 13, fontWeight: 600, color: "#111827", marginBottom: 12 }}>
+              Cash Payment Schedule
+            </div>
+            <CashPaymentInputs
+              initialData={{
+                cash_deposit: proposalDraft.cash_deposit ?? null,
+                cash_second_payment: proposalDraft.cash_second_payment ?? null,
+                cash_final_payment: proposalDraft.cash_final_payment ?? null,
+              }}
+              onChange={handleCashPaymentChange}
+            />
+            <div style={{ marginTop: 12, fontSize: 11, color: "#6b7280" }}>
+              Payment schedule automatically calculated: $2,000 deposit + ${fmt(Math.max(0, systemSummary.totalContractPrice - 3000), 2)} progress + $1,000 final
+            </div>
+          </div>
+        )}
+
         <button
           onClick={async () => {
+            const updates: any = {
+              finance_type: proposalDraft.finance_type ?? "cash",
+              finance_option_id: proposalDraft.finance_option_id ?? null,
+            };
+
+            if ((proposalDraft.finance_type ?? "cash") === "cash") {
+              updates.cash_deposit = proposalDraft.cash_deposit ?? null;
+              updates.cash_second_payment = proposalDraft.cash_second_payment ?? null;
+              updates.cash_final_payment = proposalDraft.cash_final_payment ?? null;
+            }
+
             await supabase
               .from("proposals")
-              .update({
-                finance_type: proposalDraft.finance_type ?? "cash",
-                finance_option_id: proposalDraft.finance_option_id ?? null,
-              })
+              .update(updates)
               .eq("id", proposalId);
+
+            alert("Financing option saved successfully!");
           }}
           style={{
             marginTop: 16,
@@ -2183,48 +2220,9 @@ export default function ProposalWorkspace({
             fontSize: 13,
           }}
         >
-          Save Financing Option
+          Save Financing & Payment Schedule
         </button>
       </CollapsibleSection>
-
-      {(proposalDraft.finance_type ?? "cash") === "cash" && (
-        <CollapsibleSection id="payment" icon={DollarSign} title="Cash Payment Schedule">
-          <CashPaymentInputs
-            initialData={{
-              cash_deposit: proposalDraft.cash_deposit ?? null,
-              cash_second_payment: proposalDraft.cash_second_payment ?? null,
-              cash_final_payment: proposalDraft.cash_final_payment ?? null,
-            }}
-            onChange={handleCashPaymentChange}
-          />
-
-          <button
-            onClick={async () => {
-              await supabase
-                .from("proposals")
-                .update({
-                  cash_deposit: proposalDraft.cash_deposit ?? null,
-                  cash_second_payment: proposalDraft.cash_second_payment ?? null,
-                  cash_final_payment: proposalDraft.cash_final_payment ?? null,
-                })
-                .eq("id", proposalId);
-            }}
-            style={{
-              marginTop: 16,
-              background: "#f97316",
-              color: "#fff",
-              padding: "10px 20px",
-              borderRadius: 6,
-              border: "none",
-              cursor: "pointer",
-              fontWeight: 600,
-              fontSize: 13,
-            }}
-          >
-            Save Payment Schedule
-          </button>
-        </CollapsibleSection>
-      )}
     </div>
   );
 
