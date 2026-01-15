@@ -71,17 +71,17 @@ export default function CustomerList({ refreshTrigger, onSelectCustomer, searchQ
       filtered = filtered.filter((customer) => {
         return (
           customer.customer_id?.toLowerCase().includes(query) ||
-          customer.full_name.toLowerCase().includes(query) ||
-          customer.email.toLowerCase().includes(query) ||
-          customer.phone_number.toLowerCase().includes(query) ||
-          customer.installation_address.toLowerCase().includes(query)
+          customer.full_name?.toLowerCase().includes(query) ||
+          customer.email?.toLowerCase().includes(query) ||
+          customer.phone_number?.toLowerCase().includes(query) ||
+          customer.installation_address?.toLowerCase().includes(query)
         );
       });
     }
 
     if (statusFilter !== 'all') {
       filtered = filtered.filter((customer) => {
-        const stage = customer.timelineStage.toLowerCase();
+        const stage = customer.timelineStage?.toLowerCase() || '';
         switch (statusFilter) {
           case 'pending':
             return stage.includes('new lead') || stage.includes('pending');
@@ -223,14 +223,14 @@ export default function CustomerList({ refreshTrigger, onSelectCustomer, searchQ
             <div>
               <div className="flex items-center gap-2 mb-1">
                 <span className="text-xs font-mono font-semibold text-orange-600 bg-orange-50 px-2 py-0.5 rounded">
-                  {customer.customer_id}
+                  {customer.customer_id || 'N/A'}
                 </span>
               </div>
               <h3 className="text-base font-semibold text-gray-900 mb-0.5">
-                {customer.full_name}
+                {customer.full_name || 'No Name'}
               </h3>
               <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                {customer.timelineStage}
+                {customer.timelineStage || 'New Lead'}
               </span>
             </div>
           </div>
@@ -238,20 +238,20 @@ export default function CustomerList({ refreshTrigger, onSelectCustomer, searchQ
           <div className="space-y-1.5 mb-2">
             <div className="flex items-start gap-3 text-gray-600">
               <MapPin className="w-4 h-4 mt-0.5 flex-shrink-0" />
-              <span className="text-sm">{customer.installation_address}</span>
+              <span className="text-sm">{customer.installation_address || 'N/A'}</span>
             </div>
             <div className="flex items-center gap-3 text-gray-600">
               <Mail className="w-4 h-4 flex-shrink-0" />
-              <span className="text-sm">{customer.email}</span>
+              <span className="text-sm">{customer.email || 'N/A'}</span>
             </div>
             <div className="flex items-center gap-3 text-gray-600">
               <Phone className="w-4 h-4 flex-shrink-0" />
-              <span className="text-sm">{customer.phone_number}</span>
+              <span className="text-sm">{customer.phone_number || 'N/A'}</span>
             </div>
             <div className="flex items-center gap-3 text-gray-600">
               <User className="w-4 h-4 flex-shrink-0" />
               <span className="text-sm">
-                <span className="font-medium">Sales Rep:</span> {customer.salesRepName}
+                <span className="font-medium">Sales Rep:</span> {customer.salesRepName || 'Not assigned'}
               </span>
             </div>
           </div>
@@ -265,37 +265,37 @@ export default function CustomerList({ refreshTrigger, onSelectCustomer, searchQ
               <div>
                 <span className="text-gray-500">System Size:</span>
                 <span className="ml-2 font-medium text-gray-900">
-                  {customer.system_size_kw} kW
+                  {customer.system_size_kw || 'N/A'} kW
                 </span>
               </div>
               <div>
                 <span className="text-gray-500">Panels:</span>
                 <span className="ml-2 font-medium text-gray-900">
-                  {customer.panel_quantity}
+                  {customer.panel_quantity || 'N/A'}
                 </span>
               </div>
               <div>
                 <span className="text-gray-500">Wattage:</span>
                 <span className="ml-2 font-medium text-gray-900">
-                  {customer.panel_wattage}W
+                  {customer.panel_wattage || 'N/A'}W
                 </span>
               </div>
               <div>
                 <span className="text-gray-500">Panel Brand:</span>
                 <span className="ml-2 font-medium text-gray-900">
-                  {customer.panel_brand}
+                  {customer.panel_brand || 'N/A'}
                 </span>
               </div>
               <div>
                 <span className="text-gray-500">Inverter:</span>
                 <span className="ml-2 font-medium text-gray-900">
-                  {customer.inverter_option}
+                  {customer.inverter_option || 'N/A'}
                 </span>
               </div>
               <div>
                 <span className="text-gray-500">Racking:</span>
                 <span className="ml-2 font-medium text-gray-900">
-                  {customer.racking_type}
+                  {customer.racking_type || 'N/A'}
                 </span>
               </div>
             </div>
