@@ -199,6 +199,324 @@ const ElectricityUsageInputs = React.memo(({
 
 ElectricityUsageInputs.displayName = 'ElectricityUsageInputs';
 
+const ElectricityRateInputs = React.memo(({
+  initialData,
+  onChange,
+}: {
+  initialData: { utility_company: string | null; electricity_rate: number | null };
+  onChange: (data: { utility_company: string | null; electricity_rate: number | null }) => void;
+}) => {
+  const renderCount = useRef(0);
+  renderCount.current++;
+
+  const [localData, setLocalData] = useState(initialData);
+  const dataRef = useRef(localData);
+
+  useEffect(() => {
+    setLocalData(initialData);
+    dataRef.current = initialData;
+  }, [initialData]);
+
+  const handleUtilityChange = useCallback((value: string) => {
+    setLocalData((prev: any) => {
+      const updated = { ...prev, utility_company: value };
+      dataRef.current = updated;
+      return updated;
+    });
+  }, []);
+
+  const handleRateChange = useCallback((value: string) => {
+    setLocalData((prev: any) => {
+      const updated = { ...prev, electricity_rate: value === "" ? null : Number(value) };
+      dataRef.current = updated;
+      return updated;
+    });
+  }, []);
+
+  const handleBlur = useCallback(() => {
+    onChange(dataRef.current);
+  }, [onChange]);
+
+  console.log("ElectricityRateInputs render", renderCount.current);
+
+  return (
+    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+      <div>
+        <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#374151", marginBottom: 8 }}>
+          Utility Company
+        </label>
+        <input
+          type="text"
+          value={localData.utility_company ?? ""}
+          onChange={(e) => handleUtilityChange(e.target.value)}
+          onBlur={handleBlur}
+          placeholder="Enter utility company"
+          style={{
+            width: "100%",
+            padding: "10px 12px",
+            background: "#fff",
+            border: "1px solid #d1d5db",
+            borderRadius: 6,
+            fontSize: 14,
+            color: "#111827",
+          }}
+        />
+      </div>
+
+      <div>
+        <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#374151", marginBottom: 8 }}>
+          Current Rate ($/kWh)
+        </label>
+        <input
+          type="number"
+          step="0.01"
+          value={localData.electricity_rate ?? ""}
+          onChange={(e) => handleRateChange(e.target.value)}
+          onBlur={handleBlur}
+          placeholder="0.12"
+          style={{
+            width: "100%",
+            padding: "10px 12px",
+            background: "#fff",
+            border: "1px solid #d1d5db",
+            borderRadius: 6,
+            fontSize: 14,
+            color: "#111827",
+          }}
+        />
+      </div>
+    </div>
+  );
+});
+
+ElectricityRateInputs.displayName = 'ElectricityRateInputs';
+
+const PricingDetailsInputs = React.memo(({
+  initialData,
+  onChange,
+  systemSummary,
+}: {
+  initialData: { total_price: number | null; price_per_watt: number | null };
+  onChange: (data: { total_price: number | null; price_per_watt: number | null }) => void;
+  systemSummary: { systemKw: number };
+}) => {
+  const renderCount = useRef(0);
+  renderCount.current++;
+
+  const [localData, setLocalData] = useState(initialData);
+  const dataRef = useRef(localData);
+
+  useEffect(() => {
+    setLocalData(initialData);
+    dataRef.current = initialData;
+  }, [initialData]);
+
+  const handleTotalPriceChange = useCallback((value: string) => {
+    setLocalData((prev: any) => {
+      const updated = { ...prev, total_price: value === "" ? null : Number(value) };
+      dataRef.current = updated;
+      return updated;
+    });
+  }, []);
+
+  const handlePricePerWattChange = useCallback((value: string) => {
+    setLocalData((prev: any) => {
+      const updated = { ...prev, price_per_watt: value === "" ? null : Number(value) };
+      dataRef.current = updated;
+      return updated;
+    });
+  }, []);
+
+  const handleBlur = useCallback(() => {
+    onChange(dataRef.current);
+  }, [onChange]);
+
+  console.log("PricingDetailsInputs render", renderCount.current);
+
+  return (
+    <>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+        <div>
+          <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#374151", marginBottom: 8 }}>
+            Total System Price ($)
+          </label>
+          <input
+            type="number"
+            value={localData.total_price ?? ""}
+            onChange={(e) => handleTotalPriceChange(e.target.value)}
+            onBlur={handleBlur}
+            placeholder="Enter total price"
+            style={{
+              width: "100%",
+              padding: "10px 12px",
+              background: "#fff",
+              border: "1px solid #d1d5db",
+              borderRadius: 6,
+              fontSize: 14,
+              color: "#111827",
+            }}
+          />
+        </div>
+
+        <div>
+          <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#374151", marginBottom: 8 }}>
+            Price Per Watt ($/W)
+          </label>
+          <input
+            type="number"
+            step="0.01"
+            value={localData.price_per_watt ?? ""}
+            onChange={(e) => handlePricePerWattChange(e.target.value)}
+            onBlur={handleBlur}
+            placeholder="Enter price per watt"
+            style={{
+              width: "100%",
+              padding: "10px 12px",
+              background: "#fff",
+              border: "1px solid #d1d5db",
+              borderRadius: 6,
+              fontSize: 14,
+              color: "#111827",
+            }}
+          />
+        </div>
+      </div>
+
+      {localData.total_price && systemSummary.systemKw > 0 && (
+        <div style={{ marginTop: 16, padding: 12, background: "#f9fafb", borderRadius: 6 }}>
+          <div style={{ fontSize: 12, color: "#6b7280", marginBottom: 4 }}>Calculated Price Per Watt</div>
+          <div style={{ fontSize: 16, fontWeight: 700, color: "#111827" }}>
+            ${(localData.total_price / (systemSummary.systemKw * 1000)).toFixed(2)}/W
+          </div>
+        </div>
+      )}
+    </>
+  );
+});
+
+PricingDetailsInputs.displayName = 'PricingDetailsInputs';
+
+const CashPaymentInputs = React.memo(({
+  initialData,
+  onChange,
+}: {
+  initialData: { cash_deposit: number | null; cash_second_payment: number | null; cash_final_payment: number | null };
+  onChange: (data: { cash_deposit: number | null; cash_second_payment: number | null; cash_final_payment: number | null }) => void;
+}) => {
+  const renderCount = useRef(0);
+  renderCount.current++;
+
+  const [localData, setLocalData] = useState(initialData);
+  const dataRef = useRef(localData);
+
+  useEffect(() => {
+    setLocalData(initialData);
+    dataRef.current = initialData;
+  }, [initialData]);
+
+  const handleDepositChange = useCallback((value: string) => {
+    setLocalData((prev: any) => {
+      const updated = { ...prev, cash_deposit: value === "" ? null : Number(value) };
+      dataRef.current = updated;
+      return updated;
+    });
+  }, []);
+
+  const handleSecondPaymentChange = useCallback((value: string) => {
+    setLocalData((prev: any) => {
+      const updated = { ...prev, cash_second_payment: value === "" ? null : Number(value) };
+      dataRef.current = updated;
+      return updated;
+    });
+  }, []);
+
+  const handleFinalPaymentChange = useCallback((value: string) => {
+    setLocalData((prev: any) => {
+      const updated = { ...prev, cash_final_payment: value === "" ? null : Number(value) };
+      dataRef.current = updated;
+      return updated;
+    });
+  }, []);
+
+  const handleBlur = useCallback(() => {
+    onChange(dataRef.current);
+  }, [onChange]);
+
+  console.log("CashPaymentInputs render", renderCount.current);
+
+  return (
+    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 16 }}>
+      <div>
+        <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#374151", marginBottom: 8 }}>
+          Deposit Amount ($)
+        </label>
+        <input
+          type="number"
+          value={localData.cash_deposit ?? ""}
+          onChange={(e) => handleDepositChange(e.target.value)}
+          onBlur={handleBlur}
+          placeholder="0.00"
+          style={{
+            width: "100%",
+            padding: "10px 12px",
+            background: "#fff",
+            border: "1px solid #d1d5db",
+            borderRadius: 6,
+            fontSize: 14,
+            color: "#111827",
+          }}
+        />
+      </div>
+
+      <div>
+        <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#374151", marginBottom: 8 }}>
+          2nd Payment ($)
+        </label>
+        <input
+          type="number"
+          value={localData.cash_second_payment ?? ""}
+          onChange={(e) => handleSecondPaymentChange(e.target.value)}
+          onBlur={handleBlur}
+          placeholder="0.00"
+          style={{
+            width: "100%",
+            padding: "10px 12px",
+            background: "#fff",
+            border: "1px solid #d1d5db",
+            borderRadius: 6,
+            fontSize: 14,
+            color: "#111827",
+          }}
+        />
+      </div>
+
+      <div>
+        <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#374151", marginBottom: 8 }}>
+          Final Payment ($)
+        </label>
+        <input
+          type="number"
+          value={localData.cash_final_payment ?? ""}
+          onChange={(e) => handleFinalPaymentChange(e.target.value)}
+          onBlur={handleBlur}
+          placeholder="0.00"
+          style={{
+            width: "100%",
+            padding: "10px 12px",
+            background: "#fff",
+            border: "1px solid #d1d5db",
+            borderRadius: 6,
+            fontSize: 14,
+            color: "#111827",
+          }}
+        />
+      </div>
+    </div>
+  );
+});
+
+CashPaymentInputs.displayName = 'CashPaymentInputs';
+
 type ToolMode = "none" | "roof" | "circle" | "rect" | "tree" | "add-panel" | "delete-panel";
 
 type RoofPlaneRow = {
@@ -293,6 +611,32 @@ export default function ProposalWorkspace({
     setProposalDraft((prev: any) => ({
       ...prev,
       annual_consumption: data.annual_consumption,
+    }));
+  }, []);
+
+  const handleElectricityRateChange = useCallback((data: { utility_company: string | null; electricity_rate: number | null }) => {
+    setProposalDraft((prev: any) => ({
+      ...prev,
+      utility_company: data.utility_company,
+      electricity_rate: data.electricity_rate,
+    }));
+  }, []);
+
+  const handlePricingChange = useCallback((data: { total_price: number | null; price_per_watt: number | null }) => {
+    isDirtyRef.current = true;
+    setProposalDraft((prev: any) => ({
+      ...prev,
+      total_price: data.total_price,
+      price_per_watt: data.price_per_watt,
+    }));
+  }, []);
+
+  const handleCashPaymentChange = useCallback((data: { cash_deposit: number | null; cash_second_payment: number | null; cash_final_payment: number | null }) => {
+    setProposalDraft((prev: any) => ({
+      ...prev,
+      cash_deposit: data.cash_deposit,
+      cash_second_payment: data.cash_second_payment,
+      cash_final_payment: data.cash_final_payment,
     }));
   }, []);
 
@@ -1288,60 +1632,13 @@ export default function ProposalWorkspace({
       </CollapsibleSection>
 
       <CollapsibleSection id="rate" icon={DollarSign} title="Electricity Rate">
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
-          <div>
-            <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#374151", marginBottom: 8 }}>
-              Utility Company
-            </label>
-            <input
-              type="text"
-              value={proposalDraft.utility_company ?? ""}
-              onChange={(e) =>
-                setProposalDraft((p: any) => ({
-                  ...p,
-                  utility_company: e.target.value,
-                }))
-              }
-              placeholder="Enter utility company"
-              style={{
-                width: "100%",
-                padding: "10px 12px",
-                background: "#fff",
-                border: "1px solid #d1d5db",
-                borderRadius: 6,
-                fontSize: 14,
-                color: "#111827",
-              }}
-            />
-          </div>
-
-          <div>
-            <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#374151", marginBottom: 8 }}>
-              Current Rate ($/kWh)
-            </label>
-            <input
-              type="number"
-              step="0.01"
-              value={proposalDraft.electricity_rate ?? ""}
-              onChange={(e) =>
-                setProposalDraft((p: any) => ({
-                  ...p,
-                  electricity_rate: Number(e.target.value),
-                }))
-              }
-              placeholder="0.12"
-              style={{
-                width: "100%",
-                padding: "10px 12px",
-                background: "#fff",
-                border: "1px solid #d1d5db",
-                borderRadius: 6,
-                fontSize: 14,
-                color: "#111827",
-              }}
-            />
-          </div>
-        </div>
+        <ElectricityRateInputs
+          initialData={{
+            utility_company: proposalDraft.utility_company ?? null,
+            electricity_rate: proposalDraft.electricity_rate ?? null,
+          }}
+          onChange={handleElectricityRateChange}
+        />
 
         <button
           onClick={async () => {
@@ -1405,71 +1702,14 @@ export default function ProposalWorkspace({
       </CollapsibleSection>
 
       <CollapsibleSection id="pricing" icon={DollarSign} title="Pricing Details">
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
-          <div>
-            <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#374151", marginBottom: 8 }}>
-              Total System Price ($)
-            </label>
-            <input
-              type="number"
-              value={proposalDraft.total_price ?? ""}
-              onChange={(e) => {
-                isDirtyRef.current = true;
-                setProposalDraft((p: any) => ({
-                  ...p,
-                  total_price: Number(e.target.value),
-                }));
-              }}
-              placeholder="Enter total price"
-              style={{
-                width: "100%",
-                padding: "10px 12px",
-                background: "#fff",
-                border: "1px solid #d1d5db",
-                borderRadius: 6,
-                fontSize: 14,
-                color: "#111827",
-              }}
-            />
-          </div>
-
-          <div>
-            <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#374151", marginBottom: 8 }}>
-              Price Per Watt ($/W)
-            </label>
-            <input
-              type="number"
-              step="0.01"
-              value={proposalDraft.price_per_watt ?? ""}
-              onChange={(e) => {
-                isDirtyRef.current = true;
-                setProposalDraft((p: any) => ({
-                  ...p,
-                  price_per_watt: Number(e.target.value),
-                }));
-              }}
-              placeholder="Enter price per watt"
-              style={{
-                width: "100%",
-                padding: "10px 12px",
-                background: "#fff",
-                border: "1px solid #d1d5db",
-                borderRadius: 6,
-                fontSize: 14,
-                color: "#111827",
-              }}
-            />
-          </div>
-        </div>
-
-        {proposalDraft.total_price && systemSummary.systemKw > 0 && (
-          <div style={{ marginTop: 16, padding: 12, background: "#f9fafb", borderRadius: 6 }}>
-            <div style={{ fontSize: 12, color: "#6b7280", marginBottom: 4 }}>Calculated Price Per Watt</div>
-            <div style={{ fontSize: 16, fontWeight: 700, color: "#111827" }}>
-              ${(proposalDraft.total_price / (systemSummary.systemKw * 1000)).toFixed(2)}/W
-            </div>
-          </div>
-        )}
+        <PricingDetailsInputs
+          initialData={{
+            total_price: proposalDraft.total_price ?? null,
+            price_per_watt: proposalDraft.price_per_watt ?? null,
+          }}
+          onChange={handlePricingChange}
+          systemSummary={systemSummary}
+        />
 
         <button
           type="button"
@@ -1577,85 +1817,14 @@ export default function ProposalWorkspace({
 
       {(proposalDraft.finance_type ?? "cash") === "cash" && (
         <CollapsibleSection id="payment" icon={DollarSign} title="Cash Payment Schedule">
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 16 }}>
-            <div>
-              <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#374151", marginBottom: 8 }}>
-                Deposit Amount ($)
-              </label>
-              <input
-                type="number"
-                value={proposalDraft.cash_deposit ?? ""}
-                onChange={(e) =>
-                  setProposalDraft((p: any) => ({
-                    ...p,
-                    cash_deposit: Number(e.target.value),
-                  }))
-                }
-                placeholder="0.00"
-                style={{
-                  width: "100%",
-                  padding: "10px 12px",
-                  background: "#fff",
-                  border: "1px solid #d1d5db",
-                  borderRadius: 6,
-                  fontSize: 14,
-                  color: "#111827",
-                }}
-              />
-            </div>
-
-            <div>
-              <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#374151", marginBottom: 8 }}>
-                2nd Payment ($)
-              </label>
-              <input
-                type="number"
-                value={proposalDraft.cash_second_payment ?? ""}
-                onChange={(e) =>
-                  setProposalDraft((p: any) => ({
-                    ...p,
-                    cash_second_payment: Number(e.target.value),
-                  }))
-                }
-                placeholder="0.00"
-                style={{
-                  width: "100%",
-                  padding: "10px 12px",
-                  background: "#fff",
-                  border: "1px solid #d1d5db",
-                  borderRadius: 6,
-                  fontSize: 14,
-                  color: "#111827",
-                }}
-              />
-            </div>
-
-            <div>
-              <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#374151", marginBottom: 8 }}>
-                Final Payment ($)
-              </label>
-              <input
-                type="number"
-                value={proposalDraft.cash_final_payment ?? ""}
-                onChange={(e) =>
-                  setProposalDraft((p: any) => ({
-                    ...p,
-                    cash_final_payment: Number(e.target.value),
-                  }))
-                }
-                placeholder="0.00"
-                style={{
-                  width: "100%",
-                  padding: "10px 12px",
-                  background: "#fff",
-                  border: "1px solid #d1d5db",
-                  borderRadius: 6,
-                  fontSize: 14,
-                  color: "#111827",
-                }}
-              />
-            </div>
-          </div>
+          <CashPaymentInputs
+            initialData={{
+              cash_deposit: proposalDraft.cash_deposit ?? null,
+              cash_second_payment: proposalDraft.cash_second_payment ?? null,
+              cash_final_payment: proposalDraft.cash_final_payment ?? null,
+            }}
+            onChange={handleCashPaymentChange}
+          />
 
           <button
             onClick={async () => {
