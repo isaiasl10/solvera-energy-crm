@@ -899,7 +899,18 @@ export default function ProposalWorkspace({
     const basePPW = proposalDraft?.price_per_watt || 0;
     const systemWatts = systemKw * 1000;
     const baseSystemPrice = basePPW * systemWatts;
-    const totalContractPrice = baseSystemPrice + adderCalculations.totalAdderCost;
+
+    let batteryCost = 0;
+    const batteryQty = proposalDraft.battery_quantity || proposal?.battery_quantity || 0;
+    const batteryBrand = proposalDraft.battery_brand || proposal?.battery_brand || "";
+    if (batteryQty > 0 && batteryBrand) {
+      const selectedBattery = batteries.find(b => `${b.brand} ${b.model}` === batteryBrand);
+      if (selectedBattery) {
+        batteryCost = batteryQty * Number(selectedBattery.cost);
+      }
+    }
+
+    const totalContractPrice = baseSystemPrice + adderCalculations.totalAdderCost + batteryCost;
     const effectivePPW = systemWatts > 0 ? totalContractPrice / systemWatts : 0;
 
     const cashDeposit = 2000;
@@ -920,8 +931,9 @@ export default function ProposalWorkspace({
       cashDeposit,
       cashProgress,
       cashFinal,
+      batteryCost,
     };
-  }, [panels, panelModels, proposal, proposalDraft, adderCalculations]);
+  }, [panels, panelModels, proposal, proposalDraft, adderCalculations, batteries]);
 
   useEffect(() => {
     const isCash = (proposalDraft.finance_type ?? proposal?.finance_type ?? "cash") === "cash";
@@ -1978,9 +1990,14 @@ export default function ProposalWorkspace({
                       Total Battery Capacity
                     </label>
                     <div style={{ fontSize: 13, color: "#6b7280", fontStyle: "italic", padding: "8px 0" }}>
-                      {(proposalDraft.battery_quantity || proposal?.battery_quantity)
-                        ? `${((proposalDraft.battery_quantity || proposal?.battery_quantity) * 13.5).toFixed(1)} kWh`
-                        : "0.0 kWh"}
+                      {(() => {
+                        const qty = proposalDraft.battery_quantity || proposal?.battery_quantity || 0;
+                        const batteryBrand = proposalDraft.battery_brand || proposal?.battery_brand || "";
+                        if (qty === 0 || !batteryBrand) return "0.0 kWh";
+                        const selectedBattery = batteries.find(b => `${b.brand} ${b.model}` === batteryBrand);
+                        if (!selectedBattery) return "0.0 kWh";
+                        return `${(qty * Number(selectedBattery.capacity_kwh)).toFixed(1)} kWh`;
+                      })()}
                     </div>
                   </div>
                 </div>
