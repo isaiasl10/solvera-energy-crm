@@ -102,6 +102,7 @@ export default function Proposals() {
         throw new Error("Not authenticated");
       }
 
+      console.log('Authenticated user:', user.id);
       console.log('Creating customer...');
       const { data: customerData, error: customerError } = await supabase
         .from("customers")
@@ -116,34 +117,41 @@ export default function Proposals() {
 
       if (customerError) {
         console.error('Customer creation error:', customerError);
+        setError(`Customer error: ${customerError.message}`);
         throw customerError;
       }
 
       console.log('Customer created:', customerData);
 
       if (customerData) {
-        console.log('Creating proposal...');
+        console.log('Creating proposal with user:', user.id);
+        const proposalPayload = {
+          created_by: user.id,
+          owner_id: user.id,
+          customer_id: customerData.id,
+          place_id: selectedPlace.placeId,
+          formatted_address: selectedPlace.formattedAddress,
+          lat: selectedPlace.lat,
+          lng: selectedPlace.lng,
+          status: "draft",
+          usage_mode: "annual",
+        };
+        console.log('Proposal payload:', proposalPayload);
+
         const { data: proposalData, error: proposalError } = await supabase
           .from("proposals")
-          .insert({
-            created_by: user.id,
-            owner_id: user.id,
-            customer_id: customerData.id,
-            place_id: selectedPlace.placeId,
-            formatted_address: selectedPlace.formattedAddress,
-            lat: selectedPlace.lat,
-            lng: selectedPlace.lng,
-            status: "draft",
-          })
+          .insert(proposalPayload)
           .select()
           .single();
 
         if (proposalError) {
           console.error('Proposal creation error:', proposalError);
+          console.error('Error details:', JSON.stringify(proposalError, null, 2));
+          setError(`Proposal error: ${proposalError.message}`);
           throw proposalError;
         }
 
-        console.log('Proposal created:', proposalData);
+        console.log('Proposal created successfully:', proposalData);
 
         if (proposalData) {
           await loadProposals();
