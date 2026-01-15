@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useRef, useState, useCallback } from "react"
 import { supabase } from "../lib/supabaseClient";
 import { sanitizePatch } from "../lib/supabasePatch";
 import { useFinancingOptions } from "../hooks/useFinancingOptions";
-import { User, DollarSign, ArrowLeft, Zap, Package, ChevronDown, ChevronUp, FileText, CreditCard, File, Pencil, Trash2, Square, Circle, TreeDeciduous, Grid, RotateCw } from "lucide-react";
+import { User, DollarSign, ArrowLeft, Zap, Package, ChevronDown, ChevronUp, FileText, CreditCard, File, Pencil, Trash2, Square, Circle, TreeDeciduous, Grid, RotateCw, Plus } from "lucide-react";
 
 const fmt = (n?: number | null, digits = 0) =>
   typeof n === "number" && Number.isFinite(n)
@@ -1431,7 +1431,25 @@ export default function ProposalWorkspace({
           return;
         }
 
-        if (currentToolMode === "add-panel") {
+        if (currentToolMode === "fill-roof") {
+          // Determine which roof plane was clicked
+          const clickedRoof = roofPlanes.find((roof) => {
+            return isPointInPolygon({ lat, lng }, roof.path);
+          });
+
+          if (clickedRoof && currentPanelModelId) {
+            console.log("Filling roof plane:", clickedRoof.id);
+            setSelectedRoofId(clickedRoof.id);
+            // Trigger auto-fill for this roof
+            setTimeout(() => {
+              const roof = roofPlanes.find(r => r.id === clickedRoof.id);
+              if (roof) {
+                fillRoofWithPanels(roof);
+              }
+            }, 100);
+            setToolMode("none");
+          }
+        } else if (currentToolMode === "add-panel") {
           if (currentRoofId && currentPanelModelId) {
             addPanelAt(lat, lng);
           } else {
@@ -1806,6 +1824,14 @@ export default function ProposalWorkspace({
 
       rect.setMap(mapRef.current);
       panelRectanglesRef.current.set(panel.id, rect);
+
+      // Add click listener for delete-panel mode
+      google.maps.event.addListener(rect, "click", (e: any) => {
+        if (toolModeRef.current === "delete-panel") {
+          e.stop();
+          deletePanelById(panel.id);
+        }
+      });
     });
   }, [panels, panelModels, toolMode]);
 
@@ -1821,10 +1847,12 @@ export default function ProposalWorkspace({
     }
   }, [toolMode]);
 
-  const deletePanelById = (panelId: string) => {
+  const deletePanelById = async (panelId: string) => {
+    // Delete from database if it's not a temp panel
     if (!panelId.startsWith('temp-')) {
-      setDeletedPanelIds((prev) => [...prev, panelId]);
+      await supabase.from("proposal_panels").delete().eq("id", panelId);
     }
+    // Remove from local state
     setPanels((prev) => prev.filter((p) => p.id !== panelId));
   };
 
@@ -1952,6 +1980,88 @@ export default function ProposalWorkspace({
     };
 
     setPanels((prev) => [...prev, newPanel]);
+  };
+
+  const fillRoofWithPanels = async (roof: any) => {
+    if (!roof || !selectedPanelModelId) return;
+
+    setBusy("Auto-filling panels...");
+
+    const model = panelModels.find((m) => m.id === selectedPanelModelId);
+    if (!model) {
+      setBusy(null);
+      return;
+    }
+
+    const lengthMeters = (panelOrientation === "portrait" ? model.length_mm : model.width_mm) / 1000;
+    const widthMeters = (panelOrientation === "portrait" ? model.width_mm : model.length_mm) / 1000;
+
+    const roofPath = roof.path;
+    if (roofPath.length < 3) {
+      setBusy(null);
+      return;
+    }
+
+    let minLat = roofPath[0].lat;
+    let maxLat = roofPath[0].lat;
+    let minLng = roofPath[0].lng;
+    let maxLng = roofPath[0].lng;
+
+    roofPath.forEach((p: any) => {
+      if (p.lat < minLat) minLat = p.lat;
+      if (p.lat > maxLat) maxLat = p.lat;
+      if (p.lng < minLng) minLng = p.lng;
+      if (p.lng > maxLng) maxLng = p.lng;
+    });
+
+    const latStepMeters = lengthMeters + rowSpacing;
+    const lngStepMeters = widthMeters + colSpacing;
+
+    const latStep = latStepMeters / 111320;
+    const lngStep = lngStepMeters / (111320 * Math.cos(((minLat + maxLat) / 2) * Math.PI / 180));
+
+    const newPanels: any[] = [];
+
+    for (let lat = minLat + latStep / 2; lat < maxLat; lat += latStep) {
+      for (let lng = minLng + lngStep / 2; lng < maxLng; lng += lngStep) {
+        const latOffset = lengthMeters / 111320;
+        const lngOffset = widthMeters / (111320 * Math.cos((lat * Math.PI) / 180));
+
+        const corners = [
+          { lat: lat - latOffset / 2, lng: lng - lngOffset / 2 },
+          { lat: lat - latOffset / 2, lng: lng + lngOffset / 2 },
+          { lat: lat + latOffset / 2, lng: lng - lngOffset / 2 },
+          { lat: lat + latOffset / 2, lng: lng + lngOffset / 2 },
+        ];
+
+        const allCornersInside = corners.every((corner) => isPointInPolygon(corner, roofPath));
+
+        if (allCornersInside) {
+          newPanels.push({
+            proposal_id: proposalId,
+            roof_plane_id: roof.id,
+            panel_model_id: selectedPanelModelId,
+            center_lat: lat,
+            center_lng: lng,
+            rotation_deg: panelRotation,
+            is_portrait: panelOrientation === "portrait",
+          });
+        }
+      }
+    }
+
+    if (newPanels.length > 0) {
+      const { data, error } = await supabase
+        .from("proposal_panels")
+        .insert(newPanels)
+        .select();
+
+      if (!error && data) {
+        setPanels((prev) => [...prev, ...data]);
+      }
+    }
+
+    setBusy(null);
   };
 
   const autoFillPanels = async () => {
@@ -3018,6 +3128,86 @@ export default function ProposalWorkspace({
           </div>
         </div>
 
+        <div style={{ height: 32, width: 1, background: "rgba(255,255,255,0.2)" }} />
+
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          <span style={{ fontSize: 11, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.5px" }}>Panel Tools</span>
+          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <button
+              onClick={() => setToolMode(toolMode === "fill-roof" ? "none" : "fill-roof")}
+              disabled={!selectedPanelModelId}
+              title="Fill Roof - Click on a roof plane to automatically fill it with panels"
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 6,
+                padding: "8px 14px",
+                background: toolMode === "fill-roof" ? "linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)" : (!selectedPanelModelId ? "rgba(255,255,255,0.05)" : "rgba(255,255,255,0.1)"),
+                color: !selectedPanelModelId ? "#64748b" : "#ffffff",
+                border: "1px solid " + (toolMode === "fill-roof" ? "#8b5cf6" : !selectedPanelModelId ? "rgba(255,255,255,0.1)" : "rgba(255,255,255,0.2)"),
+                borderRadius: 6,
+                cursor: !selectedPanelModelId ? "not-allowed" : "pointer",
+                fontWeight: toolMode === "fill-roof" ? 600 : 500,
+                fontSize: 13,
+                boxShadow: toolMode === "fill-roof" ? "0 2px 8px rgba(139, 92, 246, 0.4)" : "none",
+                transition: "all 0.2s",
+              }}
+            >
+              <Grid size={15} />
+              <span>Fill Roof</span>
+            </button>
+
+            <button
+              onClick={() => setToolMode(toolMode === "add-panel" ? "none" : "add-panel")}
+              disabled={!selectedPanelModelId}
+              title="Add Panel - Click on the map to place individual panels"
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 6,
+                padding: "8px 14px",
+                background: toolMode === "add-panel" ? "linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)" : (!selectedPanelModelId ? "rgba(255,255,255,0.05)" : "rgba(255,255,255,0.1)"),
+                color: !selectedPanelModelId ? "#64748b" : "#ffffff",
+                border: "1px solid " + (toolMode === "add-panel" ? "#3b82f6" : !selectedPanelModelId ? "rgba(255,255,255,0.1)" : "rgba(255,255,255,0.2)"),
+                borderRadius: 6,
+                cursor: !selectedPanelModelId ? "not-allowed" : "pointer",
+                fontWeight: toolMode === "add-panel" ? 600 : 500,
+                fontSize: 13,
+                boxShadow: toolMode === "add-panel" ? "0 2px 8px rgba(59, 130, 246, 0.4)" : "none",
+                transition: "all 0.2s",
+              }}
+            >
+              <Plus size={15} />
+              <span>Add Panel</span>
+            </button>
+
+            <button
+              onClick={() => setToolMode(toolMode === "delete-panel" ? "none" : "delete-panel")}
+              title="Delete Panel - Click on panels to remove them"
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 6,
+                padding: "8px 14px",
+                background: toolMode === "delete-panel" ? "linear-gradient(135deg, #f97316 0%, #ea580c 100%)" : "rgba(255,255,255,0.1)",
+                color: "#ffffff",
+                border: "1px solid " + (toolMode === "delete-panel" ? "#f97316" : "rgba(255,255,255,0.2)"),
+                borderRadius: 6,
+                cursor: "pointer",
+                fontWeight: toolMode === "delete-panel" ? 600 : 500,
+                fontSize: 13,
+                boxShadow: toolMode === "delete-panel" ? "0 2px 8px rgba(249, 115, 22, 0.4)" : "none",
+                transition: "all 0.2s",
+              }}
+            >
+              <Trash2 size={15} />
+              <span>Delete</span>
+            </button>
+          </div>
+        </div>
+
+        <div style={{ height: 32, width: 1, background: "rgba(255,255,255,0.2)" }} />
+
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
           <span style={{ fontSize: 11, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.5px" }}>Panel Configuration</span>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
@@ -3163,6 +3353,9 @@ export default function ProposalWorkspace({
               {toolMode === "circle" && "Click start point, drag, then click to set circle size."}
               {toolMode === "rect" && "Click start corner, drag, then click to set rectangle size."}
               {toolMode === "tree" && "Click start corner, drag, then click to set tree coverage area."}
+              {toolMode === "fill-roof" && "Click on any roof plane to automatically fill it with panels."}
+              {toolMode === "add-panel" && "Click on the map to place individual panels."}
+              {toolMode === "delete-panel" && "Click on a panel to delete it."}
             </div>
           )}
           <div ref={mapDivRef} style={{ width: "100%", height: "100%" }}>
