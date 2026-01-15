@@ -87,6 +87,7 @@ export default function ProposalWorkspace({
   const [draftCustomer, setDraftCustomer] = useState<any>({ full_name: "", email: "", phone: "" });
   const didInitDraftRef = useRef(false);
   const isDirtyRef = useRef(false);
+  const lastInitCustomerIdRef = useRef<string | null>(null);
 
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
     customer: true,
@@ -288,6 +289,7 @@ export default function ProposalWorkspace({
     didInitDraftRef.current = false;
     isDirtyRef.current = false;
     lastLoadedProposalId.current = null;
+    lastInitCustomerIdRef.current = null;
   }, [proposalId]);
 
   useEffect(() => {
@@ -356,11 +358,10 @@ export default function ProposalWorkspace({
   }, [proposalId]);
 
   useEffect(() => {
-    if (!proposalId) return;
-    if (didInitDraftRef.current) return;
-    if (!proposal?.id || !customer?.id) return;
+    if (!proposalId || !customer?.id) return;
+    if (lastInitCustomerIdRef.current === customer.id) return;
 
-    console.log("Draft init ran", didInitDraftRef.current);
+    console.log("Draft init ran for customer:", customer.id);
 
     setDraftCustomer({
       full_name: customer.full_name ?? "",
@@ -368,8 +369,9 @@ export default function ProposalWorkspace({
       phone: customer.phone ?? "",
     });
 
+    lastInitCustomerIdRef.current = customer.id;
     didInitDraftRef.current = true;
-  }, [proposalId, proposal?.id, customer?.id]);
+  }, [proposalId, customer?.id]);
 
   useEffect(() => {
     if (activeTab !== "solar-design") return;
@@ -965,7 +967,7 @@ export default function ProposalWorkspace({
               value={draftCustomer.full_name}
               onChange={(e) => {
                 isDirtyRef.current = true;
-                setDraftCustomer((c: any) => ({ ...c, full_name: e.target.value }));
+                setDraftCustomer((prev: any) => ({ ...prev, full_name: e.target.value }));
               }}
               placeholder="Enter customer name"
               style={{
@@ -989,7 +991,7 @@ export default function ProposalWorkspace({
               value={draftCustomer.email}
               onChange={(e) => {
                 isDirtyRef.current = true;
-                setDraftCustomer((c: any) => ({ ...c, email: e.target.value }));
+                setDraftCustomer((prev: any) => ({ ...prev, email: e.target.value }));
               }}
               placeholder="customer@example.com"
               style={{
@@ -1013,7 +1015,7 @@ export default function ProposalWorkspace({
               value={draftCustomer.phone}
               onChange={(e) => {
                 isDirtyRef.current = true;
-                setDraftCustomer((c: any) => ({ ...c, phone: e.target.value }));
+                setDraftCustomer((prev: any) => ({ ...prev, phone: e.target.value }));
               }}
               placeholder="(555) 123-4567"
               style={{
