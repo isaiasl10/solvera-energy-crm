@@ -107,7 +107,7 @@ export default function CreateProposal({ proposalId, onBack }: CreateProposalPro
         }
       }
 
-      pdf.save(`Proposal-${customer?.name ?? "Customer"}.pdf`);
+      pdf.save(`Proposal-${customer?.full_name ?? "Customer"}.pdf`);
     } catch (error) {
       console.error("Error generating PDF:", error);
       alert("Failed to generate PDF. Please try again.");
@@ -117,9 +117,9 @@ export default function CreateProposal({ proposalId, onBack }: CreateProposalPro
   };
 
   const sendEmail = () => {
-    const subject = encodeURIComponent(`Solar Proposal - ${customer?.name ?? ""}`);
+    const subject = encodeURIComponent(`Solar Proposal - ${customer?.full_name ?? ""}`);
     const body = encodeURIComponent(
-      `Hi ${customer?.name ?? ""},\n\nAttached is your solar proposal for ${proposal?.formatted_address ?? "your property"}.\n\nSystem Details:\n- ${systemSummary.panelCount} solar panels\n- ${fmt(systemSummary.systemKw, 2)} kW system\n- ${fmt(systemSummary.annualProductionKwh, 0)} kWh estimated annual production\n- ${fmt(systemSummary.offsetPercent, 1)}% energy offset\n\nPlease review and let me know if you have any questions.\n\nBest regards,\n${rep?.full_name ?? "Your Solar Team"}`
+      `Hi ${customer?.full_name ?? ""},\n\nAttached is your solar proposal for ${proposal?.formatted_address ?? "your property"}.\n\nSystem Details:\n- ${systemSummary.panelCount} solar panels\n- ${fmt(systemSummary.systemKw, 2)} kW system\n- ${fmt(systemSummary.annualProductionKwh, 0)} kWh estimated annual production\n- ${fmt(systemSummary.offsetPercent, 1)}% energy offset\n\nPlease review and let me know if you have any questions.\n\nBest regards,\n${rep?.full_name ?? "Your Solar Team"}`
     );
     window.location.href = `mailto:${customer?.email ?? ""}?subject=${subject}&body=${body}`;
   };
@@ -260,7 +260,7 @@ export default function CreateProposal({ proposalId, onBack }: CreateProposalPro
           <div style={{ marginTop: 16, padding: 16, background: "#f9fafb", borderRadius: 10 }}>
             <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 8 }}>Customer</div>
             <div style={{ fontSize: 13, lineHeight: 1.6 }}>
-              <div style={{ fontWeight: 600 }}>{customer.name}</div>
+              <div style={{ fontWeight: 600 }}>{customer.full_name}</div>
               <div style={{ opacity: 0.7 }}>{customer.email}</div>
               <div style={{ opacity: 0.7 }}>{customer.phone}</div>
             </div>
@@ -305,8 +305,8 @@ export default function CreateProposal({ proposalId, onBack }: CreateProposalPro
               <div style={{ padding: 12, background: "#f9fafb", border: "1px solid #e5e7eb", borderTop: "none", borderRadius: "0 0 8px 8px" }}>
                 <label style={{ display: "block", fontSize: 11, fontWeight: 600, color: "#374151", marginBottom: 4 }}>Name</label>
                 <input
-                  value={customer.name ?? ""}
-                  onChange={(e) => setCustomer((c: any) => ({ ...c, name: e.target.value }))}
+                  value={customer.full_name ?? ""}
+                  onChange={(e) => setCustomer((c: any) => ({ ...c, full_name: e.target.value }))}
                   style={{
                     width: "100%",
                     padding: "6px 10px",
@@ -353,7 +353,7 @@ export default function CreateProposal({ proposalId, onBack }: CreateProposalPro
                     await supabase
                       .from("customers")
                       .update({
-                        name: customer.name,
+                        full_name: customer.full_name,
                         email: customer.email,
                         phone: customer.phone,
                       })
@@ -612,7 +612,7 @@ export default function CreateProposal({ proposalId, onBack }: CreateProposalPro
             <div style={{ padding: 16, border: "1px solid #e5e7eb", borderRadius: 10 }}>
               <div style={{ fontSize: 14, fontWeight: 800, marginBottom: 8 }}>Customer</div>
               <div style={{ fontSize: 13, lineHeight: 1.6 }}>
-                <div style={{ fontWeight: 600 }}>{customer?.name ?? "—"}</div>
+                <div style={{ fontWeight: 600 }}>{customer?.full_name ?? "—"}</div>
                 <div style={{ opacity: 0.7 }}>{customer?.email ?? ""}</div>
                 <div style={{ opacity: 0.7 }}>{customer?.phone ?? ""}</div>
               </div>
