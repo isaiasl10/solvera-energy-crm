@@ -42,12 +42,12 @@ export default function CustomerPricing({
         .from("customers")
         .select("*")
         .eq("id", proposal.customer_id)
-        .single();
+        .maybeSingle();
 
       setCustomer(data);
       setProposalDraft(proposal);
     })();
-  }, [proposal?.customer_id]);
+  }, [proposal]);
 
   const selectedFinanceValue = useMemo(() => {
     if (!proposalDraft) return "cash";
@@ -56,41 +56,45 @@ export default function CustomerPricing({
   }, [proposalDraft]);
 
   if (!proposalId)
-    return <div style={{ padding: 24 }}>Select a proposal first.</div>;
+    return <div style={{ padding: 16 }}>Select a proposal first.</div>;
 
   if (loading || !proposal)
-    return <div style={{ padding: 24 }}>Loading customer & pricing…</div>;
+    return <div style={{ padding: 16 }}>Loading customer & pricing…</div>;
 
   const selectedModel = panelModels.find(
     (m) => m.id === proposal.panel_model_id
   );
 
   return (
-    <div style={{ padding: 24, height: "calc(100vh - 64px)", overflow: "auto" }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 16 }}>
+    <div style={{ padding: 16, height: "calc(100vh - 64px)", overflow: "auto", background: "#f8f9fa" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
         {onBack && (
           <button
-            onClick={onBack}
+            onClick={(e) => {
+              e.preventDefault();
+              onBack();
+            }}
             style={{
               display: "flex",
               alignItems: "center",
-              gap: 8,
-              padding: "8px 16px",
-              background: "#f3f4f6",
-              border: "none",
-              borderRadius: 8,
+              gap: 6,
+              padding: "6px 12px",
+              background: "#fff",
+              border: "1px solid #d1d5db",
+              borderRadius: 6,
               cursor: "pointer",
-              fontWeight: 600,
+              fontWeight: 500,
+              fontSize: 13,
               color: "#374151",
             }}
           >
-            <ArrowLeft size={18} />
+            <ArrowLeft size={16} />
             Back
           </button>
         )}
         <div>
-          <div style={{ fontSize: 22, fontWeight: 900 }}>Customer & Pricing</div>
-          <div style={{ opacity: 0.7, fontSize: 14 }}>
+          <div style={{ fontSize: 18, fontWeight: 700, color: "#111827" }}>Customer & Pricing</div>
+          <div style={{ opacity: 0.6, fontSize: 12, color: "#6b7280" }}>
             Confirm customer, financing, and payments
           </div>
         </div>
@@ -99,47 +103,51 @@ export default function CustomerPricing({
       <div
         style={{
           display: "flex",
-          gap: 8,
-          marginBottom: 24,
-          borderBottom: "2px solid #eee",
+          gap: 4,
+          marginBottom: 16,
+          borderBottom: "1px solid #e5e7eb",
+          background: "#fff",
+          borderRadius: "8px 8px 0 0",
         }}
       >
         <button
           onClick={() => setActiveTab("form")}
           style={{
-            padding: "12px 24px",
+            padding: "10px 20px",
             background: activeTab === "form" ? "#fff" : "transparent",
             border: "none",
             borderBottom:
-              activeTab === "form" ? "3px solid #f97316" : "3px solid transparent",
+              activeTab === "form" ? "2px solid #f97316" : "2px solid transparent",
             cursor: "pointer",
-            fontWeight: activeTab === "form" ? 700 : 500,
-            color: activeTab === "form" ? "#000" : "#666",
+            fontWeight: activeTab === "form" ? 600 : 500,
+            fontSize: 13,
+            color: activeTab === "form" ? "#111827" : "#6b7280",
             display: "flex",
             alignItems: "center",
-            gap: 8,
+            gap: 6,
           }}
         >
-          <FileText size={18} />
+          <FileText size={15} />
           Customer Details
         </button>
         <button
           onClick={() => setActiveTab("map")}
           style={{
-            padding: "12px 24px",
+            padding: "10px 20px",
             background: activeTab === "map" ? "#fff" : "transparent",
             border: "none",
             borderBottom:
-              activeTab === "map" ? "3px solid #f97316" : "3px solid transparent",
+              activeTab === "map" ? "2px solid #f97316" : "2px solid transparent",
             cursor: "pointer",
-            fontWeight: activeTab === "map" ? 700 : 500,
-            color: activeTab === "map" ? "#000" : "#666",
+            fontWeight: activeTab === "map" ? 600 : 500,
+            fontSize: 13,
+            color: activeTab === "map" ? "#111827" : "#6b7280",
             display: "flex",
             alignItems: "center",
-            gap: 8,
+            gap: 6,
           }}
         >
-          <MapPin size={18} />
+          <MapPin size={15} />
           Solar Design Preview
         </button>
       </div>
@@ -147,18 +155,19 @@ export default function CustomerPricing({
       {activeTab === "form" && (
         <div
           style={{
-            maxWidth: 1200,
+            maxWidth: 1400,
             display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(400px, 1fr))",
-            gap: 24,
+            gridTemplateColumns: "repeat(auto-fit, minmax(380px, 1fr))",
+            gap: 16,
           }}
         >
-          <div className="card">
-            <div className="card-title">
-              <User size={18} /> Customer Information
+          <div style={{ background: "#fff", padding: 16, borderRadius: 8, border: "1px solid #e5e7eb" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12, paddingBottom: 10, borderBottom: "1px solid #e5e7eb" }}>
+              <User size={16} style={{ color: "#6b7280" }} />
+              <span style={{ fontWeight: 600, fontSize: 14, color: "#111827" }}>Customer Information</span>
             </div>
 
-            <label className="block text-sm font-semibold text-slate-700 mb-2">
+            <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#374151", marginBottom: 6 }}>
               Name
             </label>
             <input
@@ -166,10 +175,19 @@ export default function CustomerPricing({
               onChange={(e) =>
                 setCustomer((c: any) => ({ ...c, name: e.target.value }))
               }
-              className="w-full px-4 py-3 bg-white border-2 border-slate-200 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all duration-200 text-slate-900 mb-4"
+              style={{
+                width: "100%",
+                padding: "8px 12px",
+                background: "#fff",
+                border: "1px solid #d1d5db",
+                borderRadius: 6,
+                fontSize: 13,
+                color: "#111827",
+                marginBottom: 12,
+              }}
             />
 
-            <label className="block text-sm font-semibold text-slate-700 mb-2">
+            <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#374151", marginBottom: 6 }}>
               Email
             </label>
             <input
@@ -178,10 +196,19 @@ export default function CustomerPricing({
               onChange={(e) =>
                 setCustomer((c: any) => ({ ...c, email: e.target.value }))
               }
-              className="w-full px-4 py-3 bg-white border-2 border-slate-200 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all duration-200 text-slate-900 mb-4"
+              style={{
+                width: "100%",
+                padding: "8px 12px",
+                background: "#fff",
+                border: "1px solid #d1d5db",
+                borderRadius: 6,
+                fontSize: 13,
+                color: "#111827",
+                marginBottom: 12,
+              }}
             />
 
-            <label className="block text-sm font-semibold text-slate-700 mb-2">
+            <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#374151", marginBottom: 6 }}>
               Phone
             </label>
             <input
@@ -190,7 +217,16 @@ export default function CustomerPricing({
               onChange={(e) =>
                 setCustomer((c: any) => ({ ...c, phone: e.target.value }))
               }
-              className="w-full px-4 py-3 bg-white border-2 border-slate-200 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all duration-200 text-slate-900 mb-4"
+              style={{
+                width: "100%",
+                padding: "8px 12px",
+                background: "#fff",
+                border: "1px solid #d1d5db",
+                borderRadius: 6,
+                fontSize: 13,
+                color: "#111827",
+                marginBottom: 12,
+              }}
             />
 
             <button
@@ -205,18 +241,29 @@ export default function CustomerPricing({
                   })
                   .eq("id", customer.id);
               }}
-              className="w-full bg-orange-600 text-white py-3 px-4 rounded-lg hover:bg-orange-700 transition-colors duration-200 font-semibold"
+              style={{
+                width: "100%",
+                background: "#f97316",
+                color: "#fff",
+                padding: "8px 16px",
+                borderRadius: 6,
+                border: "none",
+                cursor: "pointer",
+                fontWeight: 600,
+                fontSize: 13,
+              }}
             >
               Save Customer
             </button>
           </div>
 
-          <div className="card">
-            <div className="card-title">
-              <DollarSign size={18} /> Financing
+          <div style={{ background: "#fff", padding: 16, borderRadius: 8, border: "1px solid #e5e7eb" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12, paddingBottom: 10, borderBottom: "1px solid #e5e7eb" }}>
+              <DollarSign size={16} style={{ color: "#6b7280" }} />
+              <span style={{ fontWeight: 600, fontSize: 14, color: "#111827" }}>Financing</span>
             </div>
 
-            <label className="block text-sm font-semibold text-slate-700 mb-2">
+            <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#374151", marginBottom: 6 }}>
               Financing Option
             </label>
             <select
@@ -237,7 +284,16 @@ export default function CustomerPricing({
                   }));
                 }
               }}
-              className="w-full px-4 py-3 bg-white border-2 border-slate-200 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all duration-200 text-slate-900 mb-4"
+              style={{
+                width: "100%",
+                padding: "8px 12px",
+                background: "#fff",
+                border: "1px solid #d1d5db",
+                borderRadius: 6,
+                fontSize: 13,
+                color: "#111827",
+                marginBottom: 12,
+              }}
             >
               {financingOptions.map((opt: any) => (
                 <option key={opt.id} value={opt.id}>
@@ -258,17 +314,29 @@ export default function CustomerPricing({
                   .eq("id", proposalId);
                 await refresh();
               }}
-              className="w-full bg-orange-600 text-white py-3 px-4 rounded-lg hover:bg-orange-700 transition-colors duration-200 font-semibold"
+              style={{
+                width: "100%",
+                background: "#f97316",
+                color: "#fff",
+                padding: "8px 16px",
+                borderRadius: 6,
+                border: "none",
+                cursor: "pointer",
+                fontWeight: 600,
+                fontSize: 13,
+              }}
             >
               Save Financing
             </button>
           </div>
 
           {(proposalDraft.finance_type ?? "cash") === "cash" && (
-            <div className="card">
-              <div className="card-title">Cash Payment Schedule</div>
+            <div style={{ background: "#fff", padding: 16, borderRadius: 8, border: "1px solid #e5e7eb" }}>
+              <div style={{ fontWeight: 600, fontSize: 14, color: "#111827", marginBottom: 12, paddingBottom: 10, borderBottom: "1px solid #e5e7eb" }}>
+                Cash Payment Schedule
+              </div>
 
-              <label className="block text-sm font-semibold text-slate-700 mb-2">
+              <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#374151", marginBottom: 6 }}>
                 Deposit
               </label>
               <input
@@ -280,10 +348,19 @@ export default function CustomerPricing({
                     cash_deposit: Number(e.target.value),
                   }))
                 }
-                className="w-full px-4 py-3 bg-white border-2 border-slate-200 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all duration-200 text-slate-900 mb-4"
+                style={{
+                  width: "100%",
+                  padding: "8px 12px",
+                  background: "#fff",
+                  border: "1px solid #d1d5db",
+                  borderRadius: 6,
+                  fontSize: 13,
+                  color: "#111827",
+                  marginBottom: 12,
+                }}
               />
 
-              <label className="block text-sm font-semibold text-slate-700 mb-2">
+              <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#374151", marginBottom: 6 }}>
                 2nd Payment
               </label>
               <input
@@ -295,10 +372,19 @@ export default function CustomerPricing({
                     cash_second_payment: Number(e.target.value),
                   }))
                 }
-                className="w-full px-4 py-3 bg-white border-2 border-slate-200 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all duration-200 text-slate-900 mb-4"
+                style={{
+                  width: "100%",
+                  padding: "8px 12px",
+                  background: "#fff",
+                  border: "1px solid #d1d5db",
+                  borderRadius: 6,
+                  fontSize: 13,
+                  color: "#111827",
+                  marginBottom: 12,
+                }}
               />
 
-              <label className="block text-sm font-semibold text-slate-700 mb-2">
+              <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#374151", marginBottom: 6 }}>
                 Final Payment
               </label>
               <input
@@ -310,7 +396,16 @@ export default function CustomerPricing({
                     cash_final_payment: Number(e.target.value),
                   }))
                 }
-                className="w-full px-4 py-3 bg-white border-2 border-slate-200 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all duration-200 text-slate-900 mb-4"
+                style={{
+                  width: "100%",
+                  padding: "8px 12px",
+                  background: "#fff",
+                  border: "1px solid #d1d5db",
+                  borderRadius: 6,
+                  fontSize: 13,
+                  color: "#111827",
+                  marginBottom: 12,
+                }}
               />
 
               <button
@@ -327,83 +422,55 @@ export default function CustomerPricing({
                     .eq("id", proposalId);
                   await refresh();
                 }}
-                className="w-full bg-orange-600 text-white py-3 px-4 rounded-lg hover:bg-orange-700 transition-colors duration-200 font-semibold"
+                style={{
+                  width: "100%",
+                  background: "#f97316",
+                  color: "#fff",
+                  padding: "8px 16px",
+                  borderRadius: 6,
+                  border: "none",
+                  cursor: "pointer",
+                  fontWeight: 600,
+                  fontSize: 13,
+                }}
               >
                 Save Cash Schedule
               </button>
             </div>
           )}
 
-          <div className="card">
-            <div className="card-title">System Summary</div>
-            <div
-              style={{
-                display: "grid",
-                gap: 12,
-                fontSize: 15,
-              }}
-            >
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  padding: "8px 0",
-                  borderBottom: "1px solid #f0f0f0",
-                }}
-              >
-                <span style={{ fontWeight: 500, color: "#666" }}>Module:</span>
-                <span style={{ fontWeight: 700 }}>
-                  {selectedModel?.model ?? "—"}
+          <div style={{ background: "#fff", padding: 16, borderRadius: 8, border: "1px solid #e5e7eb" }}>
+            <div style={{ fontWeight: 600, fontSize: 14, color: "#111827", marginBottom: 12, paddingBottom: 10, borderBottom: "1px solid #e5e7eb" }}>
+              System Summary
+            </div>
+            <div style={{ display: "grid", gap: 10, fontSize: 13 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", padding: "6px 0", borderBottom: "1px solid #f3f4f6" }}>
+                <span style={{ fontWeight: 500, color: "#6b7280" }}>Module:</span>
+                <span style={{ fontWeight: 600, color: "#111827" }}>
+                  {selectedModel?.brand && selectedModel?.model
+                    ? `${selectedModel.brand} ${selectedModel.model}`
+                    : selectedModel?.model || "—"}
                 </span>
               </div>
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  padding: "8px 0",
-                  borderBottom: "1px solid #f0f0f0",
-                }}
-              >
-                <span style={{ fontWeight: 500, color: "#666" }}>Panels:</span>
-                <span style={{ fontWeight: 700 }}>{systemSummary.panelCount}</span>
+              <div style={{ display: "flex", justifyContent: "space-between", padding: "6px 0", borderBottom: "1px solid #f3f4f6" }}>
+                <span style={{ fontWeight: 500, color: "#6b7280" }}>Panels:</span>
+                <span style={{ fontWeight: 600, color: "#111827" }}>{systemSummary.panelCount}</span>
               </div>
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  padding: "8px 0",
-                  borderBottom: "1px solid #f0f0f0",
-                }}
-              >
-                <span style={{ fontWeight: 500, color: "#666" }}>System Size:</span>
-                <span style={{ fontWeight: 700 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", padding: "6px 0", borderBottom: "1px solid #f3f4f6" }}>
+                <span style={{ fontWeight: 500, color: "#6b7280" }}>System Size:</span>
+                <span style={{ fontWeight: 600, color: "#111827" }}>
                   {fmt(systemSummary.systemKw, 2)} kW
                 </span>
               </div>
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  padding: "8px 0",
-                  borderBottom: "1px solid #f0f0f0",
-                }}
-              >
-                <span style={{ fontWeight: 500, color: "#666" }}>
-                  Annual Production:
-                </span>
-                <span style={{ fontWeight: 700 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", padding: "6px 0", borderBottom: "1px solid #f3f4f6" }}>
+                <span style={{ fontWeight: 500, color: "#6b7280" }}>Annual Production:</span>
+                <span style={{ fontWeight: 600, color: "#111827" }}>
                   {fmt(systemSummary.annualProductionKwh)} kWh
                 </span>
               </div>
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  padding: "8px 0",
-                }}
-              >
-                <span style={{ fontWeight: 500, color: "#666" }}>Offset:</span>
-                <span style={{ fontWeight: 700 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", padding: "6px 0" }}>
+                <span style={{ fontWeight: 500, color: "#6b7280" }}>Offset:</span>
+                <span style={{ fontWeight: 600, color: "#111827" }}>
                   {fmt(systemSummary.offsetPercent, 1)}%
                 </span>
               </div>
@@ -416,10 +483,10 @@ export default function CustomerPricing({
         <div
           style={{
             width: "100%",
-            height: "calc(100vh - 240px)",
+            height: "calc(100vh - 200px)",
             background: "#fff",
-            borderRadius: 12,
-            border: "1px solid #eee",
+            borderRadius: 8,
+            border: "1px solid #e5e7eb",
             overflow: "hidden",
           }}
         >
