@@ -943,6 +943,7 @@ export default function ProposalWorkspace({
   const [showRoofPlanes, setShowRoofPlanes] = useState(false);
   const [drawingStart, setDrawingStart] = useState<{ lat: number; lng: number } | null>(null);
   const [previewShape, setPreviewShape] = useState<any>(null);
+  const [viewMode, setViewMode] = useState<"map" | "roof">("roof");
 
   const selectedRoof = useMemo(
     () => roofPlanes.find((r) => r.id === selectedRoofId) ?? null,
@@ -1345,11 +1346,12 @@ export default function ProposalWorkspace({
     if (!mapRef.current) {
       const map = new google.maps.Map(mapDivRef.current, {
         center: { lat: proposal.lat, lng: proposal.lng },
-        zoom: 21,
+        zoom: viewMode === "roof" ? 22 : 21,
         mapTypeId: "satellite",
         tilt: 0,
         disableDefaultUI: true,
         zoomControl: true,
+        gestureHandling: 'greedy',
       });
 
       mapRef.current = map;
@@ -1598,7 +1600,7 @@ export default function ProposalWorkspace({
         });
       });
     }
-  }, [activeTab, mapsLoading, proposal?.lat, proposal?.lng, proposalId, obstructionWidth, obstructionHeight]);
+  }, [activeTab, mapsLoading, proposal?.lat, proposal?.lng, proposalId, obstructionWidth, obstructionHeight, viewMode]);
 
   useEffect(() => {
     if (!mapRef.current || !isGoogleReady()) return;
@@ -2853,6 +2855,35 @@ export default function ProposalWorkspace({
         gap: 24,
         flexWrap: "wrap",
       }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, paddingRight: 24, borderRight: "1px solid #e5e7eb" }}>
+          <button
+            onClick={() => {
+              const newMode = viewMode === "map" ? "roof" : "map";
+              setViewMode(newMode);
+              if (mapRef.current) {
+                mapRef.current.setZoom(newMode === "roof" ? 22 : 19);
+              }
+            }}
+            title={viewMode === "map" ? "Switch to Roof View (zoomed)" : "Switch to Full Map View"}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 6,
+              padding: "6px 12px",
+              background: viewMode === "roof" ? "#10b981" : "#6366f1",
+              color: "#ffffff",
+              border: "none",
+              borderRadius: 4,
+              cursor: "pointer",
+              fontWeight: 600,
+              fontSize: 12,
+            }}
+          >
+            <Grid size={14} />
+            <span>{viewMode === "map" ? "Roof View" : "Map View"}</span>
+          </button>
+        </div>
+
         <div style={{ display: "flex", alignItems: "center", gap: 8, paddingRight: 24, borderRight: "1px solid #e5e7eb" }}>
           <button
             onClick={() => setToolMode(toolMode === "roof" ? "none" : "roof")}
