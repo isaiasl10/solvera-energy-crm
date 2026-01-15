@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "../lib/supabaseClient";
+import { sanitizePatch } from "../lib/supabasePatch";
 import { useFinancingOptions } from "../hooks/useFinancingOptions";
 import { User, DollarSign, ArrowLeft, Zap, Package, ChevronDown, ChevronUp, FileText, CreditCard, File, Pencil, Trash2, Square, Circle, TreeDeciduous, Grid, RotateCw } from "lucide-react";
 
@@ -92,6 +93,7 @@ export default function ProposalWorkspace({
     payment: true,
   });
   const [activeTab, setActiveTab] = useState<string>("manage");
+  const lastLoadedProposalId = useRef<string | null>(null);
 
   const [roofPlanes, setRoofPlanes] = useState<RoofPlaneRow[]>([]);
   const [obstructions, setObstructions] = useState<ObstructionRow[]>([]);
@@ -195,7 +197,7 @@ export default function ProposalWorkspace({
 
           await supabase
             .from("proposals")
-            .update({ annual_production_estimate: annualKwh })
+            .update(sanitizePatch({ annual_production_estimate: annualKwh }))
             .eq("id", proposalId);
 
           setProposal((prev: any) => ({
@@ -260,6 +262,9 @@ export default function ProposalWorkspace({
 
   useEffect(() => {
     if (!proposalId) return;
+    if (lastLoadedProposalId.current === proposalId) return;
+
+    lastLoadedProposalId.current = proposalId;
 
     async function loadProposal() {
       const { data: proposalData } = await supabase
@@ -875,14 +880,21 @@ export default function ProposalWorkspace({
         <button
           onClick={async () => {
             if (!customer?.id) return;
-            await supabase
+            const { error } = await supabase
               .from("customers")
-              .update({
+              .update(sanitizePatch({
                 full_name: customer.full_name,
                 email: customer.email,
                 phone: customer.phone,
-              })
+              }))
               .eq("id", customer.id);
+
+            if (error) {
+              console.error("Failed to save customer:", error);
+              alert("Failed to save customer information");
+            } else {
+              alert("Customer information saved successfully!");
+            }
           }}
           style={{
             marginTop: 16,
