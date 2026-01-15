@@ -810,6 +810,7 @@ export default function ProposalWorkspace({
 
   const [toolMode, setToolMode] = useState<ToolMode>("none");
   const [selectedRoofId, setSelectedRoofId] = useState<string | null>(null);
+  const [selectedObstruction, setSelectedObstruction] = useState<ObstructionRow | null>(null);
 
   const [selectedPanelModelId, setSelectedPanelModelId] = useState<string | null>(null);
   const [panelOrientation, setPanelOrientation] = useState<"portrait" | "landscape">("portrait");
@@ -918,6 +919,28 @@ export default function ProposalWorkspace({
       cashFinal,
     };
   }, [panels, panelModels, proposal, proposalDraft, adderCalculations]);
+
+  useEffect(() => {
+    const isCash = (proposalDraft.finance_type ?? proposal?.finance_type ?? "cash") === "cash";
+    if (isCash && systemSummary.totalContractPrice > 0) {
+      const currentDeposit = proposalDraft.cash_deposit ?? proposal?.cash_deposit ?? 0;
+      const currentSecond = proposalDraft.cash_second_payment ?? proposal?.cash_second_payment ?? 0;
+      const currentFinal = proposalDraft.cash_final_payment ?? proposal?.cash_final_payment ?? 0;
+
+      const expectedDeposit = 2000;
+      const expectedSecond = Math.max(0, systemSummary.totalContractPrice - 3000);
+      const expectedFinal = 1000;
+
+      if (currentDeposit !== expectedDeposit || currentSecond !== expectedSecond || currentFinal !== expectedFinal) {
+        setProposalDraft((p: any) => ({
+          ...p,
+          cash_deposit: expectedDeposit,
+          cash_second_payment: expectedSecond,
+          cash_final_payment: expectedFinal,
+        }));
+      }
+    }
+  }, [systemSummary.totalContractPrice, proposalDraft.finance_type, proposal?.finance_type]);
 
   useEffect(() => {
     if (!proposal || panels.length === 0 || calculatingProduction) return;
@@ -1351,17 +1374,18 @@ export default function ProposalWorkspace({
 
     obstructions.forEach((obs) => {
       let shape: any = null;
+      const isSelected = selectedObstruction?.id === obs.id;
 
       if (obs.type === "circle" && obs.radius_ft) {
         const radiusMeters = obs.radius_ft * 0.3048;
         shape = new google.maps.Circle({
           center: { lat: obs.center_lat, lng: obs.center_lng },
           radius: radiusMeters,
-          strokeColor: "#FF0000",
+          strokeColor: isSelected ? "#FFA500" : "#FF0000",
           strokeOpacity: 0.8,
-          strokeWeight: 2,
-          fillColor: "#FF0000",
-          fillOpacity: 0.35,
+          strokeWeight: isSelected ? 3 : 2,
+          fillColor: isSelected ? "#FFA500" : "#FF0000",
+          fillOpacity: isSelected ? 0.5 : 0.35,
         });
       } else if ((obs.type === "rect" || obs.type === "tree") && obs.width_ft && obs.height_ft) {
         const widthMeters = obs.width_ft * 0.3048;
@@ -1375,13 +1399,14 @@ export default function ProposalWorkspace({
           new google.maps.LatLng(obs.center_lat + latOffset / 2, obs.center_lng + lngOffset / 2)
         );
 
+        const baseColor = obs.type === "tree" ? "#228B22" : "#FF0000";
         shape = new google.maps.Rectangle({
           bounds,
-          strokeColor: obs.type === "tree" ? "#228B22" : "#FF0000",
+          strokeColor: isSelected ? "#FFA500" : baseColor,
           strokeOpacity: 0.8,
-          strokeWeight: 2,
-          fillColor: obs.type === "tree" ? "#228B22" : "#FF0000",
-          fillOpacity: 0.35,
+          strokeWeight: isSelected ? 3 : 2,
+          fillColor: isSelected ? "#FFA500" : baseColor,
+          fillOpacity: isSelected ? 0.5 : 0.35,
         });
       }
 
@@ -1390,13 +1415,12 @@ export default function ProposalWorkspace({
         obstructionShapesRef.current.set(obs.id, shape);
 
         google.maps.event.addListener(shape, "click", () => {
-          if (confirm(`Delete this ${obs.type} obstruction?`)) {
-            deleteObstructionById(obs.id);
-          }
+          setSelectedObstruction(obs);
+          setToolMode("none");
         });
       }
     });
-  }, [obstructions]);
+  }, [obstructions, selectedObstruction]);
 
   useEffect(() => {
     if (!mapRef.current || !isGoogleReady()) return;
@@ -1763,13 +1787,110 @@ export default function ProposalWorkspace({
     );
   };
 
-  const renderManageTab = () => (
-    <div style={{ padding: 20 }}>
-      <div style={{ position: "fixed", bottom: 10, left: 10, zIndex: 9999, background: "#fff", padding: 8, border: "1px solid #000", borderRadius: 4, fontSize: 11 }}>
-        dirty: {String(isDirtyRef.current)} | init: {String(didInitDraftRef.current)}
-      </div>
+  const renderManageTab = () => {
+    const panelModel = panelModels.find((m) => m.id === selectedPanelModelId);
 
-      <CollapsibleSection id="customer" icon={User} title="Customer Information">
+    return (
+      <div style={{ padding: 20 }}>
+        <div style={{ position: "fixed", bottom: 10, left: 10, zIndex: 9999, background: "#fff", padding: 8, border: "1px solid #000", borderRadius: 4, fontSize: 11 }}>
+          dirty: {String(isDirtyRef.current)} | init: {String(didInitDraftRef.current)}
+        </div>
+
+        <CollapsibleSection id="system" icon={Zap} title="System Details">
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24 }}>
+            <div>
+              <div style={{ fontSize: 13, fontWeight: 700, color: "#111827", marginBottom: 16, paddingBottom: 8, borderBottom: "2px solid #f97316" }}>
+                Solar System
+              </div>
+              <div style={{ display: "grid", gap: 12 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <span style={{ fontSize: 12, color: "#6b7280" }}>System Size (kW)</span>
+                  <span style={{ fontSize: 13, fontWeight: 600, color: "#111827" }}>
+                    {systemSummary.systemKw > 0 ? systemSummary.systemKw.toFixed(2) : "N/A"}
+                  </span>
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <span style={{ fontSize: 12, color: "#6b7280" }}>Panel Quantity</span>
+                  <span style={{ fontSize: 13, fontWeight: 600, color: "#111827" }}>
+                    {systemSummary.panelCount > 0 ? systemSummary.panelCount : "N/A"}
+                  </span>
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <span style={{ fontSize: 12, color: "#6b7280" }}>Panel Wattage (W)</span>
+                  <span style={{ fontSize: 13, fontWeight: 600, color: "#111827" }}>
+                    {panelModel ? `${panelModel.watts}W` : "Not specified"}
+                  </span>
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <span style={{ fontSize: 12, color: "#6b7280" }}>Panel Brand</span>
+                  <span style={{ fontSize: 13, fontWeight: 600, color: "#111827" }}>
+                    {panelModel ? `${panelModel.brand} ${panelModel.model}` : "Not specified"}
+                  </span>
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <span style={{ fontSize: 12, color: "#6b7280" }}>Inverter Type</span>
+                  <span style={{ fontSize: 13, fontWeight: 600, color: "#111827" }}>
+                    {proposalDraft.inverter_type || proposal?.inverter_type || "Not specified"}
+                  </span>
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <span style={{ fontSize: 12, color: "#6b7280" }}>Racking Type</span>
+                  <span style={{ fontSize: 13, fontWeight: 600, color: "#111827" }}>
+                    {proposalDraft.racking_type || proposal?.racking_type || "Not specified"}
+                  </span>
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <span style={{ fontSize: 12, color: "#6b7280" }}>Roof Type</span>
+                  <span style={{ fontSize: 13, fontWeight: 600, color: "#111827" }}>
+                    {proposalDraft.roof_type || proposal?.roof_type || "Not specified"}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <div style={{ fontSize: 13, fontWeight: 700, color: "#111827", marginBottom: 16, paddingBottom: 8, borderBottom: "2px solid #f97316" }}>
+                Battery Storage
+              </div>
+              <div style={{ display: "grid", gap: 12 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <span style={{ fontSize: 12, color: "#6b7280" }}>Battery Brand</span>
+                  <span style={{ fontSize: 13, fontWeight: 600, color: "#111827" }}>
+                    {proposalDraft.battery_brand || proposal?.battery_brand || "No Battery"}
+                  </span>
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <span style={{ fontSize: 12, color: "#6b7280" }}>Battery Quantity</span>
+                  <span style={{ fontSize: 13, fontWeight: 600, color: "#111827" }}>
+                    {proposalDraft.battery_quantity || proposal?.battery_quantity || 0}
+                  </span>
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <span style={{ fontSize: 12, color: "#6b7280" }}>Total Battery Capacity</span>
+                  <span style={{ fontSize: 13, fontWeight: 600, color: "#111827" }}>
+                    {(proposalDraft.battery_quantity || proposal?.battery_quantity)
+                      ? `${((proposalDraft.battery_quantity || proposal?.battery_quantity) * 13.5).toFixed(1)} kWh`
+                      : "N/A"}
+                  </span>
+                </div>
+              </div>
+
+              <div style={{ fontSize: 13, fontWeight: 700, color: "#111827", marginTop: 24, marginBottom: 16, paddingBottom: 8, borderBottom: "2px solid #f97316" }}>
+                Contract Price
+              </div>
+              <div style={{ display: "grid", gap: 12 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <span style={{ fontSize: 12, color: "#6b7280" }}>Total Contract Price</span>
+                  <span style={{ fontSize: 16, fontWeight: 700, color: "#059669" }}>
+                    ${fmt(systemSummary.totalContractPrice, 2)}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </CollapsibleSection>
+
+        <CollapsibleSection id="customer" icon={User} title="Customer Information">
         <form onSubmit={(e) => e.preventDefault()}>
           <CustomerFormInputs
             initialData={draftCustomer}
@@ -2223,8 +2344,9 @@ export default function ProposalWorkspace({
           Save Financing & Payment Schedule
         </button>
       </CollapsibleSection>
-    </div>
-  );
+      </div>
+    );
+  };
 
   const renderSolarDesignTab = () => (
     <div style={{ display: "flex", height: "calc(100vh - 180px)", gap: 16 }}>
@@ -2406,6 +2528,150 @@ export default function ProposalWorkspace({
             >
               Stop Tool
             </button>
+          )}
+
+          {selectedObstruction && (
+            <div style={{ marginTop: 12, padding: 12, background: "#fef3c7", borderRadius: 6, border: "1px solid #fbbf24" }}>
+              <div style={{ fontSize: 12, fontWeight: 600, color: "#78350f", marginBottom: 8 }}>
+                Selected: {selectedObstruction.type.charAt(0).toUpperCase() + selectedObstruction.type.slice(1)} Obstruction
+              </div>
+
+              {selectedObstruction.type === "circle" && selectedObstruction.radius_ft && (
+                <div style={{ marginBottom: 8 }}>
+                  <label style={{ display: "block", fontSize: 11, color: "#78350f", marginBottom: 4 }}>
+                    Radius (feet)
+                  </label>
+                  <input
+                    type="number"
+                    value={selectedObstruction.radius_ft}
+                    onChange={(e) => {
+                      const newRadius = Number(e.target.value);
+                      setObstructions((prev) =>
+                        prev.map((o) =>
+                          o.id === selectedObstruction.id
+                            ? { ...o, radius_ft: newRadius }
+                            : o
+                        )
+                      );
+                      setSelectedObstruction({ ...selectedObstruction, radius_ft: newRadius });
+                    }}
+                    min="1"
+                    step="0.5"
+                    style={{
+                      width: "100%",
+                      padding: "6px 8px",
+                      background: "#fff",
+                      border: "1px solid #fbbf24",
+                      borderRadius: 4,
+                      fontSize: 13,
+                    }}
+                  />
+                </div>
+              )}
+
+              {(selectedObstruction.type === "rect" || selectedObstruction.type === "tree") && (
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 8 }}>
+                  <div>
+                    <label style={{ display: "block", fontSize: 11, color: "#78350f", marginBottom: 4 }}>
+                      Width (feet)
+                    </label>
+                    <input
+                      type="number"
+                      value={selectedObstruction.width_ft || 5}
+                      onChange={(e) => {
+                        const newWidth = Number(e.target.value);
+                        setObstructions((prev) =>
+                          prev.map((o) =>
+                            o.id === selectedObstruction.id
+                              ? { ...o, width_ft: newWidth }
+                              : o
+                          )
+                        );
+                        setSelectedObstruction({ ...selectedObstruction, width_ft: newWidth });
+                      }}
+                      min="1"
+                      step="0.5"
+                      style={{
+                        width: "100%",
+                        padding: "6px 8px",
+                        background: "#fff",
+                        border: "1px solid #fbbf24",
+                        borderRadius: 4,
+                        fontSize: 13,
+                      }}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ display: "block", fontSize: 11, color: "#78350f", marginBottom: 4 }}>
+                      Height (feet)
+                    </label>
+                    <input
+                      type="number"
+                      value={selectedObstruction.height_ft || 5}
+                      onChange={(e) => {
+                        const newHeight = Number(e.target.value);
+                        setObstructions((prev) =>
+                          prev.map((o) =>
+                            o.id === selectedObstruction.id
+                              ? { ...o, height_ft: newHeight }
+                              : o
+                          )
+                        );
+                        setSelectedObstruction({ ...selectedObstruction, height_ft: newHeight });
+                      }}
+                      min="1"
+                      step="0.5"
+                      style={{
+                        width: "100%",
+                        padding: "6px 8px",
+                        background: "#fff",
+                        border: "1px solid #fbbf24",
+                        borderRadius: 4,
+                        fontSize: 13,
+                      }}
+                    />
+                  </div>
+                </div>
+              )}
+
+              <div style={{ display: "flex", gap: 8 }}>
+                <button
+                  onClick={() => {
+                    deleteObstructionById(selectedObstruction.id);
+                    setSelectedObstruction(null);
+                  }}
+                  style={{
+                    flex: 1,
+                    padding: "8px 12px",
+                    background: "#dc2626",
+                    color: "#fff",
+                    border: "none",
+                    borderRadius: 4,
+                    cursor: "pointer",
+                    fontWeight: 600,
+                    fontSize: 12,
+                  }}
+                >
+                  Delete
+                </button>
+                <button
+                  onClick={() => setSelectedObstruction(null)}
+                  style={{
+                    flex: 1,
+                    padding: "8px 12px",
+                    background: "#fff",
+                    color: "#78350f",
+                    border: "1px solid #fbbf24",
+                    borderRadius: 4,
+                    cursor: "pointer",
+                    fontWeight: 600,
+                    fontSize: 12,
+                  }}
+                >
+                  Deselect
+                </button>
+              </div>
+            </div>
           )}
 
           <button
