@@ -2647,373 +2647,165 @@ export default function ProposalWorkspace({
     );
   };
 
-  const renderSolarDesignTab = () => (
-    <div style={{ display: "flex", height: "calc(100vh - 180px)", gap: 16 }}>
-      <div style={{ width: 320, display: "flex", flexDirection: "column", gap: 12, overflowY: "auto", paddingRight: 8, background: "#fff", borderRadius: 8, padding: 16 }}>
-        <div style={{ fontSize: 18, fontWeight: 700, color: "#111827", marginBottom: 8 }}>Design Tools</div>
+  const renderSolarDesignTab = () => {
+    const [showRoofPlanes, setShowRoofPlanes] = useState(false);
 
-        <div style={{ marginBottom: 12 }}>
-          <div style={{ fontSize: 13, fontWeight: 600, color: "#374151", marginBottom: 8 }}>Panel Model</div>
-          <select
-            value={selectedPanelModelId ?? ""}
-            onChange={(e) => setSelectedPanelModelId(e.target.value)}
-            style={{
-              width: "100%",
-              padding: "8px 10px",
-              background: "#fff",
-              border: "1px solid #d1d5db",
-              borderRadius: 6,
-              fontSize: 13,
-              color: "#111827",
-            }}
-          >
-            {panelModels.map((model) => (
-              <option key={model.id} value={model.id}>
-                {model.brand} {model.model} ({model.watts}W)
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 16 }}>
+    return (
+    <div style={{ display: "flex", flexDirection: "column", height: "calc(100vh - 180px)" }}>
+      <div style={{
+        background: "#ffffff",
+        borderBottom: "1px solid #e5e7eb",
+        boxShadow: "0 1px 3px rgba(0,0,0,0.05)",
+        padding: "12px 16px",
+        display: "flex",
+        alignItems: "center",
+        gap: 24,
+        flexWrap: "wrap",
+      }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, paddingRight: 24, borderRight: "1px solid #e5e7eb" }}>
           <button
             onClick={() => setToolMode(toolMode === "roof" ? "none" : "roof")}
+            title="Draw Roof Plane"
             style={{
               display: "flex",
               alignItems: "center",
-              gap: 8,
-              padding: "10px 14px",
-              background: toolMode === "roof" ? "#f97316" : "#fff",
-              color: toolMode === "roof" ? "#fff" : "#111827",
-              border: "1px solid #d1d5db",
-              borderRadius: 6,
+              gap: 6,
+              padding: "6px 12px",
+              background: toolMode === "roof" ? "#f97316" : "#ffffff",
+              color: toolMode === "roof" ? "#ffffff" : "#374151",
+              border: "1px solid " + (toolMode === "roof" ? "#f97316" : "#d1d5db"),
+              borderRadius: 4,
               cursor: "pointer",
-              fontWeight: 600,
-              fontSize: 13,
+              fontWeight: 500,
+              fontSize: 12,
             }}
           >
-            <Square size={16} />
-            Draw Roof Plane
+            <Square size={14} />
+            <span>Roof</span>
           </button>
 
           <button
             onClick={() => setToolMode(toolMode === "circle" ? "none" : "circle")}
+            title="Add Circle Obstruction"
             style={{
               display: "flex",
               alignItems: "center",
-              gap: 8,
-              padding: "10px 14px",
-              background: toolMode === "circle" ? "#f97316" : "#fff",
-              color: toolMode === "circle" ? "#fff" : "#111827",
-              border: "1px solid #d1d5db",
-              borderRadius: 6,
+              gap: 6,
+              padding: "6px 12px",
+              background: toolMode === "circle" ? "#f97316" : "#ffffff",
+              color: toolMode === "circle" ? "#ffffff" : "#374151",
+              border: "1px solid " + (toolMode === "circle" ? "#f97316" : "#d1d5db"),
+              borderRadius: 4,
               cursor: "pointer",
-              fontWeight: 600,
-              fontSize: 13,
+              fontWeight: 500,
+              fontSize: 12,
             }}
           >
-            <Circle size={16} />
-            Add Circle Obstruction
+            <Circle size={14} />
+            <span>Circle</span>
           </button>
 
           <button
             onClick={() => setToolMode(toolMode === "rect" ? "none" : "rect")}
+            title="Add Rectangle Obstruction"
             style={{
               display: "flex",
               alignItems: "center",
-              gap: 8,
-              padding: "10px 14px",
-              background: toolMode === "rect" ? "#f97316" : "#fff",
-              color: toolMode === "rect" ? "#fff" : "#111827",
-              border: "1px solid #d1d5db",
-              borderRadius: 6,
+              gap: 6,
+              padding: "6px 12px",
+              background: toolMode === "rect" ? "#f97316" : "#ffffff",
+              color: toolMode === "rect" ? "#ffffff" : "#374151",
+              border: "1px solid " + (toolMode === "rect" ? "#f97316" : "#d1d5db"),
+              borderRadius: 4,
               cursor: "pointer",
-              fontWeight: 600,
-              fontSize: 13,
+              fontWeight: 500,
+              fontSize: 12,
             }}
           >
-            <Square size={16} />
-            Add Rectangle Obstruction
+            <Square size={14} />
+            <span>Rectangle</span>
           </button>
 
           <button
             onClick={() => setToolMode(toolMode === "tree" ? "none" : "tree")}
+            title="Add Tree"
             style={{
               display: "flex",
               alignItems: "center",
-              gap: 8,
-              padding: "10px 14px",
-              background: toolMode === "tree" ? "#f97316" : "#fff",
-              color: toolMode === "tree" ? "#fff" : "#111827",
-              border: "1px solid #d1d5db",
-              borderRadius: 6,
+              gap: 6,
+              padding: "6px 12px",
+              background: toolMode === "tree" ? "#f97316" : "#ffffff",
+              color: toolMode === "tree" ? "#ffffff" : "#374151",
+              border: "1px solid " + (toolMode === "tree" ? "#f97316" : "#d1d5db"),
+              borderRadius: 4,
               cursor: "pointer",
-              fontWeight: 600,
-              fontSize: 13,
+              fontWeight: 500,
+              fontSize: 12,
             }}
           >
-            <TreeDeciduous size={16} />
-            Add Tree
+            <TreeDeciduous size={14} />
+            <span>Tree</span>
           </button>
 
-          {(toolMode === "rect" || toolMode === "tree") && (
-            <div style={{ marginTop: 12, padding: 12, background: "#f9fafb", borderRadius: 6 }}>
-              <div style={{ fontSize: 12, fontWeight: 600, color: "#374151", marginBottom: 8 }}>
-                Obstruction Size (feet)
-              </div>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-                <div>
-                  <label style={{ display: "block", fontSize: 11, color: "#6b7280", marginBottom: 4 }}>
-                    Width
-                  </label>
-                  <input
-                    type="number"
-                    value={obstructionWidth}
-                    onChange={(e) => setObstructionWidth(Number(e.target.value))}
-                    min="1"
-                    step="1"
-                    style={{
-                      width: "100%",
-                      padding: "6px 8px",
-                      background: "#fff",
-                      border: "1px solid #d1d5db",
-                      borderRadius: 4,
-                      fontSize: 13,
-                    }}
-                  />
-                </div>
-                <div>
-                  <label style={{ display: "block", fontSize: 11, color: "#6b7280", marginBottom: 4 }}>
-                    Height
-                  </label>
-                  <input
-                    type="number"
-                    value={obstructionHeight}
-                    onChange={(e) => setObstructionHeight(Number(e.target.value))}
-                    min="1"
-                    step="1"
-                    style={{
-                      width: "100%",
-                      padding: "6px 8px",
-                      background: "#fff",
-                      border: "1px solid #d1d5db",
-                      borderRadius: 4,
-                      fontSize: 13,
-                    }}
-                  />
-                </div>
-              </div>
-            </div>
-          )}
-
-          {toolMode !== "none" && (
-            <button
-              onClick={() => setToolMode("none")}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: 8,
-                padding: "10px 14px",
-                background: "#dc2626",
-                color: "#fff",
-                border: "1px solid #dc2626",
-                borderRadius: 6,
-                cursor: "pointer",
-                fontWeight: 600,
-                fontSize: 13,
-                marginTop: 8,
-              }}
-            >
-              Stop Tool
-            </button>
-          )}
-
-          {selectedObstruction && (
-            <div style={{ marginTop: 12, padding: 12, background: "#fef3c7", borderRadius: 6, border: "1px solid #fbbf24" }}>
-              <div style={{ fontSize: 12, fontWeight: 600, color: "#78350f", marginBottom: 8 }}>
-                Selected: {selectedObstruction.type.charAt(0).toUpperCase() + selectedObstruction.type.slice(1)} Obstruction
-              </div>
-
-              {selectedObstruction.type === "circle" && selectedObstruction.radius_ft && (
-                <div style={{ marginBottom: 8 }}>
-                  <label style={{ display: "block", fontSize: 11, color: "#78350f", marginBottom: 4 }}>
-                    Radius (feet)
-                  </label>
-                  <input
-                    type="number"
-                    value={selectedObstruction.radius_ft}
-                    onChange={(e) => {
-                      const newRadius = Number(e.target.value);
-                      setObstructions((prev) =>
-                        prev.map((o) =>
-                          o.id === selectedObstruction.id
-                            ? { ...o, radius_ft: newRadius }
-                            : o
-                        )
-                      );
-                      setSelectedObstruction({ ...selectedObstruction, radius_ft: newRadius });
-                    }}
-                    min="1"
-                    step="0.5"
-                    style={{
-                      width: "100%",
-                      padding: "6px 8px",
-                      background: "#fff",
-                      border: "1px solid #fbbf24",
-                      borderRadius: 4,
-                      fontSize: 13,
-                    }}
-                  />
-                </div>
-              )}
-
-              {(selectedObstruction.type === "rect" || selectedObstruction.type === "tree") && (
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 8 }}>
-                  <div>
-                    <label style={{ display: "block", fontSize: 11, color: "#78350f", marginBottom: 4 }}>
-                      Width (feet)
-                    </label>
-                    <input
-                      type="number"
-                      value={selectedObstruction.width_ft || 5}
-                      onChange={(e) => {
-                        const newWidth = Number(e.target.value);
-                        setObstructions((prev) =>
-                          prev.map((o) =>
-                            o.id === selectedObstruction.id
-                              ? { ...o, width_ft: newWidth }
-                              : o
-                          )
-                        );
-                        setSelectedObstruction({ ...selectedObstruction, width_ft: newWidth });
-                      }}
-                      min="1"
-                      step="0.5"
-                      style={{
-                        width: "100%",
-                        padding: "6px 8px",
-                        background: "#fff",
-                        border: "1px solid #fbbf24",
-                        borderRadius: 4,
-                        fontSize: 13,
-                      }}
-                    />
-                  </div>
-                  <div>
-                    <label style={{ display: "block", fontSize: 11, color: "#78350f", marginBottom: 4 }}>
-                      Height (feet)
-                    </label>
-                    <input
-                      type="number"
-                      value={selectedObstruction.height_ft || 5}
-                      onChange={(e) => {
-                        const newHeight = Number(e.target.value);
-                        setObstructions((prev) =>
-                          prev.map((o) =>
-                            o.id === selectedObstruction.id
-                              ? { ...o, height_ft: newHeight }
-                              : o
-                          )
-                        );
-                        setSelectedObstruction({ ...selectedObstruction, height_ft: newHeight });
-                      }}
-                      min="1"
-                      step="0.5"
-                      style={{
-                        width: "100%",
-                        padding: "6px 8px",
-                        background: "#fff",
-                        border: "1px solid #fbbf24",
-                        borderRadius: 4,
-                        fontSize: 13,
-                      }}
-                    />
-                  </div>
-                </div>
-              )}
-
-              <div style={{ display: "flex", gap: 8 }}>
-                <button
-                  onClick={() => {
-                    deleteObstructionById(selectedObstruction.id);
-                    setSelectedObstruction(null);
-                  }}
-                  style={{
-                    flex: 1,
-                    padding: "8px 12px",
-                    background: "#dc2626",
-                    color: "#fff",
-                    border: "none",
-                    borderRadius: 4,
-                    cursor: "pointer",
-                    fontWeight: 600,
-                    fontSize: 12,
-                  }}
-                >
-                  Delete
-                </button>
-                <button
-                  onClick={() => setSelectedObstruction(null)}
-                  style={{
-                    flex: 1,
-                    padding: "8px 12px",
-                    background: "#fff",
-                    color: "#78350f",
-                    border: "1px solid #fbbf24",
-                    borderRadius: 4,
-                    cursor: "pointer",
-                    fontWeight: 600,
-                    fontSize: 12,
-                  }}
-                >
-                  Deselect
-                </button>
-              </div>
-            </div>
-          )}
-
           <button
-            onClick={saveDesignChanges}
-            disabled={!!busy}
+            onClick={() => setShowRoofPlanes(!showRoofPlanes)}
+            title="Show Roof Planes"
             style={{
               display: "flex",
               alignItems: "center",
-              justifyContent: "center",
-              gap: 8,
-              padding: "10px 14px",
-              background: busy ? "#9ca3af" : "#10b981",
-              color: "#fff",
-              border: "none",
-              borderRadius: 6,
-              cursor: busy ? "not-allowed" : "pointer",
-              fontWeight: 600,
-              fontSize: 13,
-              marginTop: 8,
+              gap: 6,
+              padding: "6px 12px",
+              background: showRoofPlanes ? "#f97316" : "#ffffff",
+              color: showRoofPlanes ? "#ffffff" : "#374151",
+              border: "1px solid " + (showRoofPlanes ? "#f97316" : "#d1d5db"),
+              borderRadius: 4,
+              cursor: "pointer",
+              fontWeight: 500,
+              fontSize: 12,
             }}
           >
-            {busy ? busy : `Save Design${(panels.filter(p => p.id.startsWith('temp-')).length + obstructions.filter(o => o.id.startsWith('temp-')).length + deletedPanelIds.length + deletedObstructionIds.length) > 0 ? ` (${panels.filter(p => p.id.startsWith('temp-')).length + obstructions.filter(o => o.id.startsWith('temp-')).length + deletedPanelIds.length + deletedObstructionIds.length} changes)` : ''}`}
+            <span>Roof Planes ({roofPlanes.length})</span>
           </button>
         </div>
 
-        <div style={{ borderTop: "1px solid #e5e7eb", paddingTop: 12, marginTop: 8 }}>
-          <div style={{ fontSize: 13, fontWeight: 600, color: "#374151", marginBottom: 8 }}>Panel Placement</div>
+        <div style={{ display: "flex", alignItems: "center", gap: 12, paddingRight: 24, borderRight: "1px solid #e5e7eb" }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+            <label style={{ fontSize: 10, fontWeight: 600, color: "#6b7280" }}>Panel Model</label>
+            <select
+              value={selectedPanelModelId ?? ""}
+              onChange={(e) => setSelectedPanelModelId(e.target.value)}
+              style={{
+                padding: "5px 8px",
+                background: "#fff",
+                border: "1px solid #d1d5db",
+                borderRadius: 4,
+                fontSize: 12,
+                color: "#111827",
+                minWidth: 180,
+              }}
+            >
+              {panelModels.map((model) => (
+                <option key={model.id} value={model.id}>
+                  {model.brand} {model.model} ({model.watts}W)
+                </option>
+              ))}
+            </select>
+          </div>
 
-          <div style={{ marginBottom: 12 }}>
-            <div style={{ fontSize: 12, color: "#6b7280", marginBottom: 4 }}>Orientation</div>
-            <div style={{ display: "flex", gap: 8 }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+            <label style={{ fontSize: 10, fontWeight: 600, color: "#6b7280" }}>Orientation</label>
+            <div style={{ display: "flex", gap: 4 }}>
               <button
                 onClick={() => setPanelOrientation("portrait")}
                 style={{
-                  flex: 1,
-                  padding: "8px",
+                  padding: "5px 10px",
                   background: panelOrientation === "portrait" ? "#f97316" : "#fff",
-                  color: panelOrientation === "portrait" ? "#fff" : "#111827",
-                  border: "1px solid #d1d5db",
-                  borderRadius: 6,
+                  color: panelOrientation === "portrait" ? "#fff" : "#374151",
+                  border: "1px solid " + (panelOrientation === "portrait" ? "#f97316" : "#d1d5db"),
+                  borderRadius: 4,
                   cursor: "pointer",
-                  fontSize: 12,
-                  fontWeight: 600,
+                  fontSize: 11,
+                  fontWeight: 500,
                 }}
               >
                 Portrait
@@ -3021,15 +2813,14 @@ export default function ProposalWorkspace({
               <button
                 onClick={() => setPanelOrientation("landscape")}
                 style={{
-                  flex: 1,
-                  padding: "8px",
+                  padding: "5px 10px",
                   background: panelOrientation === "landscape" ? "#f97316" : "#fff",
-                  color: panelOrientation === "landscape" ? "#fff" : "#111827",
-                  border: "1px solid #d1d5db",
-                  borderRadius: 6,
+                  color: panelOrientation === "landscape" ? "#fff" : "#374151",
+                  border: "1px solid " + (panelOrientation === "landscape" ? "#f97316" : "#d1d5db"),
+                  borderRadius: 4,
                   cursor: "pointer",
-                  fontSize: 12,
-                  fontWeight: 600,
+                  fontSize: 11,
+                  fontWeight: 500,
                 }}
               >
                 Landscape
@@ -3037,160 +2828,202 @@ export default function ProposalWorkspace({
             </div>
           </div>
 
-          <div style={{ marginBottom: 12 }}>
-            <label style={{ display: "block", fontSize: 12, color: "#6b7280", marginBottom: 4 }}>
-              Rotation (degrees): {panelRotation}°
-            </label>
+          <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+            <label style={{ fontSize: 10, fontWeight: 600, color: "#6b7280" }}>Rotation: {panelRotation}°</label>
             <input
               type="range"
               min="0"
               max="360"
               value={panelRotation}
               onChange={(e) => setPanelRotation(Number(e.target.value))}
-              style={{ width: "100%" }}
+              style={{ width: 120 }}
+            />
+          </div>
+        </div>
+
+        <div style={{ display: "flex", alignItems: "center", gap: 8, paddingRight: 24, borderRight: "1px solid #e5e7eb" }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+            <label style={{ fontSize: 10, fontWeight: 600, color: "#6b7280" }}>Row (ft)</label>
+            <input
+              type="number"
+              step="0.1"
+              value={rowSpacing}
+              onChange={(e) => setRowSpacing(Number(e.target.value))}
+              style={{
+                width: 60,
+                padding: "5px 6px",
+                border: "1px solid #d1d5db",
+                borderRadius: 4,
+                fontSize: 12,
+              }}
             />
           </div>
 
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 12 }}>
-            <div>
-              <label style={{ display: "block", fontSize: 12, color: "#6b7280", marginBottom: 4 }}>
-                Row Spacing (ft)
-              </label>
-              <input
-                type="number"
-                step="0.1"
-                value={rowSpacing}
-                onChange={(e) => setRowSpacing(Number(e.target.value))}
-                style={{
-                  width: "100%",
-                  padding: "6px 8px",
-                  border: "1px solid #d1d5db",
-                  borderRadius: 6,
-                  fontSize: 13,
-                }}
-              />
-            </div>
-            <div>
-              <label style={{ display: "block", fontSize: 12, color: "#6b7280", marginBottom: 4 }}>
-                Col Spacing (ft)
-              </label>
-              <input
-                type="number"
-                step="0.1"
-                value={colSpacing}
-                onChange={(e) => setColSpacing(Number(e.target.value))}
-                style={{
-                  width: "100%",
-                  padding: "6px 8px",
-                  border: "1px solid #d1d5db",
-                  borderRadius: 6,
-                  fontSize: 13,
-                }}
-              />
-            </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+            <label style={{ fontSize: 10, fontWeight: 600, color: "#6b7280" }}>Col (ft)</label>
+            <input
+              type="number"
+              step="0.1"
+              value={colSpacing}
+              onChange={(e) => setColSpacing(Number(e.target.value))}
+              style={{
+                width: 60,
+                padding: "5px 6px",
+                border: "1px solid #d1d5db",
+                borderRadius: 4,
+                fontSize: 12,
+              }}
+            />
           </div>
 
           <button
             onClick={autoFillPanels}
             disabled={!selectedRoofId}
+            title="Auto-Fill Panels"
             style={{
-              width: "100%",
               display: "flex",
               alignItems: "center",
-              gap: 8,
-              justifyContent: "center",
-              padding: "10px 14px",
+              gap: 6,
+              padding: "6px 12px",
               background: selectedRoofId ? "#10b981" : "#e5e7eb",
               color: selectedRoofId ? "#fff" : "#9ca3af",
               border: "none",
-              borderRadius: 6,
+              borderRadius: 4,
               cursor: selectedRoofId ? "pointer" : "not-allowed",
-              fontWeight: 600,
-              fontSize: 13,
-              marginBottom: 8,
+              fontWeight: 500,
+              fontSize: 12,
             }}
           >
-            <Grid size={16} />
-            Auto-Fill Panels
+            <Grid size={14} />
+            <span>Auto-Fill</span>
           </button>
 
           <button
             onClick={() => setToolMode(toolMode === "add-panel" ? "none" : "add-panel")}
             disabled={!selectedRoofId || !selectedPanelModelId}
+            title="Add Panels Manually"
             style={{
-              width: "100%",
               display: "flex",
               alignItems: "center",
-              gap: 8,
-              justifyContent: "center",
-              padding: "10px 14px",
+              gap: 6,
+              padding: "6px 12px",
               background: toolMode === "add-panel" ? "#f97316" : (selectedRoofId && selectedPanelModelId ? "#3b82f6" : "#e5e7eb"),
               color: (toolMode === "add-panel" || (selectedRoofId && selectedPanelModelId)) ? "#fff" : "#9ca3af",
               border: "none",
-              borderRadius: 6,
+              borderRadius: 4,
               cursor: (selectedRoofId && selectedPanelModelId) ? "pointer" : "not-allowed",
-              fontWeight: 600,
-              fontSize: 13,
-              marginBottom: 8,
+              fontWeight: 500,
+              fontSize: 12,
             }}
           >
-            <Pencil size={16} />
-            {toolMode === "add-panel" ? "Stop Adding" : "Add Manually"}
+            <Pencil size={14} />
+            <span>Manual</span>
           </button>
 
           <button
             onClick={() => setToolMode(toolMode === "delete-panel" ? "none" : "delete-panel")}
+            title="Delete Panels"
             style={{
-              width: "100%",
               display: "flex",
               alignItems: "center",
-              gap: 8,
-              justifyContent: "center",
-              padding: "10px 14px",
-              background: toolMode === "delete-panel" ? "#f97316" : "#ef4444",
-              color: "#fff",
-              border: "none",
-              borderRadius: 6,
+              gap: 6,
+              padding: "6px 12px",
+              background: toolMode === "delete-panel" ? "#f97316" : "#fff",
+              color: toolMode === "delete-panel" ? "#fff" : "#dc2626",
+              border: "1px solid " + (toolMode === "delete-panel" ? "#f97316" : "#fca5a5"),
+              borderRadius: 4,
               cursor: "pointer",
-              fontWeight: 600,
-              fontSize: 13,
-              marginBottom: 8,
+              fontWeight: 500,
+              fontSize: 12,
             }}
           >
-            <Trash2 size={16} />
-            {toolMode === "delete-panel" ? "Stop Deleting" : "Delete Panels"}
+            <Trash2 size={14} />
+            <span>Delete</span>
           </button>
 
           <button
             onClick={clearAllPanels}
             disabled={!selectedRoofId}
+            title="Clear All Panels"
             style={{
-              width: "100%",
               display: "flex",
               alignItems: "center",
-              gap: 8,
-              justifyContent: "center",
-              padding: "10px 14px",
+              gap: 6,
+              padding: "6px 12px",
               background: selectedRoofId ? "#991b1b" : "#e5e7eb",
               color: selectedRoofId ? "#fff" : "#9ca3af",
               border: "none",
-              borderRadius: 6,
+              borderRadius: 4,
               cursor: selectedRoofId ? "pointer" : "not-allowed",
-              fontWeight: 600,
-              fontSize: 13,
+              fontWeight: 500,
+              fontSize: 12,
             }}
           >
-            <Trash2 size={16} />
-            Clear All Panels
+            <Trash2 size={14} />
+            <span>Clear All</span>
           </button>
         </div>
 
-        <div style={{ borderTop: "1px solid #e5e7eb", paddingTop: 12, marginTop: 8 }}>
-          <div style={{ fontSize: 13, fontWeight: 600, color: "#374151", marginBottom: 8 }}>Roof Planes</div>
+        <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 8 }}>
+          <button
+            onClick={saveDesignChanges}
+            disabled={!!busy}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 6,
+              padding: "7px 16px",
+              background: busy ? "#9ca3af" : "#10b981",
+              color: "#fff",
+              border: "none",
+              borderRadius: 4,
+              cursor: busy ? "not-allowed" : "pointer",
+              fontWeight: 600,
+              fontSize: 12,
+            }}
+          >
+            {busy ? busy : `Save Design${(panels.filter(p => p.id.startsWith('temp-')).length + obstructions.filter(o => o.id.startsWith('temp-')).length + deletedPanelIds.length + deletedObstructionIds.length) > 0 ? ` (${panels.filter(p => p.id.startsWith('temp-')).length + obstructions.filter(o => o.id.startsWith('temp-')).length + deletedPanelIds.length + deletedObstructionIds.length})` : ''}`}
+          </button>
+        </div>
+      </div>
+
+      {showRoofPlanes && (
+        <div style={{
+          position: "absolute",
+          top: 100,
+          left: 16,
+          zIndex: 1000,
+          background: "#fff",
+          borderRadius: 8,
+          padding: 16,
+          boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
+          maxWidth: 280,
+          maxHeight: 400,
+          overflowY: "auto",
+        }}>
+          <div style={{ fontSize: 13, fontWeight: 600, color: "#111827", marginBottom: 12, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <span>Roof Planes</span>
+            <button
+              onClick={() => setShowRoofPlanes(false)}
+              style={{
+                background: "none",
+                border: "none",
+                cursor: "pointer",
+                color: "#6b7280",
+                fontSize: 18,
+                lineHeight: 1,
+              }}
+            >
+              ×
+            </button>
+          </div>
           {roofPlanes.map((roof) => (
             <div
               key={roof.id}
-              onClick={() => setSelectedRoofId(roof.id)}
+              onClick={() => {
+                setSelectedRoofId(roof.id);
+                setShowRoofPlanes(false);
+              }}
               style={{
                 padding: "10px 12px",
                 background: selectedRoofId === roof.id ? "#fef3c7" : "#f9fafb",
@@ -3229,15 +3062,9 @@ export default function ProposalWorkspace({
             </div>
           ))}
         </div>
+      )}
 
-        {busy && (
-          <div style={{ fontSize: 12, color: "#f97316", fontWeight: 600, marginTop: 8 }}>
-            {busy}
-          </div>
-        )}
-      </div>
-
-      <div style={{ flex: 1, position: "relative", borderRadius: 8, overflow: "hidden", border: "1px solid #e5e7eb" }}>
+      <div style={{ flex: 1, position: "relative", overflow: "hidden", background: "#f3f4f6" }}>
         {mapsError ? (
           <div style={{ padding: 20, color: "#ef4444" }}>{mapsError}</div>
         ) : mapsLoading ? (
@@ -3269,7 +3096,8 @@ export default function ProposalWorkspace({
         </div>
       </div>
     </div>
-  );
+    );
+  };
 
   const renderEnergyTab = () => {
     const annualConsumption = proposalDraft?.annual_consumption || proposal?.annual_consumption || 0;
