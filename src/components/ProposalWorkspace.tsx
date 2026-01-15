@@ -441,16 +441,36 @@ export default function ProposalWorkspace({
       });
 
       google.maps.event.addListener(map, "click", (e: any) => {
+        if (!e?.latLng) {
+          console.log("MAP CLICK: No latLng");
+          return;
+        }
+
         const lat = e.latLng.lat();
         const lng = e.latLng.lng();
         const currentToolMode = toolModeRef.current;
         const currentRoofId = selectedRoofIdRef.current;
         const currentPanelModelId = selectedPanelModelIdRef.current;
 
-        console.log("Map clicked", { toolMode: currentToolMode, lat, lng });
+        console.log("MAP CLICK", {
+          toolMode: currentToolMode,
+          roofId: currentRoofId,
+          lat,
+          lng,
+          hasLatLng: !!e.latLng
+        });
 
-        if (currentToolMode === "add-panel" && currentRoofId && currentPanelModelId) {
-          addPanelAt(lat, lng);
+        if (currentToolMode === "none") {
+          console.log("MAP CLICK: Tool mode is none, ignoring");
+          return;
+        }
+
+        if (currentToolMode === "add-panel") {
+          if (currentRoofId && currentPanelModelId) {
+            addPanelAt(lat, lng);
+          } else {
+            console.log("MAP CLICK: Missing roofId or panelModelId for add-panel");
+          }
         } else if (currentToolMode === "circle") {
           const newObstruction = {
             id: `temp-${Date.now()}-${Math.random()}`,
@@ -464,8 +484,13 @@ export default function ProposalWorkspace({
             height_ft: null,
             rotation_deg: null,
           };
-          console.log("Adding circle obstruction", newObstruction);
-          setObstructions((prev) => [...prev, newObstruction]);
+          console.log("MAP CLICK: Adding circle obstruction", newObstruction);
+          setObstructions((prev) => {
+            console.log("MAP CLICK: Obstructions before:", prev.length);
+            const updated = [...prev, newObstruction];
+            console.log("MAP CLICK: Obstructions after:", updated.length);
+            return updated;
+          });
         } else if (currentToolMode === "rect") {
           const newObstruction = {
             id: `temp-${Date.now()}-${Math.random()}`,
@@ -479,8 +504,13 @@ export default function ProposalWorkspace({
             height_ft: 5,
             rotation_deg: 0,
           };
-          console.log("Adding rect obstruction", newObstruction);
-          setObstructions((prev) => [...prev, newObstruction]);
+          console.log("MAP CLICK: Adding rect obstruction", newObstruction);
+          setObstructions((prev) => {
+            console.log("MAP CLICK: Obstructions before:", prev.length);
+            const updated = [...prev, newObstruction];
+            console.log("MAP CLICK: Obstructions after:", updated.length);
+            return updated;
+          });
         } else if (currentToolMode === "tree") {
           const newObstruction = {
             id: `temp-${Date.now()}-${Math.random()}`,
@@ -494,8 +524,13 @@ export default function ProposalWorkspace({
             height_ft: 8,
             rotation_deg: 0,
           };
-          console.log("Adding tree obstruction", newObstruction);
-          setObstructions((prev) => [...prev, newObstruction]);
+          console.log("MAP CLICK: Adding tree obstruction", newObstruction);
+          setObstructions((prev) => {
+            console.log("MAP CLICK: Obstructions before:", prev.length);
+            const updated = [...prev, newObstruction];
+            console.log("MAP CLICK: Obstructions after:", updated.length);
+            return updated;
+          });
         }
       });
     }
@@ -958,200 +993,206 @@ export default function ProposalWorkspace({
       </div>
 
       <CollapsibleSection id="customer" icon={User} title="Customer Information">
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 16 }}>
-          <div>
-            <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#374151", marginBottom: 8 }}>
-              Full Name
-            </label>
-            <input
-              value={draftCustomer.full_name}
-              onChange={(e) => {
-                isDirtyRef.current = true;
-                setDraftCustomer((prev: any) => ({ ...prev, full_name: e.target.value }));
-              }}
-              placeholder="Enter customer name"
-              style={{
-                width: "100%",
-                padding: "10px 12px",
-                background: "#fff",
-                border: "1px solid #d1d5db",
-                borderRadius: 6,
-                fontSize: 14,
-                color: "#111827",
-              }}
-            />
+        <form onSubmit={(e) => e.preventDefault()}>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 16 }}>
+            <div>
+              <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#374151", marginBottom: 8 }}>
+                Full Name
+              </label>
+              <input
+                type="text"
+                value={draftCustomer.full_name}
+                onChange={(e) => {
+                  isDirtyRef.current = true;
+                  setDraftCustomer((prev: any) => ({ ...prev, full_name: e.target.value }));
+                }}
+                placeholder="Enter customer name"
+                style={{
+                  width: "100%",
+                  padding: "10px 12px",
+                  background: "#fff",
+                  border: "1px solid #d1d5db",
+                  borderRadius: 6,
+                  fontSize: 14,
+                  color: "#111827",
+                }}
+              />
+            </div>
+
+            <div>
+              <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#374151", marginBottom: 8 }}>
+                Email Address
+              </label>
+              <input
+                type="email"
+                value={draftCustomer.email}
+                onChange={(e) => {
+                  isDirtyRef.current = true;
+                  setDraftCustomer((prev: any) => ({ ...prev, email: e.target.value }));
+                }}
+                placeholder="customer@example.com"
+                style={{
+                  width: "100%",
+                  padding: "10px 12px",
+                  background: "#fff",
+                  border: "1px solid #d1d5db",
+                  borderRadius: 6,
+                  fontSize: 14,
+                  color: "#111827",
+                }}
+              />
+            </div>
+
+            <div>
+              <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#374151", marginBottom: 8 }}>
+                Phone Number
+              </label>
+              <input
+                type="tel"
+                value={draftCustomer.phone}
+                onChange={(e) => {
+                  isDirtyRef.current = true;
+                  setDraftCustomer((prev: any) => ({ ...prev, phone: e.target.value }));
+                }}
+                placeholder="(555) 123-4567"
+                style={{
+                  width: "100%",
+                  padding: "10px 12px",
+                  background: "#fff",
+                  border: "1px solid #d1d5db",
+                  borderRadius: 6,
+                  fontSize: 14,
+                  color: "#111827",
+                }}
+              />
+            </div>
           </div>
 
-          <div>
-            <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#374151", marginBottom: 8 }}>
-              Email Address
-            </label>
-            <input
-              type="email"
-              value={draftCustomer.email}
-              onChange={(e) => {
-                isDirtyRef.current = true;
-                setDraftCustomer((prev: any) => ({ ...prev, email: e.target.value }));
-              }}
-              placeholder="customer@example.com"
-              style={{
-                width: "100%",
-                padding: "10px 12px",
-                background: "#fff",
-                border: "1px solid #d1d5db",
-                borderRadius: 6,
-                fontSize: 14,
-                color: "#111827",
-              }}
-            />
-          </div>
+          <button
+            type="button"
+            onClick={async () => {
+              if (!customer?.id) return;
+              const { error } = await supabase
+                .from("customers")
+                .update(sanitizePatch({
+                  full_name: draftCustomer.full_name.trim(),
+                  email: draftCustomer.email.trim(),
+                  phone: draftCustomer.phone.trim(),
+                }))
+                .eq("id", customer.id);
 
-          <div>
-            <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#374151", marginBottom: 8 }}>
-              Phone Number
-            </label>
-            <input
-              type="tel"
-              value={draftCustomer.phone}
-              onChange={(e) => {
-                isDirtyRef.current = true;
-                setDraftCustomer((prev: any) => ({ ...prev, phone: e.target.value }));
-              }}
-              placeholder="(555) 123-4567"
-              style={{
-                width: "100%",
-                padding: "10px 12px",
-                background: "#fff",
-                border: "1px solid #d1d5db",
-                borderRadius: 6,
-                fontSize: 14,
-                color: "#111827",
-              }}
-            />
-          </div>
-        </div>
-
-        <button
-          type="button"
-          onClick={async () => {
-            if (!customer?.id) return;
-            const { error } = await supabase
-              .from("customers")
-              .update(sanitizePatch({
-                full_name: draftCustomer.full_name.trim(),
-                email: draftCustomer.email.trim(),
-                phone: draftCustomer.phone.trim(),
-              }))
-              .eq("id", customer.id);
-
-            if (error) {
-              console.error("Failed to save customer:", error);
-              alert("Failed to save customer information");
-            } else {
-              setCustomer((c: any) => ({ ...c, ...draftCustomer }));
-              isDirtyRef.current = false;
-              alert("Customer information saved successfully!");
-            }
-          }}
-          style={{
-            marginTop: 16,
-            background: "#f97316",
-            color: "#fff",
-            padding: "10px 20px",
-            borderRadius: 6,
-            border: "none",
-            cursor: "pointer",
-            fontWeight: 600,
-            fontSize: 13,
-          }}
-        >
-          Save Customer Information
-        </button>
+              if (error) {
+                console.error("Failed to save customer:", error);
+                alert("Failed to save customer information");
+              } else {
+                setCustomer((c: any) => ({ ...c, ...draftCustomer }));
+                isDirtyRef.current = false;
+                alert("Customer information saved successfully!");
+              }
+            }}
+            style={{
+              marginTop: 16,
+              background: "#f97316",
+              color: "#fff",
+              padding: "10px 20px",
+              borderRadius: 6,
+              border: "none",
+              cursor: "pointer",
+              fontWeight: 600,
+              fontSize: 13,
+            }}
+          >
+            Save Customer Information
+          </button>
+        </form>
       </CollapsibleSection>
 
       <CollapsibleSection id="electricity" icon={Zap} title="Electricity Usage">
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
-          <div>
-            <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#374151", marginBottom: 8 }}>
-              Data source
-            </label>
-            <select
-              style={{
-                width: "100%",
-                padding: "10px 12px",
-                background: "#fff",
-                border: "1px solid #d1d5db",
-                borderRadius: 6,
-                fontSize: 14,
-                color: "#111827",
-              }}
-            >
-              <option>Annual Consumption (kWh)</option>
-              <option>Monthly Usage</option>
-              <option>Utility Bill</option>
-            </select>
+        <form onSubmit={(e) => e.preventDefault()}>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+            <div>
+              <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#374151", marginBottom: 8 }}>
+                Data source
+              </label>
+              <select
+                style={{
+                  width: "100%",
+                  padding: "10px 12px",
+                  background: "#fff",
+                  border: "1px solid #d1d5db",
+                  borderRadius: 6,
+                  fontSize: 14,
+                  color: "#111827",
+                }}
+              >
+                <option>Annual Consumption (kWh)</option>
+                <option>Monthly Usage</option>
+                <option>Utility Bill</option>
+              </select>
+            </div>
+
+            <div>
+              <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#374151", marginBottom: 8 }}>
+                Annual kWh
+              </label>
+              <input
+                type="number"
+                value={proposalDraft.annual_consumption ?? ""}
+                onChange={(e) => {
+                  isDirtyRef.current = true;
+                  const val = e.target.value;
+                  setProposalDraft((prev: any) => ({
+                    ...prev,
+                    annual_consumption: val === "" ? null : Number(val),
+                  }));
+                }}
+                placeholder="23000"
+                style={{
+                  width: "100%",
+                  padding: "10px 12px",
+                  background: "#fff",
+                  border: "1px solid #d1d5db",
+                  borderRadius: 6,
+                  fontSize: 14,
+                  color: "#111827",
+                }}
+              />
+            </div>
           </div>
 
-          <div>
-            <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#374151", marginBottom: 8 }}>
-              Annual kWh
-            </label>
-            <input
-              type="number"
-              value={proposalDraft.annual_consumption ?? ""}
-              onChange={(e) => {
-                isDirtyRef.current = true;
-                setProposalDraft((p: any) => ({
-                  ...p,
-                  annual_consumption: Number(e.target.value),
-                }));
-              }}
-              placeholder="23000"
-              style={{
-                width: "100%",
-                padding: "10px 12px",
-                background: "#fff",
-                border: "1px solid #d1d5db",
-                borderRadius: 6,
-                fontSize: 14,
-                color: "#111827",
-              }}
-            />
-          </div>
-        </div>
+          <button
+            type="button"
+            onClick={async () => {
+              const { error } = await supabase
+                .from("proposals")
+                .update(sanitizePatch({
+                  annual_consumption: proposalDraft.annual_consumption ?? null,
+                }))
+                .eq("id", proposalId);
 
-        <button
-          type="button"
-          onClick={async () => {
-            const { error } = await supabase
-              .from("proposals")
-              .update(sanitizePatch({
-                annual_consumption: proposalDraft.annual_consumption ?? null,
-              }))
-              .eq("id", proposalId);
-
-            if (error) {
-              alert("Failed to save electricity usage");
-            } else {
-              setProposal((p: any) => ({ ...p, ...proposalDraft }));
-              isDirtyRef.current = false;
-              alert("Electricity usage saved successfully!");
-            }
-          }}
-          style={{
-            marginTop: 16,
-            background: "#f97316",
-            color: "#fff",
-            padding: "10px 20px",
-            borderRadius: 6,
-            border: "none",
-            cursor: "pointer",
-            fontWeight: 600,
-            fontSize: 13,
-          }}
-        >
-          Save Electricity Usage
-        </button>
+              if (error) {
+                alert("Failed to save electricity usage");
+              } else {
+                setProposal((p: any) => ({ ...p, ...proposalDraft }));
+                isDirtyRef.current = false;
+                alert("Electricity usage saved successfully!");
+              }
+            }}
+            style={{
+              marginTop: 16,
+              background: "#f97316",
+              color: "#fff",
+              padding: "10px 20px",
+              borderRadius: 6,
+              border: "none",
+              cursor: "pointer",
+              fontWeight: 600,
+              fontSize: 13,
+            }}
+          >
+            Save Electricity Usage
+          </button>
+        </form>
       </CollapsibleSection>
 
       <CollapsibleSection id="rate" icon={DollarSign} title="Electricity Rate">
