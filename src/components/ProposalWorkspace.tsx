@@ -803,6 +803,9 @@ export default function ProposalWorkspace({
   const [deletedObstructionIds, setDeletedObstructionIds] = useState<string[]>([]);
   const [customAdders, setCustomAdders] = useState<any[]>([]);
   const [proposalAdders, setProposalAdders] = useState<any[]>([]);
+  const [inverters, setInverters] = useState<any[]>([]);
+  const [racking, setRacking] = useState<any[]>([]);
+  const [batteries, setBatteries] = useState<any[]>([]);
 
   const roofPolysRef = useRef<Map<string, google.maps.Polygon>>(new Map());
   const obstructionShapesRef = useRef<Map<string, any>>(new Map());
@@ -1151,6 +1154,36 @@ export default function ProposalWorkspace({
 
       if (customAddersData) {
         setCustomAdders(customAddersData);
+      }
+
+      const { data: invertersData } = await supabase
+        .from("inverters")
+        .select("*")
+        .eq("is_active", true)
+        .order("brand", { ascending: true });
+
+      if (invertersData) {
+        setInverters(invertersData);
+      }
+
+      const { data: rackingData } = await supabase
+        .from("racking")
+        .select("*")
+        .eq("is_active", true)
+        .order("brand", { ascending: true });
+
+      if (rackingData) {
+        setRacking(rackingData);
+      }
+
+      const { data: batteriesData } = await supabase
+        .from("batteries")
+        .select("*")
+        .eq("is_active", true)
+        .order("brand", { ascending: true });
+
+      if (batteriesData) {
+        setBatteries(batteriesData);
       }
     }
 
@@ -1796,98 +1829,213 @@ export default function ProposalWorkspace({
           dirty: {String(isDirtyRef.current)} | init: {String(didInitDraftRef.current)}
         </div>
 
-        <CollapsibleSection id="system" icon={Zap} title="System Details">
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24 }}>
-            <div>
-              <div style={{ fontSize: 13, fontWeight: 700, color: "#111827", marginBottom: 16, paddingBottom: 8, borderBottom: "2px solid #f97316" }}>
-                Solar System
+        <CollapsibleSection id="system-details" icon={Zap} title="System Details">
+          <form onSubmit={(e) => e.preventDefault()}>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24 }}>
+              <div>
+                <div style={{ fontSize: 13, fontWeight: 700, color: "#111827", marginBottom: 16, paddingBottom: 8, borderBottom: "2px solid #f97316" }}>
+                  Solar System
+                </div>
+                <div style={{ display: "grid", gap: 12 }}>
+                  <div>
+                    <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#374151", marginBottom: 4 }}>
+                      Panel Brand (from Solar Design)
+                    </label>
+                    <div style={{ fontSize: 13, color: "#6b7280", fontStyle: "italic" }}>
+                      {panelModel ? `${panelModel.brand} ${panelModel.model} (${panelModel.watts}W)` : "No panels placed yet"}
+                    </div>
+                  </div>
+
+                  <div>
+                    <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#374151", marginBottom: 4 }}>
+                      Inverter Type
+                    </label>
+                    <select
+                      value={proposalDraft.inverter_type || proposal?.inverter_type || ""}
+                      onChange={(e) => setProposalDraft((p: any) => ({ ...p, inverter_type: e.target.value }))}
+                      style={{
+                        width: "100%",
+                        padding: "8px 12px",
+                        background: "#fff",
+                        border: "1px solid #d1d5db",
+                        borderRadius: 6,
+                        fontSize: 13,
+                      }}
+                    >
+                      <option value="">Select Inverter</option>
+                      {inverters.map((inv) => (
+                        <option key={inv.id} value={`${inv.brand} ${inv.model}`}>
+                          {inv.brand} {inv.model} ({inv.capacity_kw}kW)
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#374151", marginBottom: 4 }}>
+                      Racking Type
+                    </label>
+                    <select
+                      value={proposalDraft.racking_type || proposal?.racking_type || ""}
+                      onChange={(e) => setProposalDraft((p: any) => ({ ...p, racking_type: e.target.value }))}
+                      style={{
+                        width: "100%",
+                        padding: "8px 12px",
+                        background: "#fff",
+                        border: "1px solid #d1d5db",
+                        borderRadius: 6,
+                        fontSize: 13,
+                      }}
+                    >
+                      <option value="">Select Racking</option>
+                      <option value="Unirac NXT Butyl">Unirac NXT Butyl (Primary)</option>
+                      {racking.map((rack) => (
+                        <option key={rack.id} value={`${rack.brand} ${rack.model}`}>
+                          {rack.brand} {rack.model} ({rack.roof_type})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#374151", marginBottom: 4 }}>
+                      Roof Type
+                    </label>
+                    <select
+                      value={proposalDraft.roof_type || proposal?.roof_type || ""}
+                      onChange={(e) => setProposalDraft((p: any) => ({ ...p, roof_type: e.target.value }))}
+                      style={{
+                        width: "100%",
+                        padding: "8px 12px",
+                        background: "#fff",
+                        border: "1px solid #d1d5db",
+                        borderRadius: 6,
+                        fontSize: 13,
+                      }}
+                    >
+                      <option value="">Select Roof Type</option>
+                      <option value="composition">Composition</option>
+                      <option value="tile">Tile</option>
+                      <option value="metal">Metal</option>
+                      <option value="flat">Flat</option>
+                    </select>
+                  </div>
+                </div>
               </div>
-              <div style={{ display: "grid", gap: 12 }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <span style={{ fontSize: 12, color: "#6b7280" }}>System Size (kW)</span>
-                  <span style={{ fontSize: 13, fontWeight: 600, color: "#111827" }}>
-                    {systemSummary.systemKw > 0 ? systemSummary.systemKw.toFixed(2) : "N/A"}
-                  </span>
+
+              <div>
+                <div style={{ fontSize: 13, fontWeight: 700, color: "#111827", marginBottom: 16, paddingBottom: 8, borderBottom: "2px solid #f97316" }}>
+                  Battery Storage
                 </div>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <span style={{ fontSize: 12, color: "#6b7280" }}>Panel Quantity</span>
-                  <span style={{ fontSize: 13, fontWeight: 600, color: "#111827" }}>
-                    {systemSummary.panelCount > 0 ? systemSummary.panelCount : "N/A"}
-                  </span>
+                <div style={{ display: "grid", gap: 12 }}>
+                  <div>
+                    <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#374151", marginBottom: 4 }}>
+                      Battery Brand
+                    </label>
+                    <select
+                      value={proposalDraft.battery_brand || proposal?.battery_brand || ""}
+                      onChange={(e) => setProposalDraft((p: any) => ({ ...p, battery_brand: e.target.value }))}
+                      style={{
+                        width: "100%",
+                        padding: "8px 12px",
+                        background: "#fff",
+                        border: "1px solid #d1d5db",
+                        borderRadius: 6,
+                        fontSize: 13,
+                      }}
+                    >
+                      <option value="">No Battery</option>
+                      {batteries.map((bat) => (
+                        <option key={bat.id} value={`${bat.brand} ${bat.model}`}>
+                          {bat.brand} {bat.model} ({bat.capacity_kwh}kWh)
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#374151", marginBottom: 4 }}>
+                      Battery Quantity
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      value={proposalDraft.battery_quantity ?? proposal?.battery_quantity ?? 0}
+                      onChange={(e) => setProposalDraft((p: any) => ({ ...p, battery_quantity: parseInt(e.target.value) || 0 }))}
+                      style={{
+                        width: "100%",
+                        padding: "8px 12px",
+                        background: "#fff",
+                        border: "1px solid #d1d5db",
+                        borderRadius: 6,
+                        fontSize: 13,
+                      }}
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#374151", marginBottom: 4 }}>
+                      Total Battery Capacity
+                    </label>
+                    <div style={{ fontSize: 13, color: "#6b7280", fontStyle: "italic", padding: "8px 0" }}>
+                      {(proposalDraft.battery_quantity || proposal?.battery_quantity)
+                        ? `${((proposalDraft.battery_quantity || proposal?.battery_quantity) * 13.5).toFixed(1)} kWh`
+                        : "0.0 kWh"}
+                    </div>
+                  </div>
                 </div>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <span style={{ fontSize: 12, color: "#6b7280" }}>Panel Wattage (W)</span>
-                  <span style={{ fontSize: 13, fontWeight: 600, color: "#111827" }}>
-                    {panelModel ? `${panelModel.watts}W` : "Not specified"}
-                  </span>
+
+                <div style={{ fontSize: 13, fontWeight: 700, color: "#111827", marginTop: 24, marginBottom: 16, paddingBottom: 8, borderBottom: "2px solid #f97316" }}>
+                  Contract Price
                 </div>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <span style={{ fontSize: 12, color: "#6b7280" }}>Panel Brand</span>
-                  <span style={{ fontSize: 13, fontWeight: 600, color: "#111827" }}>
-                    {panelModel ? `${panelModel.brand} ${panelModel.model}` : "Not specified"}
-                  </span>
-                </div>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <span style={{ fontSize: 12, color: "#6b7280" }}>Inverter Type</span>
-                  <span style={{ fontSize: 13, fontWeight: 600, color: "#111827" }}>
-                    {proposalDraft.inverter_type || proposal?.inverter_type || "Not specified"}
-                  </span>
-                </div>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <span style={{ fontSize: 12, color: "#6b7280" }}>Racking Type</span>
-                  <span style={{ fontSize: 13, fontWeight: 600, color: "#111827" }}>
-                    {proposalDraft.racking_type || proposal?.racking_type || "Not specified"}
-                  </span>
-                </div>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <span style={{ fontSize: 12, color: "#6b7280" }}>Roof Type</span>
-                  <span style={{ fontSize: 13, fontWeight: 600, color: "#111827" }}>
-                    {proposalDraft.roof_type || proposal?.roof_type || "Not specified"}
-                  </span>
+                <div style={{ display: "grid", gap: 12 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <span style={{ fontSize: 12, color: "#6b7280" }}>Total Contract Price</span>
+                    <span style={{ fontSize: 16, fontWeight: 700, color: "#059669" }}>
+                      ${fmt(systemSummary.totalContractPrice, 2)}
+                    </span>
+                  </div>
                 </div>
               </div>
             </div>
 
-            <div>
-              <div style={{ fontSize: 13, fontWeight: 700, color: "#111827", marginBottom: 16, paddingBottom: 8, borderBottom: "2px solid #f97316" }}>
-                Battery Storage
-              </div>
-              <div style={{ display: "grid", gap: 12 }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <span style={{ fontSize: 12, color: "#6b7280" }}>Battery Brand</span>
-                  <span style={{ fontSize: 13, fontWeight: 600, color: "#111827" }}>
-                    {proposalDraft.battery_brand || proposal?.battery_brand || "No Battery"}
-                  </span>
-                </div>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <span style={{ fontSize: 12, color: "#6b7280" }}>Battery Quantity</span>
-                  <span style={{ fontSize: 13, fontWeight: 600, color: "#111827" }}>
-                    {proposalDraft.battery_quantity || proposal?.battery_quantity || 0}
-                  </span>
-                </div>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <span style={{ fontSize: 12, color: "#6b7280" }}>Total Battery Capacity</span>
-                  <span style={{ fontSize: 13, fontWeight: 600, color: "#111827" }}>
-                    {(proposalDraft.battery_quantity || proposal?.battery_quantity)
-                      ? `${((proposalDraft.battery_quantity || proposal?.battery_quantity) * 13.5).toFixed(1)} kWh`
-                      : "N/A"}
-                  </span>
-                </div>
-              </div>
+            <button
+              type="button"
+              onClick={async () => {
+                const { error } = await supabase
+                  .from("proposals")
+                  .update(sanitizePatch({
+                    inverter_type: proposalDraft.inverter_type ?? null,
+                    racking_type: proposalDraft.racking_type ?? null,
+                    roof_type: proposalDraft.roof_type ?? null,
+                    battery_brand: proposalDraft.battery_brand ?? null,
+                    battery_quantity: proposalDraft.battery_quantity ?? 0,
+                  }))
+                  .eq("id", proposalId);
 
-              <div style={{ fontSize: 13, fontWeight: 700, color: "#111827", marginTop: 24, marginBottom: 16, paddingBottom: 8, borderBottom: "2px solid #f97316" }}>
-                Contract Price
-              </div>
-              <div style={{ display: "grid", gap: 12 }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <span style={{ fontSize: 12, color: "#6b7280" }}>Total Contract Price</span>
-                  <span style={{ fontSize: 16, fontWeight: 700, color: "#059669" }}>
-                    ${fmt(systemSummary.totalContractPrice, 2)}
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
+                if (error) {
+                  alert("Failed to save system details");
+                } else {
+                  setProposal((p: any) => ({ ...p, ...proposalDraft }));
+                  isDirtyRef.current = false;
+                  alert("System details saved successfully!");
+                }
+              }}
+              style={{
+                marginTop: 16,
+                background: "#f97316",
+                color: "#fff",
+                padding: "10px 20px",
+                borderRadius: 6,
+                border: "none",
+                cursor: "pointer",
+                fontWeight: 600,
+                fontSize: 13,
+              }}
+            >
+              Save System Details
+            </button>
+          </form>
         </CollapsibleSection>
 
         <CollapsibleSection id="customer" icon={User} title="Customer Information">
@@ -1936,12 +2084,22 @@ export default function ProposalWorkspace({
         </form>
       </CollapsibleSection>
 
-      <CollapsibleSection id="electricity" icon={Zap} title="Electricity Usage">
+      <CollapsibleSection id="electricity" icon={Zap} title="Electricity Usage and Rate">
         <form onSubmit={(e) => e.preventDefault()}>
           <ElectricityUsageInputs
             initialData={{ annual_consumption: proposalDraft.annual_consumption ?? null }}
             onChange={handleElectricityChange}
           />
+
+          <div style={{ marginTop: 16 }}>
+            <ElectricityRateInputs
+              initialData={{
+                utility_company: proposalDraft.utility_company ?? null,
+                electricity_rate: proposalDraft.electricity_rate ?? null,
+              }}
+              onChange={handleElectricityRateChange}
+            />
+          </div>
 
           <button
             type="button"
@@ -1950,15 +2108,17 @@ export default function ProposalWorkspace({
                 .from("proposals")
                 .update(sanitizePatch({
                   annual_consumption: proposalDraft.annual_consumption ?? null,
+                  utility_company: proposalDraft.utility_company ?? null,
+                  electricity_rate: proposalDraft.electricity_rate ?? null,
                 }))
                 .eq("id", proposalId);
 
               if (error) {
-                alert("Failed to save electricity usage");
+                alert("Failed to save electricity information");
               } else {
                 setProposal((p: any) => ({ ...p, ...proposalDraft }));
                 isDirtyRef.current = false;
-                alert("Electricity usage saved successfully!");
+                alert("Electricity usage and rate saved successfully!");
               }
             }}
             style={{
@@ -1973,54 +2133,12 @@ export default function ProposalWorkspace({
               fontSize: 13,
             }}
           >
-            Save Electricity Usage
+            Save Electricity Information
           </button>
         </form>
       </CollapsibleSection>
 
-      <CollapsibleSection id="rate" icon={DollarSign} title="Electricity Rate">
-        <ElectricityRateInputs
-          initialData={{
-            utility_company: proposalDraft.utility_company ?? null,
-            electricity_rate: proposalDraft.electricity_rate ?? null,
-          }}
-          onChange={handleElectricityRateChange}
-        />
-
-        <button
-          onClick={async () => {
-            const { error } = await supabase
-              .from("proposals")
-              .update(sanitizePatch({
-                utility_company: proposalDraft.utility_company ?? null,
-                electricity_rate: proposalDraft.electricity_rate ?? null,
-              }))
-              .eq("id", proposalId);
-
-            if (error) {
-              alert("Failed to save electricity rate");
-            } else {
-              setProposal((p: any) => ({ ...p, ...proposalDraft }));
-              alert("Electricity rate saved successfully!");
-            }
-          }}
-          style={{
-            marginTop: 16,
-            background: "#f97316",
-            color: "#fff",
-            padding: "10px 20px",
-            borderRadius: 6,
-            border: "none",
-            cursor: "pointer",
-            fontWeight: 600,
-            fontSize: 13,
-          }}
-        >
-          Save Electricity Rate
-        </button>
-      </CollapsibleSection>
-
-      <CollapsibleSection id="system" icon={Package} title="System Specifications">
+      <CollapsibleSection id="system-specs" icon={Package} title="System Specifications">
         <div style={{ display: "grid", gap: 12 }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 0", borderBottom: "1px solid #f3f4f6" }}>
             <span style={{ fontWeight: 500, fontSize: 13, color: "#6b7280" }}>Module Type</span>
