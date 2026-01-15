@@ -3652,8 +3652,6 @@ export default function ProposalWorkspace({
   };
 
   const renderPaymentsTab = () => {
-    const { financingOptions } = useFinancingOptions();
-
     return (
       <div style={{ padding: 20, maxWidth: 1200, margin: "0 auto" }}>
         <div style={{ background: "#fff", borderRadius: 12, padding: 24, boxShadow: "0 1px 3px rgba(0,0,0,0.1)" }}>
