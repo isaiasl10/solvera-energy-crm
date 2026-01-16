@@ -16,6 +16,7 @@ interface Contractor {
   phone_number: string | null;
   email: string | null;
   ppw: number | null;
+  default_detach_reset_price_per_panel: number | null;
   adders: Adder[];
   notes: string | null;
   created_at: string;
@@ -27,6 +28,7 @@ interface ContractorFormData {
   phone_number: string;
   email: string;
   ppw: string;
+  default_detach_reset_price_per_panel: string;
   notes: string;
 }
 
@@ -46,6 +48,7 @@ export default function ContractorManagement() {
     phone_number: '',
     email: '',
     ppw: '',
+    default_detach_reset_price_per_panel: '',
     notes: '',
   });
 
@@ -115,6 +118,7 @@ export default function ContractorManagement() {
         phone_number: contractor.phone_number || '',
         email: contractor.email || '',
         ppw: contractor.ppw?.toString() || '',
+        default_detach_reset_price_per_panel: contractor.default_detach_reset_price_per_panel?.toString() || '',
         notes: contractor.notes || '',
       });
       setAdders(contractor.adders || []);
@@ -126,6 +130,7 @@ export default function ContractorManagement() {
         phone_number: '',
         email: '',
         ppw: '',
+        default_detach_reset_price_per_panel: '',
         notes: '',
       });
       setAdders([]);
@@ -144,6 +149,7 @@ export default function ContractorManagement() {
       phone_number: '',
       email: '',
       ppw: '',
+      default_detach_reset_price_per_panel: '',
       notes: '',
     });
     setAdders([]);
@@ -175,6 +181,7 @@ export default function ContractorManagement() {
         phone_number: formData.phone_number || null,
         email: formData.email || null,
         ppw: formData.ppw ? parseFloat(formData.ppw) : null,
+        default_detach_reset_price_per_panel: formData.default_detach_reset_price_per_panel ? parseFloat(formData.default_detach_reset_price_per_panel) : null,
         adders: adders,
         notes: formData.notes || null,
       };
@@ -506,6 +513,26 @@ export default function ContractorManagement() {
                     value={formData.ppw}
                     onChange={(e) => setFormData({ ...formData, ppw: e.target.value })}
                     placeholder="300.00"
+                    style={{
+                      width: '100%',
+                      padding: '10px 12px',
+                      border: '1px solid #d1d5db',
+                      borderRadius: '8px',
+                      fontSize: '14px',
+                    }}
+                  />
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '14px', fontWeight: 600, color: '#1a1a1a', marginBottom: '8px' }}>
+                    Default Price Per Panel - Detach & Reset ($)
+                  </label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={formData.default_detach_reset_price_per_panel}
+                    onChange={(e) => setFormData({ ...formData, default_detach_reset_price_per_panel: e.target.value })}
+                    placeholder="50.00"
                     style={{
                       width: '100%',
                       padding: '10px 12px',

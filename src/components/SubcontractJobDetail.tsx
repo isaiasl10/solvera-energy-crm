@@ -410,22 +410,209 @@ export default function SubcontractJobDetail({ jobId, onClose, onUpdate }: Subco
         <div className="flex-1 overflow-auto p-4 sm:p-6">
           {activeTab === 'details' ? (
             <div className="flex flex-col gap-6">
-              {/* TODO: Add full Detach & Reset UI section with panel_qty, price_per_panel, dates, status dropdown */}
-              {job?.job_type === 'detach_reset' && (
-                <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg">
-                  <h3 className="text-sm font-bold text-amber-900 mb-2">Detach & Reset Job</h3>
-                  <p className="text-xs text-amber-700">
-                    Panel Qty: {job.panel_qty || 0} | Price/Panel: ${job.price_per_panel || 0} |
-                    Gross: ${job.gross_amount || 0} | Net: ${job.net_revenue || 0}
-                  </p>
-                  <p className="text-xs text-amber-700 mt-1">
-                    Status: {job.detach_reset_status || 'detach_scheduled'}
-                  </p>
-                </div>
-              )}
+              {job?.job_type === 'detach_reset' ? (
+                <>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">
+                        Panel Quantity *
+                      </label>
+                      <input
+                        type="number"
+                        value={formData.panel_qty}
+                        onChange={(e) => {
+                          const newValue = e.target.value;
+                          setFormData({ ...formData, panel_qty: newValue });
+                        }}
+                        className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                      />
+                    </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {job?.job_type === 'new_install' && (
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">
+                        Price Per Panel ($) *
+                      </label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        value={formData.price_per_panel}
+                        onChange={(e) => {
+                          const newValue = e.target.value;
+                          setFormData({ ...formData, price_per_panel: newValue });
+                        }}
+                        className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">
+                        Gross Amount (Auto-calculated)
+                      </label>
+                      <div className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm bg-gray-50 font-semibold text-green-600">
+                        ${((parseFloat(formData.panel_qty) || 0) * (parseFloat(formData.price_per_panel) || 0)).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">
+                        Status *
+                      </label>
+                      <select
+                        value={formData.detach_reset_status}
+                        onChange={(e) => {
+                          const newStatus = e.target.value;
+                          const updates: any = { detach_reset_status: newStatus };
+
+                          if (newStatus === 'invoice_sent' && !formData.invoice_sent_date) {
+                            updates.invoice_sent_date = new Date().toISOString().split('T')[0];
+                          }
+                          if (newStatus === 'paid' && !formData.invoice_paid_date) {
+                            updates.invoice_paid_date = new Date().toISOString().split('T')[0];
+                          }
+
+                          setFormData({ ...formData, ...updates });
+                        }}
+                        className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                      >
+                        <option value="detach_scheduled">Detach Scheduled</option>
+                        <option value="detach_complete">Detach Complete</option>
+                        <option value="reset_scheduled">Reset Scheduled</option>
+                        <option value="reset_complete">Reset Complete</option>
+                        <option value="invoice_sent">Invoice Sent</option>
+                        <option value="paid">Paid</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">
+                        Detach Date
+                      </label>
+                      <input
+                        type="date"
+                        value={formData.detach_date}
+                        onChange={(e) => setFormData({ ...formData, detach_date: e.target.value })}
+                        className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">
+                        Reset Date
+                      </label>
+                      <input
+                        type="date"
+                        value={formData.reset_date}
+                        onChange={(e) => setFormData({ ...formData, reset_date: e.target.value })}
+                        className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">
+                        Labor Cost ($)
+                      </label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        value={formData.labor_cost}
+                        onChange={(e) => setFormData({ ...formData, labor_cost: e.target.value })}
+                        className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">
+                        Material Cost ($)
+                      </label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        value={formData.material_cost}
+                        onChange={(e) => setFormData({ ...formData, material_cost: e.target.value })}
+                        className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">
+                        Net Revenue (Auto-calculated)
+                      </label>
+                      <div className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm bg-gray-50 font-bold text-blue-600">
+                        ${(
+                          ((parseFloat(formData.panel_qty) || 0) * (parseFloat(formData.price_per_panel) || 0)) -
+                          (parseFloat(formData.labor_cost) || 0) -
+                          (parseFloat(formData.material_cost) || 0)
+                        ).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </div>
+                    </div>
+
+                    {(formData.detach_reset_status === 'invoice_sent' || formData.detach_reset_status === 'paid') && (
+                      <div>
+                        <label className="block text-sm font-semibold text-gray-700 mb-2">
+                          Invoice Sent Date
+                        </label>
+                        <input
+                          type="date"
+                          value={formData.invoice_sent_date}
+                          onChange={(e) => setFormData({ ...formData, invoice_sent_date: e.target.value })}
+                          className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                        />
+                      </div>
+                    )}
+
+                    {formData.detach_reset_status === 'paid' && (
+                      <>
+                        <div>
+                          <label className="block text-sm font-semibold text-gray-700 mb-2">
+                            Paid Date
+                          </label>
+                          <input
+                            type="date"
+                            value={formData.invoice_paid_date}
+                            onChange={(e) => setFormData({ ...formData, invoice_paid_date: e.target.value })}
+                            className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-semibold text-gray-700 mb-2">
+                            Payment Method
+                          </label>
+                          <select
+                            value={formData.payment_method}
+                            onChange={(e) => setFormData({ ...formData, payment_method: e.target.value })}
+                            className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                          >
+                            <option value="">Select Payment Method</option>
+                            <option value="check">Check</option>
+                            <option value="wire">Wire</option>
+                            <option value="ach">ACH</option>
+                            <option value="other">Other</option>
+                          </select>
+                        </div>
+
+                        {formData.payment_method === 'check' && (
+                          <div>
+                            <label className="block text-sm font-semibold text-gray-700 mb-2">
+                              Check Number
+                            </label>
+                            <input
+                              type="text"
+                              value={formData.check_number}
+                              onChange={(e) => setFormData({ ...formData, check_number: e.target.value })}
+                              placeholder="Enter check number"
+                              className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                            />
+                          </div>
+                        )}
+                      </>
+                    )}
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {job?.job_type === 'new_install' && (
                   <>
                     <div>
                       <label className="block text-sm font-semibold text-gray-700 mb-2">
@@ -454,39 +641,41 @@ export default function SubcontractJobDetail({ jobId, onClose, onUpdate }: Subco
                   </>
                 )}
 
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Install Date
-                  </label>
-                  <input
-                    type="date"
-                    value={formData.install_date}
-                    onChange={(e) => setFormData({ ...formData, install_date: e.target.value })}
-                    onBlur={async (e) => {
-                      if (e.target.value !== job?.install_date) {
-                        try {
-                          const { error } = await supabase
-                            .from('customers')
-                            .update({ install_date: e.target.value || null })
-                            .eq('id', jobId);
+                {job?.job_type === 'new_install' && (
+                  <>
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">
+                        Install Date
+                      </label>
+                      <input
+                        type="date"
+                        value={formData.install_date}
+                        onChange={(e) => setFormData({ ...formData, install_date: e.target.value })}
+                        onBlur={async (e) => {
+                          if (e.target.value !== job?.install_date) {
+                            try {
+                              const { error } = await supabase
+                                .from('customers')
+                                .update({ install_date: e.target.value || null })
+                                .eq('id', jobId);
 
-                          if (error) throw error;
-                          await loadJob();
-                          onUpdate();
-                        } catch (error) {
-                          console.error('Error saving install date:', error);
-                        }
-                      }
-                    }}
-                    className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-                  />
-                </div>
+                              if (error) throw error;
+                              await loadJob();
+                              onUpdate();
+                            } catch (error) {
+                              console.error('Error saving install date:', error);
+                            }
+                          }
+                        }}
+                        className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                      />
+                    </div>
 
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Status
-                  </label>
-                  <select
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">
+                        Status
+                      </label>
+                      <select
                     value={formData.subcontract_status}
                     onChange={(e) => {
                       const newStatus = e.target.value;
@@ -731,9 +920,13 @@ export default function SubcontractJobDetail({ jobId, onClose, onUpdate }: Subco
                     }}
                   />
                 </div>
+                  </>
+                )}
               </div>
 
-              <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
+              {job?.job_type === 'new_install' && (
+                <>
+                  <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
                 <h3 className="text-base font-semibold mb-3">
                   Adders
                 </h3>
@@ -826,6 +1019,10 @@ export default function SubcontractJobDetail({ jobId, onClose, onUpdate }: Subco
                   </span>
                 </div>
               </div>
+                  </>
+                )}
+                </>
+              )}
             </div>
           ) : activeTab === 'invoice' ? (
             <div className="flex flex-col gap-6">
