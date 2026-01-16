@@ -1,46 +1,72 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '../lib/supabase';
-import { Plus, Search, Calendar, User, MapPin, Zap, DollarSign, FileText, X } from 'lucide-react';
+import { loadGoogleMaps } from '../lib/loadGoogleMaps';
+import { Plus, Search, X } from 'lucide-react';
+import SubcontractJobDetail from './SubcontractJobDetail';
 
 interface SubcontractJob {
   id: string;
+  contractor_name: string;
+  subcontract_customer_name: string;
   address: string;
   system_size_kw: number;
-  contractor_name: string;
-  contractor_job_ref: string;
-  subcontract_rate: number;
-  subcontract_notes: string;
+  gross_revenue: number;
+  net_revenue: number;
+  subcontract_status: string;
+  invoice_number: string;
   created_at: string;
-  updated_at: string;
-}
-
-interface SchedulingInfo {
-  id: string;
-  scheduled_date: string | null;
-  assigned_technicians: string[];
-  status: string;
-  appointment_type: string;
 }
 
 export default function SubcontractingIntake() {
   const [jobs, setJobs] = useState<SubcontractJob[]>([]);
-  const [schedulingInfo, setSchedulingInfo] = useState<Record<string, SchedulingInfo[]>>({});
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
+  const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
   const [formData, setFormData] = useState({
-    address: '',
-    system_size_kw: '',
     contractor_name: '',
-    contractor_job_ref: '',
-    subcontract_rate: '',
-    subcontract_notes: '',
+    customer_name: '',
+    address: '',
   });
   const [submitting, setSubmitting] = useState(false);
+
+  const addressInputRef = useRef<HTMLInputElement>(null);
+  const autocompleteRef = useRef<google.maps.places.Autocomplete | null>(null);
 
   useEffect(() => {
     loadSubcontractJobs();
   }, []);
+
+  useEffect(() => {
+    if (showAddModal && addressInputRef.current) {
+      initializeAutocomplete();
+    }
+  }, [showAddModal]);
+
+  const initializeAutocomplete = async () => {
+    try {
+      const google = await loadGoogleMaps();
+
+      if (addressInputRef.current && !autocompleteRef.current) {
+        autocompleteRef.current = new google.maps.places.Autocomplete(
+          addressInputRef.current,
+          {
+            types: ['address'],
+            componentRestrictions: { country: 'us' },
+          }
+        );
+
+        autocompleteRef.current.addListener('place_changed', () => {
+          const place = autocompleteRef.current?.getPlace();
+          if (place && place.formatted_address) {
+            setFormData(prev => ({ ...prev, address: place.formatted_address || '' }));
+          }
+        });
+      }
+    } catch (error) {
+      console.error('Error initializing Google Maps autocomplete:', error);
+    }
+  };
 
   const loadSubcontractJobs = async () => {
     setLoading(true);
@@ -52,27 +78,7 @@ export default function SubcontractingIntake() {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-
       setJobs(data || []);
-
-      if (data && data.length > 0) {
-        const customerIds = data.map(j => j.id);
-        const { data: schedData, error: schedError } = await supabase
-          .from('scheduling')
-          .select('*')
-          .in('customer_id', customerIds);
-
-        if (!schedError && schedData) {
-          const schedByCustomer: Record<string, SchedulingInfo[]> = {};
-          schedData.forEach(sched => {
-            if (!schedByCustomer[sched.customer_id]) {
-              schedByCustomer[sched.customer_id] = [];
-            }
-            schedByCustomer[sched.customer_id].push(sched);
-          });
-          setSchedulingInfo(schedByCustomer);
-        }
-      }
     } catch (error) {
       console.error('Error loading subcontract jobs:', error);
     } finally {
@@ -90,31 +96,31 @@ export default function SubcontractingIntake() {
         .insert([
           {
             job_source: 'subcontract',
-            address: formData.address,
-            system_size_kw: parseFloat(formData.system_size_kw),
             contractor_name: formData.contractor_name,
-            contractor_job_ref: formData.contractor_job_ref,
-            subcontract_rate: formData.subcontract_rate ? parseFloat(formData.subcontract_rate) : null,
-            subcontract_notes: formData.subcontract_notes,
-            full_name: `Subcontract - ${formData.contractor_name}`,
-            phone: '',
-            email: '',
+            subcontract_customer_name: formData.customer_name,
+            address: formData.address,
+            full_name: formData.customer_name,
+            system_size_kw: 0,
+            subcontract_status: 'install_scheduled',
           },
         ])
-        .select();
+        .select()
+        .single();
 
       if (error) throw error;
 
       setShowAddModal(false);
       setFormData({
-        address: '',
-        system_size_kw: '',
         contractor_name: '',
-        contractor_job_ref: '',
-        subcontract_rate: '',
-        subcontract_notes: '',
+        customer_name: '',
+        address: '',
       });
-      loadSubcontractJobs();
+
+      await loadSubcontractJobs();
+
+      if (data) {
+        setSelectedJobId(data.id);
+      }
     } catch (error) {
       console.error('Error creating subcontract job:', error);
       alert('Error creating subcontract job. Please try again.');
@@ -128,39 +134,26 @@ export default function SubcontractingIntake() {
     return (
       job.address?.toLowerCase().includes(searchLower) ||
       job.contractor_name?.toLowerCase().includes(searchLower) ||
-      job.contractor_job_ref?.toLowerCase().includes(searchLower)
+      job.subcontract_customer_name?.toLowerCase().includes(searchLower) ||
+      job.invoice_number?.toLowerCase().includes(searchLower)
     );
   });
 
-  const getJobStatus = (jobId: string): string => {
-    const schedules = schedulingInfo[jobId] || [];
-    if (schedules.length === 0) return 'Not Scheduled';
-
-    const hasCompleted = schedules.some(s => s.status === 'completed');
-    if (hasCompleted) return 'Completed';
-
-    const hasPending = schedules.some(s => s.status === 'pending' || s.status === 'confirmed');
-    if (hasPending) return 'Scheduled';
-
-    return 'Not Scheduled';
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'install_complete':
+        return { bg: '#d1fae5', color: '#065f46' };
+      case 'install_complete_pending_payment':
+        return { bg: '#fef3c7', color: '#92400e' };
+      default:
+        return { bg: '#dbeafe', color: '#1e40af' };
+    }
   };
 
-  const getNextScheduledDate = (jobId: string): string | null => {
-    const schedules = schedulingInfo[jobId] || [];
-    const upcoming = schedules
-      .filter(s => s.scheduled_date && s.status !== 'completed' && s.status !== 'cancelled')
-      .sort((a, b) => new Date(a.scheduled_date!).getTime() - new Date(b.scheduled_date!).getTime());
-
-    return upcoming.length > 0 ? upcoming[0].scheduled_date : null;
-  };
-
-  const getAssignedTechs = (jobId: string): string[] => {
-    const schedules = schedulingInfo[jobId] || [];
-    const allTechs = new Set<string>();
-    schedules.forEach(s => {
-      s.assigned_technicians?.forEach(tech => allTechs.add(tech));
-    });
-    return Array.from(allTechs);
+  const formatStatus = (status: string) => {
+    return status.split('_').map(word =>
+      word.charAt(0).toUpperCase() + word.slice(1)
+    ).join(' ');
   };
 
   return (
@@ -220,7 +213,7 @@ export default function SubcontractingIntake() {
         <Search size={20} color="#6b7280" />
         <input
           type="text"
-          placeholder="Search by address, contractor name, or job reference..."
+          placeholder="Search by contractor, customer, address, or invoice number..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           style={{
@@ -260,7 +253,13 @@ export default function SubcontractingIntake() {
             <thead>
               <tr style={{ background: '#f9fafb', borderBottom: '1px solid #e5e7eb' }}>
                 <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: 600, color: '#6b7280', textTransform: 'uppercase' }}>
-                  Badge
+                  Invoice #
+                </th>
+                <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: 600, color: '#6b7280', textTransform: 'uppercase' }}>
+                  Contractor
+                </th>
+                <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: 600, color: '#6b7280', textTransform: 'uppercase' }}>
+                  Customer
                 </th>
                 <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: 600, color: '#6b7280', textTransform: 'uppercase' }}>
                   Address
@@ -269,117 +268,65 @@ export default function SubcontractingIntake() {
                   System Size
                 </th>
                 <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: 600, color: '#6b7280', textTransform: 'uppercase' }}>
-                  Contractor
+                  Gross Revenue
                 </th>
                 <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: 600, color: '#6b7280', textTransform: 'uppercase' }}>
-                  Job Ref
-                </th>
-                <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: 600, color: '#6b7280', textTransform: 'uppercase' }}>
-                  Rate
+                  Net Revenue
                 </th>
                 <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: 600, color: '#6b7280', textTransform: 'uppercase' }}>
                   Status
-                </th>
-                <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: 600, color: '#6b7280', textTransform: 'uppercase' }}>
-                  Scheduled Date
-                </th>
-                <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: 600, color: '#6b7280', textTransform: 'uppercase' }}>
-                  Assigned Techs
                 </th>
               </tr>
             </thead>
             <tbody>
               {filteredJobs.map((job) => {
-                const status = getJobStatus(job.id);
-                const nextDate = getNextScheduledDate(job.id);
-                const techs = getAssignedTechs(job.id);
+                const statusStyle = getStatusColor(job.subcontract_status || 'install_scheduled');
 
                 return (
-                  <tr key={job.id} style={{ borderBottom: '1px solid #e5e7eb' }}>
-                    <td style={{ padding: '16px' }}>
-                      <span style={{
-                        display: 'inline-block',
-                        padding: '4px 12px',
-                        background: 'linear-gradient(135deg, #f97316 0%, #ea580c 100%)',
-                        color: 'white',
-                        fontSize: '11px',
-                        fontWeight: 700,
-                        borderRadius: '4px',
-                        letterSpacing: '0.5px',
-                      }}>
-                        SUBCONTRACT
-                      </span>
-                    </td>
-                    <td style={{ padding: '16px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <MapPin size={16} color="#6b7280" />
-                        <span style={{ fontSize: '14px', color: '#1a1a1a', fontWeight: 500 }}>
-                          {job.address}
-                        </span>
-                      </div>
-                    </td>
-                    <td style={{ padding: '16px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <Zap size={16} color="#f59e0b" />
-                        <span style={{ fontSize: '14px', color: '#1a1a1a' }}>
-                          {job.system_size_kw} kW
-                        </span>
-                      </div>
+                  <tr
+                    key={job.id}
+                    onClick={() => setSelectedJobId(job.id)}
+                    style={{
+                      borderBottom: '1px solid #e5e7eb',
+                      cursor: 'pointer',
+                      transition: 'background 0.15s',
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.background = '#f9fafb'}
+                    onMouseLeave={(e) => e.currentTarget.style.background = 'white'}
+                  >
+                    <td style={{ padding: '16px', fontSize: '14px', color: '#1a1a1a', fontWeight: 600 }}>
+                      {job.invoice_number || '-'}
                     </td>
                     <td style={{ padding: '16px', fontSize: '14px', color: '#1a1a1a', fontWeight: 500 }}>
                       {job.contractor_name}
                     </td>
-                    <td style={{ padding: '16px', fontSize: '14px', color: '#6b7280' }}>
-                      {job.contractor_job_ref || '-'}
+                    <td style={{ padding: '16px', fontSize: '14px', color: '#1a1a1a' }}>
+                      {job.subcontract_customer_name || '-'}
                     </td>
-                    <td style={{ padding: '16px' }}>
-                      {job.subcontract_rate ? (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                          <DollarSign size={14} color="#10b981" />
-                          <span style={{ fontSize: '14px', color: '#10b981', fontWeight: 600 }}>
-                            {job.subcontract_rate.toLocaleString()}
-                          </span>
-                        </div>
-                      ) : (
-                        <span style={{ fontSize: '14px', color: '#6b7280' }}>-</span>
-                      )}
+                    <td style={{ padding: '16px', fontSize: '14px', color: '#6b7280' }}>
+                      {job.address}
+                    </td>
+                    <td style={{ padding: '16px', fontSize: '14px', color: '#1a1a1a' }}>
+                      {job.system_size_kw ? `${job.system_size_kw} kW` : '-'}
+                    </td>
+                    <td style={{ padding: '16px', fontSize: '14px', color: '#059669', fontWeight: 600 }}>
+                      {job.gross_revenue ? `$${job.gross_revenue.toLocaleString('en-US', { minimumFractionDigits: 2 })}` : '-'}
+                    </td>
+                    <td style={{ padding: '16px', fontSize: '14px', color: '#10b981', fontWeight: 700 }}>
+                      {job.net_revenue ? `$${job.net_revenue.toLocaleString('en-US', { minimumFractionDigits: 2 })}` : '-'}
                     </td>
                     <td style={{ padding: '16px' }}>
                       <span style={{
                         display: 'inline-block',
                         padding: '4px 8px',
-                        background: status === 'Completed' ? '#d1fae5' : status === 'Scheduled' ? '#dbeafe' : '#f3f4f6',
-                        color: status === 'Completed' ? '#065f46' : status === 'Scheduled' ? '#1e40af' : '#6b7280',
+                        background: statusStyle.bg,
+                        color: statusStyle.color,
                         fontSize: '12px',
                         fontWeight: 600,
                         borderRadius: '4px',
                       }}>
-                        {status}
+                        {formatStatus(job.subcontract_status || 'install_scheduled')}
                       </span>
-                    </td>
-                    <td style={{ padding: '16px' }}>
-                      {nextDate ? (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                          <Calendar size={14} color="#6b7280" />
-                          <span style={{ fontSize: '14px', color: '#1a1a1a' }}>
-                            {new Date(nextDate).toLocaleDateString()}
-                          </span>
-                        </div>
-                      ) : (
-                        <span style={{ fontSize: '14px', color: '#6b7280' }}>-</span>
-                      )}
-                    </td>
-                    <td style={{ padding: '16px' }}>
-                      {techs.length > 0 ? (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
-                          <User size={14} color="#6b7280" />
-                          <span style={{ fontSize: '14px', color: '#1a1a1a' }}>
-                            {techs.join(', ')}
-                          </span>
-                        </div>
-                      ) : (
-                        <span style={{ fontSize: '14px', color: '#6b7280' }}>-</span>
-                      )}
                     </td>
                   </tr>
                 );
@@ -437,62 +384,19 @@ export default function SubcontractingIntake() {
             </div>
 
             <form onSubmit={handleSubmit} style={{ padding: '24px' }}>
+              <p style={{
+                fontSize: '14px',
+                color: '#6b7280',
+                marginBottom: '20px',
+                padding: '12px',
+                background: '#f0f9ff',
+                borderRadius: '6px',
+                border: '1px solid #bae6fd',
+              }}>
+                Enter the basic information to create the job. You'll be able to add financial details, system specifications, and generate invoices in the next step.
+              </p>
+
               <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                <div>
-                  <label style={{
-                    display: 'block',
-                    fontSize: '14px',
-                    fontWeight: 600,
-                    color: '#374151',
-                    marginBottom: '8px',
-                  }}>
-                    Address *
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={formData.address}
-                    onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                    placeholder="123 Main St, City, State ZIP"
-                    style={{
-                      width: '100%',
-                      padding: '10px 12px',
-                      border: '1px solid #d1d5db',
-                      borderRadius: '6px',
-                      fontSize: '14px',
-                      outline: 'none',
-                    }}
-                  />
-                </div>
-
-                <div>
-                  <label style={{
-                    display: 'block',
-                    fontSize: '14px',
-                    fontWeight: 600,
-                    color: '#374151',
-                    marginBottom: '8px',
-                  }}>
-                    System Size (kW) *
-                  </label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    required
-                    value={formData.system_size_kw}
-                    onChange={(e) => setFormData({ ...formData, system_size_kw: e.target.value })}
-                    placeholder="8.0"
-                    style={{
-                      width: '100%',
-                      padding: '10px 12px',
-                      border: '1px solid #d1d5db',
-                      borderRadius: '6px',
-                      fontSize: '14px',
-                      outline: 'none',
-                    }}
-                  />
-                </div>
-
                 <div>
                   <label style={{
                     display: 'block',
@@ -528,13 +432,14 @@ export default function SubcontractingIntake() {
                     color: '#374151',
                     marginBottom: '8px',
                   }}>
-                    Contractor Job Reference
+                    Customer Name *
                   </label>
                   <input
                     type="text"
-                    value={formData.contractor_job_ref}
-                    onChange={(e) => setFormData({ ...formData, contractor_job_ref: e.target.value })}
-                    placeholder="JOB-2024-001"
+                    required
+                    value={formData.customer_name}
+                    onChange={(e) => setFormData({ ...formData, customer_name: e.target.value })}
+                    placeholder="John Smith"
                     style={{
                       width: '100%',
                       padding: '10px 12px',
@@ -554,14 +459,15 @@ export default function SubcontractingIntake() {
                     color: '#374151',
                     marginBottom: '8px',
                   }}>
-                    Subcontract Rate ($)
+                    Address *
                   </label>
                   <input
-                    type="number"
-                    step="0.01"
-                    value={formData.subcontract_rate}
-                    onChange={(e) => setFormData({ ...formData, subcontract_rate: e.target.value })}
-                    placeholder="2500.00"
+                    ref={addressInputRef}
+                    type="text"
+                    required
+                    value={formData.address}
+                    onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                    placeholder="Start typing address..."
                     style={{
                       width: '100%',
                       padding: '10px 12px',
@@ -571,33 +477,14 @@ export default function SubcontractingIntake() {
                       outline: 'none',
                     }}
                   />
-                </div>
-
-                <div>
-                  <label style={{
-                    display: 'block',
-                    fontSize: '14px',
-                    fontWeight: 600,
-                    color: '#374151',
-                    marginBottom: '8px',
+                  <p style={{
+                    fontSize: '12px',
+                    color: '#6b7280',
+                    marginTop: '6px',
+                    fontStyle: 'italic',
                   }}>
-                    Notes
-                  </label>
-                  <textarea
-                    value={formData.subcontract_notes}
-                    onChange={(e) => setFormData({ ...formData, subcontract_notes: e.target.value })}
-                    placeholder="Additional notes about this subcontract job..."
-                    rows={4}
-                    style={{
-                      width: '100%',
-                      padding: '10px 12px',
-                      border: '1px solid #d1d5db',
-                      borderRadius: '6px',
-                      fontSize: '14px',
-                      outline: 'none',
-                      resize: 'vertical',
-                    }}
-                  />
+                    Start typing to see address suggestions
+                  </p>
                 </div>
               </div>
 
@@ -644,6 +531,14 @@ export default function SubcontractingIntake() {
             </form>
           </div>
         </div>
+      )}
+
+      {selectedJobId && (
+        <SubcontractJobDetail
+          jobId={selectedJobId}
+          onClose={() => setSelectedJobId(null)}
+          onUpdate={loadSubcontractJobs}
+        />
       )}
     </div>
   );
