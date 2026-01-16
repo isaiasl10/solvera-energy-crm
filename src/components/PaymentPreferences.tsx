@@ -47,7 +47,7 @@ type SalesCommission = {
 };
 
 export default function PaymentPreferences() {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -69,16 +69,25 @@ export default function PaymentPreferences() {
   const [totalCommissionPay, setTotalCommissionPay] = useState(0);
 
   useEffect(() => {
-    loadPaymentPreferences();
-    loadPayCalculations();
-  }, []);
+    if (!authLoading && user) {
+      loadPaymentPreferences();
+      loadPayCalculations();
+    } else if (!authLoading && !user) {
+      setLoading(false);
+    }
+  }, [authLoading, user]);
 
   const loadPaymentPreferences = async () => {
+    if (!user?.email) {
+      setLoading(false);
+      return;
+    }
+
     try {
       const { data, error } = await supabase
         .from('app_users')
         .select('id, payment_method, check_address, bank_name, account_name, routing_number')
-        .eq('email', user?.email)
+        .eq('email', user.email)
         .maybeSingle();
 
       if (error) throw error;
@@ -92,7 +101,6 @@ export default function PaymentPreferences() {
           account_name: data.account_name || '',
           routing_number: data.routing_number || '',
         }));
-        setUserData(prev => prev ? { ...prev, id: data.id } : null);
       }
     } catch (err) {
       console.error('Error loading payment preferences:', err);
@@ -120,11 +128,15 @@ export default function PaymentPreferences() {
   };
 
   const loadPayCalculations = async () => {
+    if (!user?.email) {
+      return;
+    }
+
     try {
       const { data: userDataResult, error: userError } = await supabase
         .from('app_users')
         .select('id, role, hourly_rate, is_salary, battery_pay_rates, per_watt_rate, full_name, role_category')
-        .eq('email', user?.email)
+        .eq('email', user.email)
         .maybeSingle();
 
       if (userError) throw userError;
@@ -264,6 +276,11 @@ export default function PaymentPreferences() {
     setError(null);
     setSuccess(false);
 
+    if (!user?.email) {
+      setError('User not found. Please refresh the page.');
+      return;
+    }
+
     if (!formData.payment_method) {
       setError('Please select a payment method');
       return;
@@ -320,7 +337,7 @@ export default function PaymentPreferences() {
       const { error: updateError } = await supabase
         .from('app_users')
         .update(updateData)
-        .eq('email', user?.email);
+        .eq('email', user.email);
 
       if (updateError) throw updateError;
 
@@ -340,10 +357,20 @@ export default function PaymentPreferences() {
     }
   };
 
-  if (loading) {
+  if (loading || authLoading) {
     return (
       <div className="flex items-center justify-center py-12">
         <Loader2 className="w-8 h-8 text-orange-600 animate-spin" />
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <div className="text-center">
+          <p className="text-gray-600">Unable to load user data. Please refresh the page.</p>
+        </div>
       </div>
     );
   }
