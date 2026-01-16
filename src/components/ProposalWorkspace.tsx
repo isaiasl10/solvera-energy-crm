@@ -3262,7 +3262,7 @@ export default function ProposalWorkspace({
           <span style={{ fontSize: 11, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.5px" }}>Panel Tools</span>
           <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
             <button
-              onClick={() => setToolMode(toolMode === "fill-roof" ? "none" : "fill-roof")}
+              onClick={() => { alert("FILL ROOF CLICKED"); setToolMode(toolMode === "fill-roof" ? "none" : "fill-roof"); }}
               disabled={!selectedPanelModelId}
               title="Fill Roof - Click on a roof plane to automatically fill it with panels"
               style={{
@@ -3286,7 +3286,7 @@ export default function ProposalWorkspace({
             </button>
 
             <button
-              onClick={() => setToolMode(toolMode === "add-panel" ? "none" : "add-panel")}
+              onClick={() => { alert("ADD PANEL CLICKED"); setToolMode(toolMode === "add-panel" ? "none" : "add-panel"); }}
               disabled={!selectedPanelModelId}
               title="Add Panel - Click on the map to place individual panels"
               style={{
