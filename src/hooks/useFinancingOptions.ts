@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { supabase } from "../lib/supabaseClient";
 
 export function useFinancingOptions() {
@@ -27,6 +27,10 @@ export function useFinancingOptions() {
     })();
   }, []);
 
-  const withCash = [{ id: "cash", name: "Cash", type: "cash" }, ...options];
+  const withCash = useMemo(
+    () => [{ id: "cash", name: "Cash", type: "cash" }, ...options],
+    [options]
+  );
+
   return { loading, error, options: withCash };
 }
