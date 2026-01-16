@@ -3,11 +3,19 @@ import { supabase } from '../lib/supabase';
 import { X, Save, Plus, Trash2, FileText, Download } from 'lucide-react';
 import jsPDF from 'jspdf';
 
+interface ContractorInfo {
+  company_name: string;
+  address: string | null;
+  phone_number: string | null;
+  email: string | null;
+}
+
 interface SubcontractJob {
   id: string;
+  contractor_id: string;
   contractor_name: string;
   subcontract_customer_name: string;
-  address: string;
+  installation_address: string;
   system_size_kw: number;
   panel_quantity: number;
   install_date: string | null;
@@ -20,6 +28,7 @@ interface SubcontractJob {
   subcontract_adders: any[];
   invoice_number: string;
   invoice_generated_at: string | null;
+  contractors?: ContractorInfo;
 }
 
 interface Adder {
@@ -62,7 +71,15 @@ export default function SubcontractJobDetail({ jobId, onClose, onUpdate }: Subco
     try {
       const { data, error } = await supabase
         .from('customers')
-        .select('*')
+        .select(`
+          *,
+          contractors:contractor_id (
+            company_name,
+            address,
+            phone_number,
+            email
+          )
+        `)
         .eq('id', jobId)
         .eq('job_source', 'subcontract')
         .single();
@@ -155,7 +172,7 @@ export default function SubcontractJobDetail({ jobId, onClose, onUpdate }: Subco
     const labor = parseFloat(formData.total_labor) || 0;
     const expenses = parseFloat(formData.expenses) || 0;
     const addersTotal = calculateAddersTotal();
-    return gross - labor - expenses - addersTotal;
+    return gross + addersTotal - labor - expenses;
   };
 
   const generateInvoicePDF = () => {
@@ -176,20 +193,27 @@ export default function SubcontractJobDetail({ jobId, onClose, onUpdate }: Subco
     doc.setFontSize(12);
     doc.text('Bill To:', 20, 70);
     doc.setFontSize(10);
-    doc.text(job.subcontract_customer_name || 'N/A', 20, 77);
-    doc.text(job.installation_address || '', 20, 84);
+    const contractorInfo = job.contractors as ContractorInfo;
+    doc.text(contractorInfo?.company_name || job.contractor_name || 'N/A', 20, 77);
+    if (contractorInfo?.address) {
+      doc.text(contractorInfo.address, 20, 84);
+    }
+    if (contractorInfo?.phone_number) {
+      doc.text(contractorInfo.phone_number, 20, contractorInfo?.address ? 91 : 84);
+    }
 
     doc.setFontSize(12);
-    doc.text('Job Details:', 20, 100);
+    doc.text('Job Details:', 20, 110);
     doc.setFontSize(10);
-    doc.text(`Contractor: ${job.contractor_name}`, 20, 107);
-    doc.text(`System Size: ${job.system_size_kw || 0} kW`, 20, 114);
-    doc.text(`Panel Quantity: ${job.panel_quantity || 0}`, 20, 121);
-    doc.text(`Install Date: ${job.install_date ? new Date(job.install_date).toLocaleDateString() : 'N/A'}`, 20, 128);
+    doc.text(`Customer: ${job.subcontract_customer_name || 'N/A'}`, 20, 117);
+    doc.text(`Address: ${job.installation_address || 'N/A'}`, 20, 124);
+    doc.text(`System Size: ${job.system_size_kw || 0} kW`, 20, 131);
+    doc.text(`Panel Quantity: ${job.panel_quantity || 0}`, 20, 138);
+    doc.text(`Install Date: ${job.install_date ? new Date(job.install_date).toLocaleDateString() : 'N/A'}`, 20, 145);
 
-    let yPos = 145;
+    let yPos = 162;
     doc.setFontSize(12);
-    doc.text('Financial Summary:', 20, yPos);
+    doc.text('Invoice Total:', 20, yPos);
     yPos += 7;
 
     doc.setFontSize(10);
@@ -198,30 +222,23 @@ export default function SubcontractJobDetail({ jobId, onClose, onUpdate }: Subco
     yPos += 7;
 
     if (adders.length > 0) {
-      doc.text('Adders:', 20, yPos);
-      yPos += 7;
       adders.forEach(adder => {
-        doc.text(`  - ${adder.name}:`, 25, yPos);
+        doc.text(`  - ${adder.name}:`, 20, yPos);
         doc.text(`$${adder.amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, 160, yPos, { align: 'right' });
         yPos += 7;
       });
     }
 
-    doc.text(`Labor:`, 20, yPos);
-    doc.text(`-$${(job.total_labor || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, 160, yPos, { align: 'right' });
-    yPos += 7;
-
-    doc.text(`Expenses:`, 20, yPos);
-    doc.text(`-$${(job.expenses || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, 160, yPos, { align: 'right' });
-    yPos += 10;
+    yPos += 3;
 
     doc.setLineWidth(0.5);
     doc.line(20, yPos, 190, yPos);
     yPos += 7;
 
+    const totalAmount = (job.gross_revenue || 0) + adders.reduce((sum, a) => sum + a.amount, 0);
     doc.setFontSize(12);
-    doc.text('Net Revenue:', 20, yPos);
-    doc.text(`$${(job.net_revenue || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, 160, yPos, { align: 'right' });
+    doc.text('Total Amount:', 20, yPos);
+    doc.text(`$${totalAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, 160, yPos, { align: 'right' });
 
     doc.save(`invoice-${job.invoice_number}.pdf`);
   };
@@ -662,9 +679,15 @@ export default function SubcontractJobDetail({ jobId, onClose, onUpdate }: Subco
                 border: '1px solid #93c5fd',
               }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                  <span style={{ fontSize: '14px', color: '#1e40af' }}>Gross Revenue:</span>
+                  <span style={{ fontSize: '14px', color: '#1e40af' }}>System Price:</span>
                   <span style={{ fontSize: '14px', fontWeight: 600, color: '#1e40af' }}>
                     ${calculateGrossRevenue().toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                  <span style={{ fontSize: '14px', color: '#1e40af' }}>Plus: Adders</span>
+                  <span style={{ fontSize: '14px', fontWeight: 600, color: '#059669' }}>
+                    +${calculateAddersTotal().toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
@@ -673,16 +696,10 @@ export default function SubcontractJobDetail({ jobId, onClose, onUpdate }: Subco
                     -${(parseFloat(formData.total_labor) || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </span>
                 </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}>
                   <span style={{ fontSize: '14px', color: '#1e40af' }}>Less: Expenses</span>
                   <span style={{ fontSize: '14px', fontWeight: 600, color: '#dc2626' }}>
                     -${(parseFloat(formData.expenses) || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                  </span>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}>
-                  <span style={{ fontSize: '14px', color: '#1e40af' }}>Less: Adders</span>
-                  <span style={{ fontSize: '14px', fontWeight: 600, color: '#dc2626' }}>
-                    -${calculateAddersTotal().toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </span>
                 </div>
                 <div style={{
@@ -722,13 +739,31 @@ export default function SubcontractJobDetail({ jobId, onClose, onUpdate }: Subco
 
                 <div style={{ marginBottom: '24px' }}>
                   <h4 style={{ fontSize: '14px', fontWeight: 600, marginBottom: '8px' }}>Bill To:</h4>
-                  <p style={{ fontSize: '14px', color: '#1a1a1a' }}>{job.subcontract_customer_name}</p>
-                  <p style={{ fontSize: '14px', color: '#6b7280' }}>{job.installation_address}</p>
+                  {(() => {
+                    const contractorInfo = job.contractors as ContractorInfo;
+                    return (
+                      <>
+                        <p style={{ fontSize: '14px', color: '#1a1a1a' }}>
+                          {contractorInfo?.company_name || job.contractor_name}
+                        </p>
+                        {contractorInfo?.address && (
+                          <p style={{ fontSize: '14px', color: '#6b7280' }}>{contractorInfo.address}</p>
+                        )}
+                        {contractorInfo?.phone_number && (
+                          <p style={{ fontSize: '14px', color: '#6b7280' }}>{contractorInfo.phone_number}</p>
+                        )}
+                        {contractorInfo?.email && (
+                          <p style={{ fontSize: '14px', color: '#6b7280' }}>{contractorInfo.email}</p>
+                        )}
+                      </>
+                    );
+                  })()}
                 </div>
 
                 <div style={{ marginBottom: '24px' }}>
                   <h4 style={{ fontSize: '14px', fontWeight: 600, marginBottom: '8px' }}>Job Details:</h4>
-                  <p style={{ fontSize: '14px', color: '#6b7280' }}>Contractor: {job.contractor_name}</p>
+                  <p style={{ fontSize: '14px', color: '#6b7280' }}>Customer: {job.subcontract_customer_name}</p>
+                  <p style={{ fontSize: '14px', color: '#6b7280' }}>Address: {job.installation_address}</p>
                   <p style={{ fontSize: '14px', color: '#6b7280' }}>System Size: {job.system_size_kw} kW</p>
                   <p style={{ fontSize: '14px', color: '#6b7280' }}>Panel Quantity: {job.panel_quantity}</p>
                   <p style={{ fontSize: '14px', color: '#6b7280' }}>
@@ -737,7 +772,7 @@ export default function SubcontractJobDetail({ jobId, onClose, onUpdate }: Subco
                 </div>
 
                 <div>
-                  <h4 style={{ fontSize: '14px', fontWeight: 600, marginBottom: '12px' }}>Financial Summary:</h4>
+                  <h4 style={{ fontSize: '14px', fontWeight: 600, marginBottom: '12px' }}>Invoice Total:</h4>
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
                     <span style={{ fontSize: '14px' }}>System Price ({job.ppw} $/W):</span>
                     <span style={{ fontSize: '14px', fontWeight: 600 }}>
@@ -752,27 +787,16 @@ export default function SubcontractJobDetail({ jobId, onClose, onUpdate }: Subco
                       </span>
                     </div>
                   ))}
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                    <span style={{ fontSize: '14px' }}>Labor:</span>
-                    <span style={{ fontSize: '14px', fontWeight: 600, color: '#dc2626' }}>
-                      -${(job.total_labor || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}
-                    </span>
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '16px' }}>
-                    <span style={{ fontSize: '14px' }}>Expenses:</span>
-                    <span style={{ fontSize: '14px', fontWeight: 600, color: '#dc2626' }}>
-                      -${(job.expenses || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}
-                    </span>
-                  </div>
                   <div style={{
                     borderTop: '2px solid #1a1a1a',
                     paddingTop: '12px',
+                    marginTop: '12px',
                     display: 'flex',
                     justifyContent: 'space-between',
                   }}>
-                    <span style={{ fontSize: '16px', fontWeight: 700 }}>Net Revenue:</span>
+                    <span style={{ fontSize: '16px', fontWeight: 700 }}>Total Amount:</span>
                     <span style={{ fontSize: '16px', fontWeight: 700, color: '#059669' }}>
-                      ${(job.net_revenue || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                      ${((job.gross_revenue || 0) + adders.reduce((sum, a) => sum + a.amount, 0)).toLocaleString('en-US', { minimumFractionDigits: 2 })}
                     </span>
                   </div>
                 </div>

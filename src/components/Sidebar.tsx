@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
-import { Calendar, Users, Settings, ChevronDown, ChevronRight, UserCog, LogOut, User, Eye, Layers, X, FileText, Briefcase } from 'lucide-react';
+import { Calendar, Users, Settings, ChevronDown, ChevronRight, UserCog, LogOut, User, Eye, Layers, X, FileText, Briefcase, Building2 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 
-export type ViewType = 'calendar' | 'customers' | 'proposals' | 'createProposal' | 'customerPricing' | 'user-management' | 'employee-profile' | 'sales-manager-dashboard' | 'role-previews' | 'subcontracting-intake' | 'admin-analytics' | 'admin-custom-adders' | 'admin-inverters' | 'admin-optimizers' | 'admin-batteries' | 'admin-racking' | 'admin-panels' | 'admin-financing' | 'admin-payroll' | 'queue-new-project' | 'queue-site-survey' | 'queue-engineering' | 'queue-utility-permits' | 'queue-ready-to-order' | 'queue-coordinate-install' | 'queue-install-scheduled' | 'queue-ready-inspection' | 'queue-pending-pto' | 'queue-pending-activation' | 'queue-system-activated' | 'queue-service-tickets';
+export type ViewType = 'calendar' | 'customers' | 'proposals' | 'createProposal' | 'customerPricing' | 'user-management' | 'employee-profile' | 'sales-manager-dashboard' | 'role-previews' | 'subcontracting-intake' | 'contractor-management' | 'admin-analytics' | 'admin-custom-adders' | 'admin-inverters' | 'admin-optimizers' | 'admin-batteries' | 'admin-racking' | 'admin-panels' | 'admin-financing' | 'admin-payroll' | 'queue-new-project' | 'queue-site-survey' | 'queue-engineering' | 'queue-utility-permits' | 'queue-ready-to-order' | 'queue-coordinate-install' | 'queue-install-scheduled' | 'queue-ready-inspection' | 'queue-pending-pto' | 'queue-pending-activation' | 'queue-system-activated' | 'queue-service-tickets';
 
 interface SidebarProps {
   currentView: ViewType;
@@ -254,6 +254,21 @@ export default function Sidebar({ currentView, onViewChange, isMobileOpen, onMob
               >
                 <Briefcase className="w-4 h-4" />
                 <span className="font-medium">Subcontracting Intake</span>
+              </button>
+            </li>
+          )}
+          {(isAdmin || isManagement) && (
+            <li>
+              <button
+                onClick={() => handleViewChange('contractor-management')}
+                className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg transition-colors text-sm ${
+                  currentView === 'contractor-management'
+                    ? 'bg-orange-600 text-white'
+                    : 'text-gray-300 hover:bg-gray-800'
+                }`}
+              >
+                <Building2 className="w-4 h-4" />
+                <span className="font-medium">Contractor Management</span>
               </button>
             </li>
           )}

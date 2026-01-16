@@ -4,12 +4,24 @@ import { loadGoogleMaps } from '../lib/loadGoogleMaps';
 import { Plus, Search, X } from 'lucide-react';
 import SubcontractJobDetail from './SubcontractJobDetail';
 
+interface Contractor {
+  id: string;
+  company_name: string;
+  ppw: number | null;
+  adders: string[];
+  address: string | null;
+  phone_number: string | null;
+  email: string | null;
+}
+
 interface SubcontractJob {
   id: string;
+  contractor_id: string;
   contractor_name: string;
   subcontract_customer_name: string;
-  address: string;
+  installation_address: string;
   system_size_kw: number;
+  ppw: number;
   gross_revenue: number;
   net_revenue: number;
   subcontract_status: string;
@@ -19,12 +31,13 @@ interface SubcontractJob {
 
 export default function SubcontractingIntake() {
   const [jobs, setJobs] = useState<SubcontractJob[]>([]);
+  const [contractors, setContractors] = useState<Contractor[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
   const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
   const [formData, setFormData] = useState({
-    contractor_name: '',
+    contractor_id: '',
     customer_name: '',
     address: '',
   });
@@ -35,7 +48,22 @@ export default function SubcontractingIntake() {
 
   useEffect(() => {
     loadSubcontractJobs();
+    loadContractors();
   }, []);
+
+  const loadContractors = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('contractors')
+        .select('id, company_name, ppw, adders, address, phone_number, email')
+        .order('company_name');
+
+      if (error) throw error;
+      setContractors(data || []);
+    } catch (error) {
+      console.error('Error loading contractors:', error);
+    }
+  };
 
   useEffect(() => {
     if (showAddModal && addressInputRef.current) {
@@ -91,20 +119,34 @@ export default function SubcontractingIntake() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!formData.contractor_id) {
+      alert('Please select a contractor');
+      return;
+    }
+
     setSubmitting(true);
 
     try {
+      const selectedContractor = contractors.find(c => c.id === formData.contractor_id);
+      if (!selectedContractor) {
+        throw new Error('Selected contractor not found');
+      }
+
       const { data, error } = await supabase
         .from('customers')
         .insert([
           {
             job_source: 'subcontract',
-            contractor_name: formData.contractor_name,
+            contractor_id: formData.contractor_id,
+            contractor_name: selectedContractor.company_name,
             subcontract_customer_name: formData.customer_name,
             installation_address: formData.address,
             full_name: formData.customer_name,
             system_size_kw: 0,
+            ppw: selectedContractor.ppw || 0,
             subcontract_status: 'install_scheduled',
+            subcontract_adders: selectedContractor.adders || [],
           },
         ])
         .select()
@@ -117,7 +159,7 @@ export default function SubcontractingIntake() {
 
       setShowAddModal(false);
       setFormData({
-        contractor_name: '',
+        contractor_id: '',
         customer_name: '',
         address: '',
       });
@@ -412,23 +454,42 @@ export default function SubcontractingIntake() {
                     color: '#374151',
                     marginBottom: '8px',
                   }}>
-                    Contractor Name *
+                    Select Contractor *
                   </label>
-                  <input
-                    type="text"
-                    required
-                    value={formData.contractor_name}
-                    onChange={(e) => setFormData({ ...formData, contractor_name: e.target.value })}
-                    placeholder="ABC Solar Inc."
-                    style={{
-                      width: '100%',
+                  {contractors.length === 0 ? (
+                    <div style={{
                       padding: '10px 12px',
-                      border: '1px solid #d1d5db',
+                      backgroundColor: '#fef3c7',
+                      border: '1px solid #f59e0b',
                       borderRadius: '6px',
                       fontSize: '14px',
-                      outline: 'none',
-                    }}
-                  />
+                      color: '#92400e',
+                    }}>
+                      No contractors available. Please add a contractor first.
+                    </div>
+                  ) : (
+                    <select
+                      required
+                      value={formData.contractor_id}
+                      onChange={(e) => setFormData({ ...formData, contractor_id: e.target.value })}
+                      style={{
+                        width: '100%',
+                        padding: '10px 12px',
+                        border: '1px solid #d1d5db',
+                        borderRadius: '6px',
+                        fontSize: '14px',
+                        outline: 'none',
+                        backgroundColor: 'white',
+                      }}
+                    >
+                      <option value="">Select a contractor...</option>
+                      {contractors.map(contractor => (
+                        <option key={contractor.id} value={contractor.id}>
+                          {contractor.company_name} {contractor.ppw ? `($${contractor.ppw.toFixed(2)}/W)` : ''}
+                        </option>
+                      ))}
+                    </select>
+                  )}
                 </div>
 
                 <div>
