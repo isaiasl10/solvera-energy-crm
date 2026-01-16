@@ -2,8 +2,8 @@ import React, { useEffect, useMemo, useRef, useState, useCallback } from "react"
 import { supabase } from "../lib/supabaseClient";
 import { sanitizePatch } from "../lib/supabasePatch";
 import { useFinancingOptions } from "../hooks/useFinancingOptions";
-import { User, DollarSign, ArrowLeft, Zap, Package, ChevronDown, ChevronUp, FileText, CreditCard, File, Pencil, Trash2, Square, Circle, TreeDeciduous, Grid, RotateCw, Plus } from "lucide-react";
-import ProposalViewer from "./ProposalViewer";
+import { User, DollarSign, ArrowLeft, Zap, Package, ChevronDown, ChevronUp, FileText, CreditCard, Pencil, Trash2, Square, Circle, TreeDeciduous, Grid, RotateCw, Plus } from "lucide-react";
+import ProposalPresentation from "./ProposalPresentation";
 
 const fmt = (n?: number | null, digits = 0) =>
   typeof n === "number" && Number.isFinite(n)
@@ -886,7 +886,6 @@ export default function ProposalWorkspace({
   };
 
   const [activeTab, setActiveTab] = useState<string>("manage");
-  const [showProposalViewer, setShowProposalViewer] = useState(false);
   const lastLoadedProposalId = useRef<string | null>(null);
 
   const [roofPlanes, setRoofPlanes] = useState<RoofPlaneRow[]>([]);
@@ -3870,71 +3869,22 @@ export default function ProposalWorkspace({
   );
 
   const renderOnlineProposalTab = () => {
-    return (
-      <div style={{ padding: 20, maxWidth: 1200, margin: "0 auto" }}>
-        <div style={{ background: "#fff", borderRadius: 12, padding: 24, boxShadow: "0 1px 3px rgba(0,0,0,0.1)" }}>
-          <div style={{ fontSize: 18, fontWeight: 600, color: "#111827", marginBottom: 16 }}>
-            Online Proposal Preview
+    if (!proposalId) {
+      return (
+        <div style={{ padding: 20, maxWidth: 1200, margin: "0 auto" }}>
+          <div style={{ background: "#fff", borderRadius: 12, padding: 24, boxShadow: "0 1px 3px rgba(0,0,0,0.1)" }}>
+            <div style={{ fontSize: 18, fontWeight: 600, color: "#111827", marginBottom: 16 }}>
+              Online Proposal
+            </div>
+            <div style={{ color: "#6b7280", fontSize: 14 }}>
+              Please save the proposal first to view the online proposal.
+            </div>
           </div>
-          <div style={{ color: "#6b7280", fontSize: 14, marginBottom: 20 }}>
-            View and share your solar proposal online. Click below to open the interactive proposal viewer.
-          </div>
-          <button
-            onClick={() => setShowProposalViewer(true)}
-            style={{
-              padding: "12px 24px",
-              background: "#f97316",
-              color: "#fff",
-              border: "none",
-              borderRadius: 6,
-              cursor: "pointer",
-              fontWeight: 600,
-              fontSize: 14,
-              display: "flex",
-              alignItems: "center",
-              gap: 8,
-            }}
-          >
-            <FileText size={18} />
-            Open Proposal Viewer
-          </button>
         </div>
-      </div>
-    );
-  };
+      );
+    }
 
-  const renderPDFProposalTab = () => {
-    return (
-      <div style={{ padding: 20, maxWidth: 1200, margin: "0 auto" }}>
-        <div style={{ background: "#fff", borderRadius: 12, padding: 24, boxShadow: "0 1px 3px rgba(0,0,0,0.1)" }}>
-          <div style={{ fontSize: 18, fontWeight: 600, color: "#111827", marginBottom: 16 }}>
-            PDF Proposal Generator
-          </div>
-          <div style={{ color: "#6b7280", fontSize: 14, marginBottom: 20 }}>
-            Generate a professional PDF proposal document with all system details, pricing, and savings information.
-          </div>
-          <button
-            onClick={() => setShowProposalViewer(true)}
-            style={{
-              padding: "12px 24px",
-              background: "#f97316",
-              color: "#fff",
-              border: "none",
-              borderRadius: 6,
-              cursor: "pointer",
-              fontWeight: 600,
-              fontSize: 14,
-              display: "flex",
-              alignItems: "center",
-              gap: 8,
-            }}
-          >
-            <File size={18} />
-            Generate & Download PDF
-          </button>
-        </div>
-      </div>
-    );
+    return <ProposalPresentation proposalId={proposalId} />;
   };
 
   return (
@@ -3982,7 +3932,6 @@ export default function ProposalWorkspace({
             { id: "solar-design", label: "Solar Design", icon: Pencil },
             { id: "payments", label: "Payments", icon: CreditCard },
             { id: "online", label: "Online Proposal", icon: FileText },
-            { id: "pdf", label: "PDF Proposal", icon: File },
           ].map((tab) => (
             <button
               key={tab.id}
@@ -4013,16 +3962,8 @@ export default function ProposalWorkspace({
           {activeTab === "solar-design" && renderSolarDesignTab()}
           {activeTab === "payments" && renderPaymentsTab()}
           {activeTab === "online" && renderOnlineProposalTab()}
-          {activeTab === "pdf" && renderPDFProposalTab()}
         </div>
       </div>
-
-      {showProposalViewer && proposalId && (
-        <ProposalViewer
-          proposalId={proposalId}
-          onClose={() => setShowProposalViewer(false)}
-        />
-      )}
     </div>
   );
 }
