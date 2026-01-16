@@ -1733,6 +1733,12 @@ export default function ProposalWorkspace({
         const currentToolMode = toolModeRef.current;
         const currentPanelModelId = selectedPanelModelIdRef.current;
 
+        // In delete-panel mode, don't handle clicks at the polygon level
+        // so they can propagate to the panel rectangles underneath
+        if (currentToolMode === "delete-panel") {
+          return;
+        }
+
         if (currentToolMode === "add-panel" && currentPanelModelId && e?.latLng) {
           // Handle panel placement on roof polygon click
           const lat = e.latLng.lat();
