@@ -120,7 +120,8 @@ export default function SchedulingSection({ customer }: SchedulingSectionProps) 
         .eq('id', ticketId);
 
       if (error) throw error;
-      await fetchTickets();
+
+      setTickets(prevTickets => prevTickets.filter(t => t.id !== ticketId));
     } catch (err) {
       console.error('Error deleting ticket:', err);
     }

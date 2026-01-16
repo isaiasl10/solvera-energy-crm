@@ -36,7 +36,7 @@ interface Adder {
   id: string;
   name: string;
   amount: number;
-  type?: 'fixed' | 'per_watt';
+  type?: 'fixed' | 'per_watt' | 'per_panel';
 }
 
 interface SubcontractJobDetailProps {
@@ -62,7 +62,7 @@ export default function SubcontractJobDetail({ jobId, onClose, onUpdate }: Subco
   });
 
   const [adders, setAdders] = useState<Adder[]>([]);
-  const [newAdder, setNewAdder] = useState({ name: '', amount: '' });
+  const [newAdder, setNewAdder] = useState({ name: '', amount: '', type: 'fixed' as 'fixed' | 'per_watt' | 'per_panel' });
 
   useEffect(() => {
     loadJob();
@@ -151,8 +151,9 @@ export default function SubcontractJobDetail({ jobId, onClose, onUpdate }: Subco
       id: `adder-${Date.now()}`,
       name: newAdder.name,
       amount: parseFloat(newAdder.amount),
+      type: newAdder.type,
     }]);
-    setNewAdder({ name: '', amount: '' });
+    setNewAdder({ name: '', amount: '', type: 'fixed' });
   };
 
   const handleRemoveAdder = (id: string) => {
@@ -167,9 +168,12 @@ export default function SubcontractJobDetail({ jobId, onClose, onUpdate }: Subco
 
   const calculateAddersTotal = () => {
     const systemSize = parseFloat(formData.system_size_kw) || 0;
+    const panelQty = parseFloat(formData.panel_quantity) || 0;
     return adders.reduce((sum, adder) => {
       if (adder.type === 'per_watt') {
         return sum + (adder.amount * systemSize * 1000);
+      } else if (adder.type === 'per_panel') {
+        return sum + (adder.amount * panelQty);
       }
       return sum + adder.amount;
     }, 0);
@@ -231,8 +235,14 @@ export default function SubcontractJobDetail({ jobId, onClose, onUpdate }: Subco
 
     if (adders.length > 0) {
       const systemSizeKw = job.system_size_kw || 0;
+      const panelQty = job.panel_quantity || 0;
       adders.forEach(adder => {
-        const adderAmount = adder.type === 'per_watt' ? adder.amount * systemSizeKw * 1000 : adder.amount;
+        let adderAmount = adder.amount;
+        if (adder.type === 'per_watt') {
+          adderAmount = adder.amount * systemSizeKw * 1000;
+        } else if (adder.type === 'per_panel') {
+          adderAmount = adder.amount * panelQty;
+        }
         doc.text(`  - ${adder.name}:`, 20, yPos);
         doc.text(`$${adderAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, 160, yPos, { align: 'right' });
         yPos += 7;
@@ -651,14 +661,14 @@ export default function SubcontractJobDetail({ jobId, onClose, onUpdate }: Subco
                   </div>
                 )}
 
-                <div style={{ display: 'flex', gap: '8px' }}>
+                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                   <input
                     type="text"
-                    placeholder="Adder name"
+                    placeholder="Adder name (e.g. Tile, Critter Guard)"
                     value={newAdder.name}
                     onChange={(e) => setNewAdder({ ...newAdder, name: e.target.value })}
                     style={{
-                      flex: 1,
+                      flex: '1 1 150px',
                       padding: '8px 12px',
                       border: '1px solid #d1d5db',
                       borderRadius: '6px',
@@ -666,14 +676,31 @@ export default function SubcontractJobDetail({ jobId, onClose, onUpdate }: Subco
                       outline: 'none',
                     }}
                   />
+                  <select
+                    value={newAdder.type}
+                    onChange={(e) => setNewAdder({ ...newAdder, type: e.target.value as 'fixed' | 'per_watt' | 'per_panel' })}
+                    style={{
+                      flex: '0 0 130px',
+                      padding: '8px 12px',
+                      border: '1px solid #d1d5db',
+                      borderRadius: '6px',
+                      fontSize: '14px',
+                      outline: 'none',
+                      backgroundColor: 'white',
+                    }}
+                  >
+                    <option value="fixed">Fixed Amount</option>
+                    <option value="per_watt">Per Watt</option>
+                    <option value="per_panel">Per Panel</option>
+                  </select>
                   <input
                     type="number"
                     step="0.01"
-                    placeholder="Amount"
+                    placeholder={newAdder.type === 'fixed' ? 'Amount' : newAdder.type === 'per_watt' ? '$/W (e.g. 0.10)' : '$/panel (e.g. 50)'}
                     value={newAdder.amount}
                     onChange={(e) => setNewAdder({ ...newAdder, amount: e.target.value })}
                     style={{
-                      width: '120px',
+                      flex: '0 0 140px',
                       padding: '8px 12px',
                       border: '1px solid #d1d5db',
                       borderRadius: '6px',
@@ -870,11 +897,20 @@ export default function SubcontractJobDetail({ jobId, onClose, onUpdate }: Subco
                         </tr>
                         {adders.length > 0 && adders.map(adder => {
                           const systemSizeKw = parseFloat(formData.system_size_kw) || 0;
-                          const adderAmount = adder.type === 'per_watt' ? adder.amount * systemSizeKw * 1000 : adder.amount;
+                          const panelQty = parseFloat(formData.panel_quantity) || 0;
+                          let adderAmount = adder.amount;
+                          let description = adder.name;
+                          if (adder.type === 'per_watt') {
+                            adderAmount = adder.amount * systemSizeKw * 1000;
+                            description = `${adder.name} ($${adder.amount.toFixed(2)}/W × ${systemSizeKw} kW)`;
+                          } else if (adder.type === 'per_panel') {
+                            adderAmount = adder.amount * panelQty;
+                            description = `${adder.name} ($${adder.amount.toFixed(2)}/panel × ${panelQty} panels)`;
+                          }
                           return (
                             <tr key={adder.id} style={{ borderBottom: '1px solid #f3f4f6' }}>
                               <td style={{ padding: '16px 0 16px 20px', fontSize: '14px', color: '#6b7280' }}>
-                                {adder.name} {adder.type === 'per_watt' && `(${adder.amount.toFixed(2)} $/W × ${systemSizeKw} kW)`}
+                                {description}
                               </td>
                               <td style={{ textAlign: 'right', padding: '16px 0', fontSize: '14px', fontWeight: 600, color: '#1a1a1a' }}>
                                 ${adderAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}

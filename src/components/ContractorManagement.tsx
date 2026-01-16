@@ -6,7 +6,7 @@ import { Building2, Plus, X, Pencil, Trash2, DollarSign, Mail, Phone, MapPin } f
 interface Adder {
   name: string;
   amount: number;
-  type: 'fixed' | 'per_watt';
+  type: 'fixed' | 'per_watt' | 'per_panel';
 }
 
 interface Contractor {
@@ -39,7 +39,7 @@ export default function ContractorManagement() {
   const [adders, setAdders] = useState<Adder[]>([]);
   const [newAdderName, setNewAdderName] = useState('');
   const [newAdderAmount, setNewAdderAmount] = useState('');
-  const [newAdderType, setNewAdderType] = useState<'fixed' | 'per_watt'>('fixed');
+  const [newAdderType, setNewAdderType] = useState<'fixed' | 'per_watt' | 'per_panel'>('fixed');
   const [formData, setFormData] = useState<ContractorFormData>({
     company_name: '',
     address: '',
@@ -403,7 +403,7 @@ export default function ContractorManagement() {
                           fontWeight: 500,
                         }}
                       >
-                        {adder.name}: ${adder.amount.toFixed(2)}{adder.type === 'per_watt' ? '/W' : ''}
+                        {adder.name}: ${adder.amount.toFixed(2)}{adder.type === 'per_watt' ? '/W' : adder.type === 'per_panel' ? '/panel' : ''}
                       </span>
                     ))}
                   </div>
@@ -533,7 +533,7 @@ export default function ContractorManagement() {
                           borderRadius: '6px',
                         }}>
                           <span style={{ fontSize: '14px', color: '#1a1a1a' }}>
-                            {adder.name}: ${adder.amount.toFixed(2)} {adder.type === 'per_watt' && '(per watt)'}
+                            {adder.name}: ${adder.amount.toFixed(2)} {adder.type === 'per_watt' ? '(per watt)' : adder.type === 'per_panel' ? '(per panel)' : ''}
                           </span>
                           <button
                             type="button"
@@ -571,7 +571,7 @@ export default function ContractorManagement() {
                     />
                     <select
                       value={newAdderType}
-                      onChange={(e) => setNewAdderType(e.target.value as 'fixed' | 'per_watt')}
+                      onChange={(e) => setNewAdderType(e.target.value as 'fixed' | 'per_watt' | 'per_panel')}
                       style={{
                         flex: '0 0 140px',
                         padding: '10px 12px',
@@ -583,11 +583,12 @@ export default function ContractorManagement() {
                     >
                       <option value="fixed">Fixed Amount</option>
                       <option value="per_watt">Per Watt</option>
+                      <option value="per_panel">Per Panel</option>
                     </select>
                     <input
                       type="number"
                       step="0.01"
-                      placeholder={newAdderType === 'fixed' ? 'Amount' : 'Rate ($/W)'}
+                      placeholder={newAdderType === 'fixed' ? 'Amount' : newAdderType === 'per_watt' ? 'Rate ($/W)' : 'Rate ($/panel)'}
                       value={newAdderAmount}
                       onChange={(e) => setNewAdderAmount(e.target.value)}
                       style={{
