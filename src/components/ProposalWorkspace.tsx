@@ -3982,6 +3982,19 @@ export default function ProposalWorkspace({
 
   return (
     <div style={{ height: "calc(100vh - 64px)", overflow: "auto", background: "#f5f5f7" }}>
+      <div style={{
+        position: "fixed",
+        top: 10,
+        right: 10,
+        zIndex: 99999,
+        background: "black",
+        color: "white",
+        padding: "6px 10px",
+        borderRadius: 8,
+        fontSize: 12
+      }}>
+        DEPLOY MARKER: 2026-01-15 A
+      </div>
       <div style={{ maxWidth: "100%", margin: "0 auto", padding: 20 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
           {onBack && (
