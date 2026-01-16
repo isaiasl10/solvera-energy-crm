@@ -71,6 +71,41 @@ export default function Calendar({ onViewCustomerProject }: CalendarProps) {
     }
   }, [currentDate, userAppId]);
 
+  useEffect(() => {
+    if (userAppId === null) return;
+
+    const channelName = `calendar_${userAppId}_${Date.now()}`;
+    const subscription = supabase
+      .channel(channelName)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'scheduling',
+        },
+        () => {
+          fetchAppointments();
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'appointments',
+        },
+        () => {
+          fetchAppointments();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(subscription);
+    };
+  }, [userAppId, currentDate]);
+
   const loadUserData = async () => {
     if (!user?.email) return;
 
