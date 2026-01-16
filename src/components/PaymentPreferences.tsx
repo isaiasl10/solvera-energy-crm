@@ -170,10 +170,12 @@ export default function PaymentPreferences() {
           id,
           customers!inner (
             system_size_kw,
-            battery_quantity
+            battery_quantity,
+            is_active
           )
         `)
         .eq('ticket_type', 'installation')
+        .eq('customers.is_active', true)
         .eq('pv_installer_id', userDataResult.id)
         .not('closed_at', 'is', null)
         .gte('closed_at', startDate)
@@ -215,9 +217,11 @@ export default function PaymentPreferences() {
             *,
             customers!inner (
               customer_id,
-              full_name
+              full_name,
+              is_active
             )
           `)
+          .eq('customers.is_active', true)
           .or(
             userDataResult.role === 'sales_rep'
               ? `and(sales_rep_id.eq.${userDataResult.id},or(m1_payroll_period_end.eq.${endDateStr},m2_payroll_period_end.eq.${endDateStr}))`

@@ -208,8 +208,12 @@ export default function SalesManagerDashboard() {
           m2_payment_status,
           m2_paid_date,
           m2_payroll_period_end,
-          customer_id
+          customer_id,
+          customers!inner (
+            is_active
+          )
         `)
+        .eq('customers.is_active', true)
         .or(`sales_manager_id.eq.${managerId},sales_rep_id.eq.${managerId}`)
         .or(`m1_payroll_period_end.eq.${periodEndStr},m2_payroll_period_end.eq.${periodEndStr}`);
 
@@ -321,8 +325,12 @@ export default function SalesManagerDashboard() {
         m2_payment_amount,
         m2_payment_status,
         m2_paid_date,
-        signature_date
+        signature_date,
+        customers!inner (
+          is_active
+        )
       `)
+      .eq('customers.is_active', true)
       .eq('sales_manager_id', managerId)
       .order('signature_date', { ascending: false });
 

@@ -135,16 +135,24 @@ export default function Payroll() {
             ticket_type,
             customers!inner (
               system_size_kw,
-              battery_quantity
+              battery_quantity,
+              is_active
             )
           `)
           .eq('ticket_type', 'installation')
+          .eq('customers.is_active', true)
           .not('closed_at', 'is', null)
           .gte('closed_at', startDate)
           .lte('closed_at', endDateStr),
         supabase
           .from('sales_commissions')
-          .select('*')
+          .select(`
+            *,
+            customers!inner (
+              is_active
+            )
+          `)
+          .eq('customers.is_active', true)
           .or(`m1_payroll_period_end.eq.${endDateStr.split('T')[0]},m2_payroll_period_end.eq.${endDateStr.split('T')[0]}`)
       ]);
 
