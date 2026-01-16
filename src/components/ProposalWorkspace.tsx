@@ -2349,10 +2349,6 @@ export default function ProposalWorkspace({
 
     return (
       <div style={{ padding: 16, maxWidth: 1400, margin: "0 auto" }}>
-        <div style={{ position: "fixed", bottom: 10, left: 10, zIndex: 9999, background: "#fff", padding: 8, border: "1px solid #000", borderRadius: 4, fontSize: 11 }}>
-          dirty: {String(isDirtyRef.current)} | init: {String(didInitDraftRef.current)}
-        </div>
-
         <CollapsibleSection id="customer" icon={User} title="Customer Information">
         <form onSubmit={(e) => e.preventDefault()}>
           <CustomerFormInputs
@@ -4011,7 +4007,7 @@ export default function ProposalWorkspace({
         borderRadius: 8,
         fontSize: 12
       }}>
-        DEPLOY MARKER: 2026-01-15 A
+        DEPLOY MARKER: 2026-01-16 B
       </div>
       <div style={{ maxWidth: "100%", margin: "0 auto", padding: 20 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
