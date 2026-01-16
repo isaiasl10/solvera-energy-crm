@@ -1008,12 +1008,16 @@ export default function ProposalWorkspace({
     const baseSystemPrice = basePPW * systemWatts;
 
     let batteryCost = 0;
+    let batteryCapacityKwh = 0;
+    let batteryPowerKw = 0;
     const batteryQty = proposalDraft.battery_quantity || proposal?.battery_quantity || 0;
     const batteryBrand = proposalDraft.battery_brand || proposal?.battery_brand || "";
     if (batteryQty > 0 && batteryBrand) {
       const selectedBattery = batteries.find(b => `${b.brand} ${b.model}` === batteryBrand);
       if (selectedBattery) {
         batteryCost = batteryQty * Number(selectedBattery.cost);
+        batteryCapacityKwh = batteryQty * Number(selectedBattery.capacity_kwh);
+        batteryPowerKw = batteryQty * Number(selectedBattery.power_output_kw);
       }
     }
 
@@ -1039,6 +1043,9 @@ export default function ProposalWorkspace({
       cashProgress,
       cashFinal,
       batteryCost,
+      batteryQty,
+      batteryCapacityKwh,
+      batteryPowerKw,
     };
   }, [panels, panelModels, proposal, proposalDraft, adderCalculations, batteries]);
 
@@ -2576,14 +2583,9 @@ export default function ProposalWorkspace({
                       Total Battery Capacity
                     </label>
                     <div style={{ fontSize: 13, color: "#6b7280", fontStyle: "italic", padding: "8px 0" }}>
-                      {(() => {
-                        const qty = proposalDraft.battery_quantity || proposal?.battery_quantity || 0;
-                        const batteryBrand = proposalDraft.battery_brand || proposal?.battery_brand || "";
-                        if (qty === 0 || !batteryBrand) return "0.0 kWh";
-                        const selectedBattery = batteries.find(b => `${b.brand} ${b.model}` === batteryBrand);
-                        if (!selectedBattery) return "0.0 kWh";
-                        return `${(qty * Number(selectedBattery.capacity_kwh)).toFixed(1)} kWh`;
-                      })()}
+                      {systemSummary.batteryCapacityKwh > 0
+                        ? `${systemSummary.batteryCapacityKwh.toFixed(1)} kWh (${systemSummary.batteryPowerKw.toFixed(1)} kW power)`
+                        : "0.0 kWh"}
                     </div>
                   </div>
                 </div>
@@ -2593,9 +2595,40 @@ export default function ProposalWorkspace({
                 </div>
                 <div style={{ display: "grid", gap: 12 }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                    <span style={{ fontSize: 12, color: "#6b7280" }}>Total Contract Price</span>
+                    <span style={{ fontSize: 12, color: "#6b7280" }}>Base System Price</span>
+                    <span style={{ fontSize: 13, fontWeight: 600, color: "#111827" }}>
+                      ${fmt(systemSummary.baseSystemPrice, 2)}
+                    </span>
+                  </div>
+                  {systemSummary.totalAdderCost > 0 && (
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                      <span style={{ fontSize: 12, color: "#6b7280" }}>+ Adders</span>
+                      <span style={{ fontSize: 13, fontWeight: 600, color: "#111827" }}>
+                        ${fmt(systemSummary.totalAdderCost, 2)}
+                      </span>
+                    </div>
+                  )}
+                  {systemSummary.batteryCost > 0 && (
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                      <span style={{ fontSize: 12, color: "#6b7280" }}>
+                        + Battery Storage ({systemSummary.batteryQty}x @ ${fmt(systemSummary.batteryCost / systemSummary.batteryQty, 0)} each)
+                      </span>
+                      <span style={{ fontSize: 13, fontWeight: 600, color: "#111827" }}>
+                        ${fmt(systemSummary.batteryCost, 2)}
+                      </span>
+                    </div>
+                  )}
+                  <div style={{ height: 1, background: "#e5e7eb", margin: "8px 0" }} />
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <span style={{ fontSize: 13, fontWeight: 700, color: "#111827" }}>Total Contract Price</span>
                     <span style={{ fontSize: 16, fontWeight: 700, color: "#059669" }}>
                       ${fmt(systemSummary.totalContractPrice, 2)}
+                    </span>
+                  </div>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingTop: 8, borderTop: "1px solid #e5e7eb" }}>
+                    <span style={{ fontSize: 12, color: "#6b7280" }}>Effective Price per Watt</span>
+                    <span style={{ fontSize: 13, fontWeight: 600, color: "#f97316" }}>
+                      ${systemSummary.effectivePPW.toFixed(3)}/W
                     </span>
                   </div>
                 </div>
@@ -3429,18 +3462,32 @@ export default function ProposalWorkspace({
                 <span style={{ fontSize: 12, color: "#475569" }}>Offset:</span>
                 <span style={{ fontSize: 14, fontWeight: 700, color: "#0f172a" }}>{fmt(systemSummary.offsetPercent, 1)}%</span>
               </div>
+              {systemSummary.batteryCapacityKwh > 0 && (
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <span style={{ fontSize: 12, color: "#475569" }}>Battery:</span>
+                  <span style={{ fontSize: 14, fontWeight: 700, color: "#0f172a" }}>{fmt(systemSummary.batteryCapacityKwh, 1)} kWh</span>
+                </div>
+              )}
               <div style={{ height: 1, background: "#cbd5e1", margin: "8px 0" }} />
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <span style={{ fontSize: 12, color: "#475569" }}>Base Price:</span>
                 <span style={{ fontSize: 14, fontWeight: 700, color: "#0f172a" }}>${fmt(systemSummary.baseSystemPrice, 0)}</span>
               </div>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <span style={{ fontSize: 12, color: "#475569" }}>Adders:</span>
-                <span style={{ fontSize: 14, fontWeight: 700, color: "#0f172a" }}>${fmt(systemSummary.totalAdderCost, 0)}</span>
-              </div>
+              {systemSummary.totalAdderCost > 0 && (
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <span style={{ fontSize: 12, color: "#475569" }}>Adders:</span>
+                  <span style={{ fontSize: 14, fontWeight: 700, color: "#0f172a" }}>${fmt(systemSummary.totalAdderCost, 0)}</span>
+                </div>
+              )}
+              {systemSummary.batteryCost > 0 && (
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <span style={{ fontSize: 12, color: "#475569" }}>Battery:</span>
+                  <span style={{ fontSize: 14, fontWeight: 700, color: "#0f172a" }}>${fmt(systemSummary.batteryCost, 0)}</span>
+                </div>
+              )}
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingTop: 8, borderTop: "2px solid #0ea5e9" }}>
                 <span style={{ fontSize: 13, fontWeight: 700, color: "#0c4a6e" }}>Total Price:</span>
-                <span style={{ fontSize: 16, fontWeight: 800, color: "#0c4a6e" }}>${fmt(systemSummary.totalPrice, 0)}</span>
+                <span style={{ fontSize: 16, fontWeight: 800, color: "#0c4a6e" }}>${fmt(systemSummary.totalContractPrice, 0)}</span>
               </div>
             </div>
           </div>
