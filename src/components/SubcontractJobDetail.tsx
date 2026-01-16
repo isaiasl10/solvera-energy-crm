@@ -1117,14 +1117,38 @@ export default function SubcontractJobDetail({ jobId, onClose, onUpdate }: Subco
                         </tr>
                       </thead>
                       <tbody>
-                        <tr style={{ borderBottom: '1px solid #f3f4f6' }}>
-                          <td style={{ padding: '16px 0', fontSize: '14px', color: '#1a1a1a' }}>
-                            System Installation ({job.system_size_kw} kW @ ${job.ppw}/kW)
-                          </td>
-                          <td style={{ textAlign: 'right', padding: '16px 0', fontSize: '14px', fontWeight: 600, color: '#1a1a1a' }}>
-                            ${(job.gross_revenue || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                          </td>
-                        </tr>
+                        {job.job_type === 'detach_reset' ? (
+                          <tr style={{ borderBottom: '1px solid #f3f4f6' }}>
+                            <td style={{ padding: '16px 0', fontSize: '14px', color: '#1a1a1a' }}>
+                              Panel Detach & Reset Service
+                              <div style={{ fontSize: '12px', color: '#6b7280', marginTop: '4px' }}>
+                                {job.panel_qty || 0} panels @ ${(job.price_per_panel || 0).toFixed(2)}/panel
+                              </div>
+                              {job.detach_date && (
+                                <div style={{ fontSize: '12px', color: '#6b7280', marginTop: '2px' }}>
+                                  Detach Date: {new Date(job.detach_date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
+                                </div>
+                              )}
+                              {job.reset_date && (
+                                <div style={{ fontSize: '12px', color: '#6b7280', marginTop: '2px' }}>
+                                  Reset Date: {new Date(job.reset_date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
+                                </div>
+                              )}
+                            </td>
+                            <td style={{ textAlign: 'right', padding: '16px 0', fontSize: '14px', fontWeight: 600, color: '#1a1a1a' }}>
+                              ${((job.panel_qty || 0) * (job.price_per_panel || 0)).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            </td>
+                          </tr>
+                        ) : (
+                          <tr style={{ borderBottom: '1px solid #f3f4f6' }}>
+                            <td style={{ padding: '16px 0', fontSize: '14px', color: '#1a1a1a' }}>
+                              System Installation ({job.system_size_kw} kW @ ${job.ppw}/kW)
+                            </td>
+                            <td style={{ textAlign: 'right', padding: '16px 0', fontSize: '14px', fontWeight: 600, color: '#1a1a1a' }}>
+                              ${(job.gross_revenue || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            </td>
+                          </tr>
+                        )}
                         {adders.length > 0 && adders.map(adder => {
                           const systemSizeKw = parseFloat(formData.system_size_kw) || 0;
                           const panelQty = parseFloat(formData.panel_quantity) || 0;
@@ -1160,7 +1184,12 @@ export default function SubcontractJobDetail({ jobId, onClose, onUpdate }: Subco
                     }}>
                       <span style={{ fontSize: '20px', fontWeight: 700, color: '#1a1a1a' }}>TOTAL AMOUNT DUE:</span>
                       <span style={{ fontSize: '24px', fontWeight: 700, color: '#f97316' }}>
-                        ${((job.gross_revenue || 0) + adders.reduce((sum, a) => sum + a.amount, 0)).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        ${(
+                          (job.job_type === 'detach_reset'
+                            ? ((job.panel_qty || 0) * (job.price_per_panel || 0))
+                            : (job.gross_revenue || 0)
+                          ) + adders.reduce((sum, a) => sum + a.amount, 0)
+                        ).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </span>
                     </div>
                   </div>
