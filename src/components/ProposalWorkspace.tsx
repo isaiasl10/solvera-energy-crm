@@ -1931,22 +1931,50 @@ export default function ProposalWorkspace({
         fillColor: "#0000FF",
         fillOpacity: 0.3,
         clickable: true,
-      });
-
-      google.maps.event.addListener(rect, "click", () => {
-        if (toolMode === "delete-panel") {
-          deletePanelById(panel.id);
-        }
+        draggable: true,
+        editable: false,
       });
 
       rect.setMap(mapRef.current);
       panelRectanglesRef.current.set(panel.id, rect);
 
-      // Add click listener for delete-panel mode
+      // Click listener for delete-panel mode
       google.maps.event.addListener(rect, "click", (e: any) => {
         if (toolModeRef.current === "delete-panel") {
           e.stop();
           deletePanelById(panel.id);
+        }
+      });
+
+      // Drag end listener to update panel position
+      google.maps.event.addListener(rect, "dragend", () => {
+        if (rect.getBounds()) {
+          const newBounds = rect.getBounds();
+          const center = newBounds.getCenter();
+          const newLat = center.lat();
+          const newLng = center.lng();
+
+          console.log("[PANEL] Drag completed", { panelId: panel.id, newLat, newLng });
+
+          // Update panel position in state
+          setPanels((prev) =>
+            prev.map((p) =>
+              p.id === panel.id
+                ? { ...p, center_lat: newLat, center_lng: newLng }
+                : p
+            )
+          );
+
+          // Update in database
+          supabase
+            .from("proposal_panels")
+            .update({ center_lat: newLat, center_lng: newLng })
+            .eq("id", panel.id)
+            .then(({ error }) => {
+              if (error) {
+                console.error("Error updating panel position:", error);
+              }
+            });
         }
       });
     });
