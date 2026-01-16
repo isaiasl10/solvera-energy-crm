@@ -220,6 +220,8 @@ export default function SubcontractingIntake() {
         return { bg: '#d1fae5', color: '#065f46' };
       case 'install_complete_pending_payment':
         return { bg: '#fef3c7', color: '#92400e' };
+      case 'pending_completion':
+        return { bg: '#fde68a', color: '#78350f' };
       default:
         return { bg: '#dbeafe', color: '#1e40af' };
     }

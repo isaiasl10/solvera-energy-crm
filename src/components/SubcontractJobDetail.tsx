@@ -365,18 +365,6 @@ export default function SubcontractJobDetail({ jobId, onClose, onUpdate }: Subco
               {job.contractor_name} - {job.subcontract_customer_name}
             </p>
           </div>
-          <button
-            onClick={onClose}
-            style={{
-              background: 'none',
-              border: 'none',
-              cursor: 'pointer',
-              padding: '4px',
-              color: '#6b7280',
-            }}
-          >
-            <X size={24} />
-          </button>
         </div>
 
         <div style={{
@@ -555,6 +543,7 @@ export default function SubcontractJobDetail({ jobId, onClose, onUpdate }: Subco
                     }}
                   >
                     <option value="install_scheduled">Install Scheduled</option>
+                    <option value="pending_completion">Pending Completion</option>
                     <option value="install_complete">Install Complete</option>
                     <option value="install_complete_pending_payment">Install Complete - Pending Payment</option>
                     <option value="invoice_sent">Invoice Sent</option>
