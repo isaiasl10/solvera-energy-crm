@@ -6,6 +6,7 @@ import { Building2, Plus, X, Pencil, Trash2, DollarSign, Mail, Phone, MapPin } f
 interface Adder {
   name: string;
   amount: number;
+  type: 'fixed' | 'per_watt';
 }
 
 interface Contractor {
@@ -38,6 +39,7 @@ export default function ContractorManagement() {
   const [adders, setAdders] = useState<Adder[]>([]);
   const [newAdderName, setNewAdderName] = useState('');
   const [newAdderAmount, setNewAdderAmount] = useState('');
+  const [newAdderType, setNewAdderType] = useState<'fixed' | 'per_watt'>('fixed');
   const [formData, setFormData] = useState<ContractorFormData>({
     company_name: '',
     address: '',
@@ -151,9 +153,10 @@ export default function ContractorManagement() {
 
   const handleAddAdder = () => {
     if (newAdderName.trim() && newAdderAmount) {
-      setAdders([...adders, { name: newAdderName.trim(), amount: parseFloat(newAdderAmount) }]);
+      setAdders([...adders, { name: newAdderName.trim(), amount: parseFloat(newAdderAmount), type: newAdderType }]);
       setNewAdderName('');
       setNewAdderAmount('');
+      setNewAdderType('fixed');
     }
   };
 
@@ -400,7 +403,7 @@ export default function ContractorManagement() {
                           fontWeight: 500,
                         }}
                       >
-                        {adder.name}: ${adder.amount.toFixed(2)}
+                        {adder.name}: ${adder.amount.toFixed(2)}{adder.type === 'per_watt' ? '/W' : ''}
                       </span>
                     ))}
                   </div>
@@ -530,7 +533,7 @@ export default function ContractorManagement() {
                           borderRadius: '6px',
                         }}>
                           <span style={{ fontSize: '14px', color: '#1a1a1a' }}>
-                            {adder.name}: ${adder.amount.toFixed(2)}
+                            {adder.name}: ${adder.amount.toFixed(2)} {adder.type === 'per_watt' && '(per watt)'}
                           </span>
                           <button
                             type="button"
@@ -552,28 +555,43 @@ export default function ContractorManagement() {
                     </div>
                   )}
 
-                  <div style={{ display: 'flex', gap: '8px' }}>
+                  <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                     <input
                       type="text"
-                      placeholder="Adder name (e.g. FSU)"
+                      placeholder="Adder name (e.g. FSU, Tile, Metal Roof)"
                       value={newAdderName}
                       onChange={(e) => setNewAdderName(e.target.value)}
                       style={{
-                        flex: 2,
+                        flex: '1 1 200px',
                         padding: '10px 12px',
                         border: '1px solid #d1d5db',
                         borderRadius: '6px',
                         fontSize: '14px',
                       }}
                     />
+                    <select
+                      value={newAdderType}
+                      onChange={(e) => setNewAdderType(e.target.value as 'fixed' | 'per_watt')}
+                      style={{
+                        flex: '0 0 140px',
+                        padding: '10px 12px',
+                        border: '1px solid #d1d5db',
+                        borderRadius: '6px',
+                        fontSize: '14px',
+                        backgroundColor: 'white',
+                      }}
+                    >
+                      <option value="fixed">Fixed Amount</option>
+                      <option value="per_watt">Per Watt</option>
+                    </select>
                     <input
                       type="number"
                       step="0.01"
-                      placeholder="Amount"
+                      placeholder={newAdderType === 'fixed' ? 'Amount' : 'Rate ($/W)'}
                       value={newAdderAmount}
                       onChange={(e) => setNewAdderAmount(e.target.value)}
                       style={{
-                        flex: 1,
+                        flex: '0 0 120px',
                         padding: '10px 12px',
                         border: '1px solid #d1d5db',
                         borderRadius: '6px',

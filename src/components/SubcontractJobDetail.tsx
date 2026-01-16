@@ -36,6 +36,7 @@ interface Adder {
   id: string;
   name: string;
   amount: number;
+  type?: 'fixed' | 'per_watt';
 }
 
 interface SubcontractJobDetailProps {
@@ -165,7 +166,13 @@ export default function SubcontractJobDetail({ jobId, onClose, onUpdate }: Subco
   };
 
   const calculateAddersTotal = () => {
-    return adders.reduce((sum, adder) => sum + adder.amount, 0);
+    const systemSize = parseFloat(formData.system_size_kw) || 0;
+    return adders.reduce((sum, adder) => {
+      if (adder.type === 'per_watt') {
+        return sum + (adder.amount * systemSize * 1000);
+      }
+      return sum + adder.amount;
+    }, 0);
   };
 
   const calculateNetRevenue = () => {
@@ -223,9 +230,11 @@ export default function SubcontractJobDetail({ jobId, onClose, onUpdate }: Subco
     yPos += 7;
 
     if (adders.length > 0) {
+      const systemSizeKw = job.system_size_kw || 0;
       adders.forEach(adder => {
+        const adderAmount = adder.type === 'per_watt' ? adder.amount * systemSizeKw * 1000 : adder.amount;
         doc.text(`  - ${adder.name}:`, 20, yPos);
-        doc.text(`$${adder.amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, 160, yPos, { align: 'right' });
+        doc.text(`$${adderAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, 160, yPos, { align: 'right' });
         yPos += 7;
       });
     }
@@ -505,6 +514,12 @@ export default function SubcontractJobDetail({ jobId, onClose, onUpdate }: Subco
                     step="0.01"
                     value={formData.ppw}
                     onChange={(e) => setFormData({ ...formData, ppw: e.target.value })}
+                    onBlur={(e) => {
+                      const value = parseFloat(e.target.value);
+                      if (!isNaN(value)) {
+                        setFormData({ ...formData, ppw: value.toFixed(2) });
+                      }
+                    }}
                     style={{
                       width: '100%',
                       padding: '10px 12px',
@@ -734,42 +749,42 @@ export default function SubcontractJobDetail({ jobId, onClose, onUpdate }: Subco
           ) : activeTab === 'invoice' ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
               <div style={{
-                padding: '32px',
                 background: 'white',
                 borderRadius: '12px',
                 border: '2px solid #e5e7eb',
                 boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
+                overflow: 'hidden',
               }}>
                 <div style={{
+                  background: 'linear-gradient(135deg, #f97316 0%, #ea580c 100%)',
+                  padding: '32px',
                   display: 'flex',
                   justifyContent: 'space-between',
-                  alignItems: 'flex-start',
-                  marginBottom: '32px',
-                  paddingBottom: '24px',
-                  borderBottom: '3px solid #f97316',
+                  alignItems: 'center',
                 }}>
                   <div>
                     <img
                       src="/solvera_energy_logo_redesign.png"
                       alt="Solvera Energy Logo"
                       style={{
-                        maxWidth: '180px',
+                        maxWidth: '200px',
                         height: 'auto',
-                        marginBottom: '12px',
+                        filter: 'brightness(0) invert(1)',
                       }}
                     />
-                    <p style={{ fontSize: '12px', color: '#6b7280', margin: 0 }}>Solar Energy Solutions</p>
                   </div>
                   <div style={{ textAlign: 'right' }}>
-                    <h4 style={{ fontSize: '28px', fontWeight: 700, marginBottom: '8px', color: '#1a1a1a' }}>INVOICE</h4>
-                    <p style={{ fontSize: '14px', color: '#6b7280', margin: '4px 0' }}>
+                    <h4 style={{ fontSize: '32px', fontWeight: 700, marginBottom: '8px', color: 'white' }}>INVOICE</h4>
+                    <p style={{ fontSize: '14px', color: 'rgba(255, 255, 255, 0.9)', margin: '4px 0' }}>
                       <strong>Invoice #:</strong> {job.invoice_number}
                     </p>
-                    <p style={{ fontSize: '14px', color: '#6b7280', margin: '4px 0' }}>
+                    <p style={{ fontSize: '14px', color: 'rgba(255, 255, 255, 0.9)', margin: '4px 0' }}>
                       <strong>Date:</strong> {job.invoice_generated_at ? new Date(job.invoice_generated_at).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
                     </p>
                   </div>
                 </div>
+
+                <div style={{ padding: '32px' }}>
 
                 <div style={{
                   display: 'grid',
@@ -853,16 +868,20 @@ export default function SubcontractJobDetail({ jobId, onClose, onUpdate }: Subco
                             ${(job.gross_revenue || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                           </td>
                         </tr>
-                        {adders.length > 0 && adders.map(adder => (
-                          <tr key={adder.id} style={{ borderBottom: '1px solid #f3f4f6' }}>
-                            <td style={{ padding: '16px 0 16px 20px', fontSize: '14px', color: '#6b7280' }}>
-                              {adder.name}
-                            </td>
-                            <td style={{ textAlign: 'right', padding: '16px 0', fontSize: '14px', fontWeight: 600, color: '#1a1a1a' }}>
-                              ${adder.amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                            </td>
-                          </tr>
-                        ))}
+                        {adders.length > 0 && adders.map(adder => {
+                          const systemSizeKw = parseFloat(formData.system_size_kw) || 0;
+                          const adderAmount = adder.type === 'per_watt' ? adder.amount * systemSizeKw * 1000 : adder.amount;
+                          return (
+                            <tr key={adder.id} style={{ borderBottom: '1px solid #f3f4f6' }}>
+                              <td style={{ padding: '16px 0 16px 20px', fontSize: '14px', color: '#6b7280' }}>
+                                {adder.name} {adder.type === 'per_watt' && `(${adder.amount.toFixed(2)} $/W × ${systemSizeKw} kW)`}
+                              </td>
+                              <td style={{ textAlign: 'right', padding: '16px 0', fontSize: '14px', fontWeight: 600, color: '#1a1a1a' }}>
+                                ${adderAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                              </td>
+                            </tr>
+                          );
+                        })}
                       </tbody>
                     </table>
                     <div style={{
@@ -880,10 +899,9 @@ export default function SubcontractJobDetail({ jobId, onClose, onUpdate }: Subco
                     </div>
                   </div>
                 </div>
-              </div>
 
-              <button
-                onClick={generateInvoicePDF}
+                <button
+                  onClick={generateInvoicePDF}
                 style={{
                   padding: '12px 24px',
                   background: 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)',
@@ -899,10 +917,12 @@ export default function SubcontractJobDetail({ jobId, onClose, onUpdate }: Subco
                   gap: '8px',
                 }}
               >
-                <Download size={20} />
-                Download Invoice PDF
-              </button>
+                  <Download size={20} />
+                  Download Invoice PDF
+                </button>
+              </div>
             </div>
+          </div>
           ) : (
             <div>
               <SchedulingSection customer={job} />

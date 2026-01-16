@@ -535,7 +535,7 @@ export default function SubcontractingIntake() {
                             style={{ cursor: 'pointer' }}
                           />
                           <span style={{ fontSize: '14px', color: '#1a1a1a' }}>
-                            {adder.name}: ${adder.amount.toFixed(2)}
+                            {adder.name}: ${adder.amount.toFixed(2)}{adder.type === 'per_watt' ? '/W' : ''}
                           </span>
                         </label>
                       ))}
