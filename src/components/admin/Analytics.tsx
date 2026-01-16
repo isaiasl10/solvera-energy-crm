@@ -200,17 +200,17 @@ export default function Analytics() {
 
   return (
     <div className="flex-1 flex flex-col h-screen bg-gray-50">
-      <div className="bg-white border-b border-gray-200 p-4">
-        <div className="flex items-center justify-between">
+      <div className="bg-white border-b border-gray-200 p-4 sm:p-6">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h2 className="text-2xl font-bold text-gray-900">Analytics & Reports</h2>
-            <p className="text-sm text-gray-500 mt-1">View comprehensive project and financial metrics</p>
+            <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Analytics & Reports</h2>
+            <p className="text-xs sm:text-sm text-gray-500 mt-1">View comprehensive project and financial metrics</p>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
             <select
               value={selectedYear}
               onChange={(e) => setSelectedYear(Number(e.target.value))}
-              className="px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="min-h-[44px] px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             >
               {availableYears.map(year => (
                 <option key={year} value={year}>{year}</option>
@@ -219,7 +219,7 @@ export default function Analytics() {
             <div className="flex bg-gray-100 rounded-lg p-1">
               <button
                 onClick={() => setTimeRange('monthly')}
-                className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
+                className={`min-h-[44px] flex-1 sm:flex-none px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
                   timeRange === 'monthly'
                     ? 'bg-white text-blue-600 shadow-sm'
                     : 'text-gray-600 hover:text-gray-900'
@@ -229,7 +229,7 @@ export default function Analytics() {
               </button>
               <button
                 onClick={() => setTimeRange('annual')}
-                className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
+                className={`min-h-[44px] flex-1 sm:flex-none px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
                   timeRange === 'annual'
                     ? 'bg-white text-blue-600 shadow-sm'
                     : 'text-gray-600 hover:text-gray-900'
@@ -242,8 +242,8 @@ export default function Analytics() {
         </div>
       </div>
 
-      <div className="flex-1 overflow-auto p-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+      <div className="flex-1 overflow-auto p-4 sm:p-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-4 sm:mb-6">
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
             <div className="flex items-center justify-between">
               <div>
@@ -324,8 +324,8 @@ export default function Analytics() {
                   {avgDaysToInstall > 0 ? Math.round(avgDaysToInstall) : 'N/A'}
                 </p>
               </div>
-              <div className="p-3 bg-purple-100 rounded-lg">
-                <Clock className="w-6 h-6 text-purple-600" />
+              <div className="p-3 bg-slate-100 rounded-lg">
+                <Clock className="w-6 h-6 text-slate-600" />
               </div>
             </div>
           </div>
@@ -345,39 +345,39 @@ export default function Analytics() {
 
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
           <div className="p-4 border-b border-gray-200">
-            <h3 className="text-lg font-bold text-gray-900">
+            <h3 className="text-base sm:text-lg font-bold text-gray-900">
               {timeRange === 'monthly' ? 'Monthly Breakdown' : 'Annual Summary'}
             </h3>
           </div>
           <div className="overflow-x-auto">
-            <table className="w-full">
+            <table className="w-full min-w-[800px]">
               <thead className="bg-gray-50 border-b border-gray-200">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                  <th className="px-3 sm:px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider whitespace-nowrap">
                     Period
                   </th>
-                  <th className="px-6 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                  <th className="px-3 sm:px-6 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider whitespace-nowrap">
                     Projects
                   </th>
-                  <th className="px-6 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                  <th className="px-3 sm:px-6 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider whitespace-nowrap">
                     Panels
                   </th>
-                  <th className="px-6 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                  <th className="px-3 sm:px-6 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider whitespace-nowrap">
                     Total kW
                   </th>
-                  <th className="px-6 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                  <th className="px-3 sm:px-6 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider whitespace-nowrap">
                     Gross Revenue
                   </th>
-                  <th className="px-6 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                  <th className="px-3 sm:px-6 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider whitespace-nowrap">
                     BOM Cost
                   </th>
-                  <th className="px-6 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                  <th className="px-3 sm:px-6 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider whitespace-nowrap">
                     Permit & Eng
                   </th>
-                  <th className="px-6 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                  <th className="px-3 sm:px-6 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider whitespace-nowrap">
                     Net Revenue
                   </th>
-                  <th className="px-6 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                  <th className="px-3 sm:px-6 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider whitespace-nowrap">
                     Avg Days
                   </th>
                 </tr>
@@ -392,31 +392,31 @@ export default function Analytics() {
                 ) : (
                   metrics.map((metric, index) => (
                     <tr key={index} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                      <td className="px-3 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                         {metric.period}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-900">
+                      <td className="px-3 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-right text-gray-900">
                         {metric.projectCount}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-900">
+                      <td className="px-3 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-right text-gray-900">
                         {formatNumber(metric.panelsInstalled)}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-900">
+                      <td className="px-3 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-right text-gray-900">
                         {formatNumber(metric.totalKw)}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-right font-medium text-emerald-600">
+                      <td className="px-3 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-right font-medium text-emerald-600">
                         {formatCurrency(metric.grossRevenue)}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-orange-600">
+                      <td className="px-3 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-right text-orange-600">
                         {formatCurrency(metric.bomCost)}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-amber-600">
+                      <td className="px-3 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-right text-amber-600">
                         {formatCurrency(metric.permitEngineeringCost)}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-right font-medium text-teal-600">
+                      <td className="px-3 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-right font-medium text-teal-600">
                         {formatCurrency(metric.netRevenue)}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-900">
+                      <td className="px-3 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-right text-gray-900">
                         {metric.avgDaysToInstall !== null ? Math.round(metric.avgDaysToInstall) : 'N/A'}
                       </td>
                     </tr>

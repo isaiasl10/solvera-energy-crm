@@ -136,15 +136,15 @@ export default function AdminPanel({ title, tableName, fields }: AdminPanelProps
 
   return (
     <div className="flex-1 flex flex-col h-screen bg-gray-50">
-      <div className="bg-white border-b border-gray-200 p-3">
-        <div className="flex items-center justify-between">
+      <div className="bg-white border-b border-gray-200 p-4 sm:p-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
-            <h2 className="text-xl font-bold text-gray-900">{title}</h2>
-            <p className="text-xs text-gray-500 mt-0.5">Manage {title.toLowerCase()}</p>
+            <h2 className="text-lg sm:text-xl font-bold text-gray-900">{title}</h2>
+            <p className="text-sm text-gray-500 mt-1">Manage {title.toLowerCase()}</p>
           </div>
           <button
             onClick={() => setShowForm(!showForm)}
-            className="inline-flex items-center gap-1 px-3 py-1.5 text-sm bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-all"
+            className="inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-all min-h-[44px]"
           >
             {showForm ? (
               <>
@@ -161,18 +161,18 @@ export default function AdminPanel({ title, tableName, fields }: AdminPanelProps
         </div>
       </div>
 
-      <div className="flex-1 overflow-auto p-3">
+      <div className="flex-1 overflow-auto p-4 sm:p-6">
         <div className="space-y-3">
           {showForm && (
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-              <h3 className="text-lg font-bold text-gray-900 mb-3">
+              <h3 className="text-base sm:text-lg font-bold text-gray-900 mb-4">
                 {editingId ? `Edit ${title}` : `Add New ${title}`}
               </h3>
-              <form onSubmit={handleSubmit} className="space-y-3">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                   {fields.map((field) => (
                     <div key={field.name} className={field.type === 'checkbox' ? 'col-span-full' : ''}>
-                      <label className="block text-xs font-medium text-gray-700 mb-1">
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">
                         {field.label}
                       </label>
                       {field.type === 'select' ? (
@@ -180,7 +180,7 @@ export default function AdminPanel({ title, tableName, fields }: AdminPanelProps
                           value={formData[field.name] || ''}
                           onChange={(e) => handleChange(field, e.target.value)}
                           required={field.required}
-                          className="w-full px-3 py-2 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          className="w-full px-3 py-2.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                         >
                           <option value="">Select...</option>
                           {field.options?.map((opt) => (
@@ -195,7 +195,7 @@ export default function AdminPanel({ title, tableName, fields }: AdminPanelProps
                             type="checkbox"
                             checked={formData[field.name] || false}
                             onChange={(e) => handleChange(field, e.target.checked)}
-                            className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
+                            className="w-5 h-5 text-blue-600 rounded focus:ring-blue-500"
                           />
                           <span className="text-sm text-gray-700">{field.label}</span>
                         </div>
@@ -206,24 +206,24 @@ export default function AdminPanel({ title, tableName, fields }: AdminPanelProps
                           onChange={(e) => handleChange(field, e.target.value)}
                           required={field.required}
                           step={field.step}
-                          className="w-full px-3 py-2 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          className="w-full px-3 py-2.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                         />
                       )}
                     </div>
                   ))}
                 </div>
 
-                <div className="flex justify-end gap-2 pt-2">
+                <div className="flex flex-col sm:flex-row justify-end gap-3 pt-4">
                   <button
                     type="button"
                     onClick={resetForm}
-                    className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded hover:bg-gray-50 transition-colors"
+                    className="px-5 py-2.5 text-sm font-semibold text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors min-h-[44px]"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
-                    className="inline-flex items-center gap-1 px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded hover:bg-blue-700 transition-colors"
+                    className="inline-flex items-center justify-center gap-2 px-5 py-2.5 text-sm font-semibold text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors min-h-[44px]"
                   >
                     <Save className="w-4 h-4" />
                     {editingId ? 'Update' : 'Save'}
@@ -235,29 +235,29 @@ export default function AdminPanel({ title, tableName, fields }: AdminPanelProps
 
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
             <div className="overflow-x-auto">
-              <table className="w-full">
+              <table className="w-full min-w-[800px]">
                 <thead className="bg-gray-50 border-b border-gray-200">
                   <tr>
                     {fields.filter(f => f.type !== 'checkbox').map((field) => (
-                      <th key={field.name} className="px-4 py-2 text-left text-xs font-semibold text-gray-700">
+                      <th key={field.name} className="px-4 py-3 text-left text-sm font-semibold text-gray-700">
                         {field.label}
                       </th>
                     ))}
-                    <th className="px-4 py-2 text-right text-xs font-semibold text-gray-700">Actions</th>
+                    <th className="px-4 py-3 text-right text-sm font-semibold text-gray-700">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
                   {items.length === 0 ? (
                     <tr>
-                      <td colSpan={fields.filter(f => f.type !== 'checkbox').length + 1} className="px-4 py-8 text-center text-sm text-gray-500">
+                      <td colSpan={fields.filter(f => f.type !== 'checkbox').length + 1} className="px-4 py-12 text-center text-sm text-gray-500">
                         No items found. Add your first item to get started.
                       </td>
                     </tr>
                   ) : (
                     items.map((item) => (
-                      <tr key={item.id} className="hover:bg-gray-50">
+                      <tr key={item.id} className="hover:bg-gray-50 transition-colors">
                         {fields.filter(f => f.type !== 'checkbox').map((field) => (
-                          <td key={field.name} className="px-4 py-2 text-sm text-gray-900">
+                          <td key={field.name} className="px-4 py-3 text-sm text-gray-900">
                             {field.type === 'number'
                               ? typeof item[field.name] === 'number'
                                 ? item[field.name].toFixed(2)
@@ -265,18 +265,18 @@ export default function AdminPanel({ title, tableName, fields }: AdminPanelProps
                               : item[field.name] || '-'}
                           </td>
                         ))}
-                        <td className="px-4 py-2 text-right">
-                          <div className="flex items-center justify-end gap-1">
+                        <td className="px-4 py-3 text-right">
+                          <div className="flex items-center justify-end gap-2">
                             <button
                               onClick={() => handleEdit(item)}
-                              className="p-1.5 text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                              className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
                               title="Edit"
                             >
                               <Edit2 className="w-4 h-4" />
                             </button>
                             <button
                               onClick={() => handleDelete(item.id)}
-                              className="p-1.5 text-red-600 hover:bg-red-50 rounded transition-colors"
+                              className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                               title="Delete"
                             >
                               <Trash2 className="w-4 h-4" />

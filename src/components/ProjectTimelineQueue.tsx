@@ -87,19 +87,19 @@ const queueConfig = {
   engineering: {
     title: 'Engineering Queue',
     icon: FileCheck,
-    color: 'violet',
+    color: 'slate',
     description: 'Site survey completed, pending engineering plans'
   },
   utility_permits: {
     title: 'Utility & Permits Application Queue',
     icon: FileCheck,
-    color: 'indigo',
+    color: 'cyan',
     description: 'Engineering complete, processing utility and city permits'
   },
   coordinate_installation: {
     title: 'Coordinate Installation',
     icon: Users,
-    color: 'purple',
+    color: 'sky',
     description: 'Permits approved, working with customer to schedule installation date'
   },
   ready_to_order_material: {
@@ -252,16 +252,16 @@ export default function ProjectTimelineQueue() {
 
   return (
     <div className="flex-1 flex flex-col h-screen bg-gray-50">
-      <div className="bg-white border-b border-gray-200 px-3 py-2">
+      <div className="bg-white border-b border-gray-200 p-4 sm:p-6">
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-base font-bold text-gray-900">Project Timeline Overview</h2>
-            <p className="text-xs text-gray-500">All customer projects organized by stage</p>
+            <h2 className="text-lg sm:text-xl font-bold text-gray-900">Project Timeline Overview</h2>
+            <p className="text-sm text-gray-500">All customer projects organized by stage</p>
           </div>
         </div>
       </div>
 
-      <div className="flex-1 overflow-auto p-2">
+      <div className="flex-1 overflow-auto p-3 sm:p-4">
         <div className="space-y-2">
           {loading ? (
             <div className="bg-white rounded shadow-sm border border-gray-200 p-6 text-center">

@@ -410,16 +410,16 @@ export default function Payroll() {
 
   return (
     <div className="flex-1 overflow-auto bg-gray-50">
-      <div className="p-8">
-        <div className="mb-6">
-          <h1 className="text-3xl font-bold text-gray-900">Payroll Management</h1>
-          <p className="text-gray-600 mt-1">Calculate and manage employee payroll for bi-weekly pay periods</p>
+      <div className="p-4 sm:p-6 lg:p-8">
+        <div className="mb-4 sm:mb-6">
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Payroll Management</h1>
+          <p className="text-sm sm:text-base text-gray-600 mt-1">Calculate and manage employee payroll for bi-weekly pay periods</p>
         </div>
 
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
-          <div className="flex items-center justify-between mb-6">
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-6 mb-4 sm:mb-6">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4 sm:mb-6">
             <div>
-              <h2 className="text-lg font-semibold text-gray-900">Pay Period</h2>
+              <h2 className="text-base sm:text-lg font-semibold text-gray-900">Pay Period</h2>
               <p className="text-sm text-gray-600">
                 {selectedPeriodStart.toLocaleDateString()} - {selectedPeriodEnd.toLocaleDateString()}
               </p>
@@ -427,29 +427,29 @@ export default function Payroll() {
                 Pay Date: {payDate.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
               </p>
             </div>
-            <div className="flex gap-2">
+            <div className="flex flex-col sm:flex-row gap-2">
               <button
                 onClick={handlePreviousPeriod}
-                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                className="min-h-[44px] px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
               >
-                Previous Period
+                Previous
               </button>
               <button
                 onClick={handleCurrentPeriod}
-                className="px-4 py-2 text-sm font-medium text-white bg-orange-600 rounded-lg hover:bg-orange-700 transition-colors"
+                className="min-h-[44px] px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors"
               >
-                Current Period
+                Current
               </button>
               <button
                 onClick={handleNextPeriod}
-                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                className="min-h-[44px] px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
               >
-                Next Period
+                Next
               </button>
             </div>
           </div>
 
-          <div className="grid grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
             <div className="bg-gradient-to-br from-green-50 to-emerald-50 p-4 rounded-lg border border-green-200">
               <div className="flex items-center justify-between">
                 <div>
@@ -502,20 +502,20 @@ export default function Payroll() {
 
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="w-full">
+            <table className="w-full min-w-[800px]">
               <thead className="bg-gray-50 border-b border-gray-200">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Employee</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">ID</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Role</th>
-                  <th className="px-6 py-3 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">Reg Hrs</th>
-                  <th className="px-6 py-3 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">OT Hrs</th>
-                  <th className="px-6 py-3 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">Hourly Pay</th>
-                  <th className="px-6 py-3 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">Per Watt</th>
-                  <th className="px-6 py-3 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">Battery</th>
-                  <th className="px-6 py-3 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">Commission</th>
-                  <th className="px-6 py-3 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">Total Pay</th>
-                  <th className="px-6 py-3 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">Details</th>
+                  <th className="px-3 sm:px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider whitespace-nowrap">Employee</th>
+                  <th className="px-3 sm:px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider whitespace-nowrap">ID</th>
+                  <th className="px-3 sm:px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider whitespace-nowrap">Role</th>
+                  <th className="px-3 sm:px-6 py-3 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider whitespace-nowrap">Reg Hrs</th>
+                  <th className="px-3 sm:px-6 py-3 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider whitespace-nowrap">OT Hrs</th>
+                  <th className="px-3 sm:px-6 py-3 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider whitespace-nowrap">Hourly Pay</th>
+                  <th className="px-3 sm:px-6 py-3 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider whitespace-nowrap">Per Watt</th>
+                  <th className="px-3 sm:px-6 py-3 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider whitespace-nowrap">Battery</th>
+                  <th className="px-3 sm:px-6 py-3 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider whitespace-nowrap">Commission</th>
+                  <th className="px-3 sm:px-6 py-3 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider whitespace-nowrap">Total Pay</th>
+                  <th className="px-3 sm:px-6 py-3 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider whitespace-nowrap">Details</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
@@ -604,57 +604,57 @@ function PayrollRow({
   return (
     <>
       <tr className="hover:bg-gray-50 transition-colors">
-        <td className="px-6 py-4">
+        <td className="px-3 sm:px-6 py-3 sm:py-4">
           <div className="text-sm font-medium text-gray-900">
             {user.full_name}
           </div>
         </td>
-        <td className="px-6 py-4">
+        <td className="px-3 sm:px-6 py-3 sm:py-4">
           <div className="text-sm text-gray-600">{user.custom_id}</div>
         </td>
-        <td className="px-6 py-4">
+        <td className="px-3 sm:px-6 py-3 sm:py-4">
           <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getRoleBadgeColor(user.role_category)}`}>
             {getRoleLabel(user.role_category)}
           </span>
         </td>
-        <td className="px-6 py-4 text-right">
+        <td className="px-3 sm:px-6 py-3 sm:py-4 text-right">
           <div className="text-sm text-gray-900">{regularHours.toFixed(1)}</div>
         </td>
-        <td className="px-6 py-4 text-right">
+        <td className="px-3 sm:px-6 py-3 sm:py-4 text-right">
           <div className="text-sm text-amber-600 font-medium">{overtimeHours.toFixed(1)}</div>
         </td>
-        <td className="px-6 py-4 text-right">
+        <td className="px-3 sm:px-6 py-3 sm:py-4 text-right">
           <div className="text-sm text-gray-900">${(regularPay + overtimePay).toFixed(2)}</div>
           {(regularHours > 0 || overtimeHours > 0) && (
             <div className="text-xs text-gray-500">{(regularHours + overtimeHours).toFixed(1)} hrs</div>
           )}
         </td>
-        <td className="px-6 py-4 text-right">
+        <td className="px-3 sm:px-6 py-3 sm:py-4 text-right">
           <div className="text-sm text-gray-900">${perWattPay.toFixed(2)}</div>
           {installationCount > 0 && (
             <div className="text-xs text-gray-500">{(totalWatts / 1000).toFixed(1)}kW</div>
           )}
         </td>
-        <td className="px-6 py-4 text-right">
+        <td className="px-3 sm:px-6 py-3 sm:py-4 text-right">
           <div className="text-sm text-gray-900">${batteryPay.toFixed(2)}</div>
           {totalBatteries > 0 && (
             <div className="text-xs text-gray-500">{totalBatteries} units</div>
           )}
         </td>
-        <td className="px-6 py-4 text-right">
+        <td className="px-3 sm:px-6 py-3 sm:py-4 text-right">
           <div className="text-sm text-gray-900">${commissionPay.toFixed(2)}</div>
           {commissions.length > 0 && (
             <div className="text-xs text-gray-500">{commissions.length} payment{commissions.length !== 1 ? 's' : ''}</div>
           )}
         </td>
-        <td className="px-6 py-4 text-right">
+        <td className="px-3 sm:px-6 py-3 sm:py-4 text-right">
           <div className="text-sm font-semibold text-green-600">${totalPay.toFixed(2)}</div>
         </td>
-        <td className="px-6 py-4 text-center">
+        <td className="px-3 sm:px-6 py-3 sm:py-4 text-center">
           {(weeklyBreakdown.length > 0 || installationCount > 0 || commissions.length > 0) && (
             <button
               onClick={() => setExpanded(!expanded)}
-              className="text-sm text-orange-600 hover:text-orange-700 font-medium"
+              className="min-h-[44px] px-3 py-2 text-sm text-blue-600 hover:text-blue-700 font-medium"
             >
               {expanded ? 'Hide' : 'Show'}
             </button>
@@ -663,13 +663,13 @@ function PayrollRow({
       </tr>
       {expanded && (weeklyBreakdown.length > 0 || installationCount > 0 || commissions.length > 0) && (
         <tr>
-          <td colSpan={11} className="px-6 py-4 bg-gray-50">
+          <td colSpan={11} className="px-3 sm:px-6 py-3 sm:py-4 bg-gray-50">
             <div className="grid grid-cols-1 gap-4">
               {weeklyBreakdown.length > 0 && (
                 <div className="space-y-2">
                   <h4 className="text-sm font-semibold text-gray-700 mb-3">Hourly Time Breakdown</h4>
                   {weeklyBreakdown.map((week) => (
-                    <div key={week.weekNumber} className="flex items-center justify-between text-xs bg-white p-3 rounded border border-gray-200">
+                    <div key={week.weekNumber} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-xs bg-white p-3 rounded border border-gray-200">
                       <div className="flex items-center gap-4">
                         <span className="font-medium text-gray-900">Week {week.weekNumber}</span>
                         <span className="text-gray-600">{week.weekStart} - {week.weekEnd}</span>
@@ -698,7 +698,7 @@ function PayrollRow({
               {installationCount > 0 && (
                 <div className="space-y-2">
                   <h4 className="text-sm font-semibold text-gray-700 mb-3">Production Pay Summary</h4>
-                  <div className="grid grid-cols-3 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     <div className="bg-white p-3 rounded border border-gray-200">
                       <div className="text-xs text-gray-600">Installations Completed</div>
                       <div className="text-lg font-bold text-gray-900">{installationCount}</div>
@@ -762,7 +762,7 @@ function PayrollRow({
                                   <button
                                     onClick={() => onApprovePayment(comm.id, 'm1')}
                                     disabled={approvingPayment === `${comm.id}-m1`}
-                                    className="ml-3 px-3 py-1.5 text-xs font-medium text-white bg-green-600 rounded hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                    className="min-h-[44px] mt-2 sm:mt-0 sm:ml-3 px-3 py-2 text-xs font-medium text-white bg-green-600 rounded hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                                   >
                                     {approvingPayment === `${comm.id}-m1` ? 'Approving...' : 'Approve Payment'}
                                   </button>
@@ -795,7 +795,7 @@ function PayrollRow({
                                   <button
                                     onClick={() => onApprovePayment(comm.id, 'm2')}
                                     disabled={approvingPayment === `${comm.id}-m2`}
-                                    className="ml-3 px-3 py-1.5 text-xs font-medium text-white bg-green-600 rounded hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                    className="min-h-[44px] mt-2 sm:mt-0 sm:ml-3 px-3 py-2 text-xs font-medium text-white bg-green-600 rounded hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                                   >
                                     {approvingPayment === `${comm.id}-m2` ? 'Approving...' : 'Approve Payment'}
                                   </button>
@@ -829,7 +829,7 @@ function PayrollRow({
                                 <button
                                   onClick={() => onApprovePayment(comm.id, 'manager_override')}
                                   disabled={approvingPayment === `${comm.id}-manager_override`}
-                                  className="ml-3 px-3 py-1.5 text-xs font-medium text-white bg-green-600 rounded hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                  className="min-h-[44px] mt-2 sm:mt-0 sm:ml-3 px-3 py-2 text-xs font-medium text-white bg-green-600 rounded hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                                 >
                                   {approvingPayment === `${comm.id}-manager_override` ? 'Approving...' : 'Approve Payment'}
                                 </button>

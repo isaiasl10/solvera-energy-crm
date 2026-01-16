@@ -93,13 +93,24 @@ export default function SubcontractingIntake() {
     if (showAddModal && addressInputRef.current) {
       initializeAutocomplete();
     }
+
+    return () => {
+      if (autocompleteRef.current) {
+        google.maps.event.clearInstanceListeners(autocompleteRef.current);
+        autocompleteRef.current = null;
+      }
+    };
   }, [showAddModal]);
 
   const initializeAutocomplete = async () => {
     try {
       const google = await loadGoogleMaps();
 
-      if (addressInputRef.current && !autocompleteRef.current) {
+      if (addressInputRef.current) {
+        if (autocompleteRef.current) {
+          google.maps.event.clearInstanceListeners(autocompleteRef.current);
+        }
+
         autocompleteRef.current = new google.maps.places.Autocomplete(
           addressInputRef.current,
           {
@@ -234,182 +245,123 @@ export default function SubcontractingIntake() {
   };
 
   return (
-    <div style={{ padding: '24px', maxWidth: '1400px', margin: '0 auto' }}>
-      <div style={{
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: '24px',
-        gap: '16px',
-      }}>
+    <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-4 sm:mb-6">
         <div>
-          <h1 style={{
-            fontSize: '28px',
-            fontWeight: 700,
-            color: '#1a1a1a',
-            marginBottom: '4px',
-          }}>
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-1">
             Subcontracting Jobs Intake
           </h1>
-          <p style={{ color: '#666', fontSize: '14px' }}>
+          <p className="text-sm text-gray-600">
             Manage jobs from external contractors - isolated from internal pipeline
           </p>
         </div>
         <button
           onClick={() => setShowAddModal(true)}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            padding: '12px 24px',
-            background: 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)',
-            color: 'white',
-            border: 'none',
-            borderRadius: '8px',
-            fontSize: '14px',
-            fontWeight: 600,
-            cursor: 'pointer',
-            boxShadow: '0 2px 4px rgba(37, 99, 235, 0.2)',
-          }}
+          className="min-h-[44px] flex items-center justify-center gap-2 px-4 sm:px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white font-semibold rounded-lg shadow-sm hover:from-blue-700 hover:to-blue-800 transition-all"
         >
           <Plus size={20} />
-          Add Subcontract Job
+          <span className="whitespace-nowrap">Add Subcontract Job</span>
         </button>
       </div>
 
-      <div style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: '12px',
-        marginBottom: '24px',
-        padding: '12px 16px',
-        background: 'white',
-        border: '1px solid #e5e7eb',
-        borderRadius: '8px',
-      }}>
-        <Search size={20} color="#6b7280" />
+      <div className="flex items-center gap-3 mb-4 sm:mb-6 p-3 sm:p-4 bg-white border border-gray-200 rounded-lg">
+        <Search size={20} className="text-gray-400 flex-shrink-0" />
         <input
           type="text"
           placeholder="Search by contractor, customer, address, or invoice number..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
-          style={{
-            flex: 1,
-            border: 'none',
-            outline: 'none',
-            fontSize: '14px',
-            color: '#1a1a1a',
-          }}
+          className="flex-1 border-none outline-none text-sm text-gray-900 placeholder-gray-400"
         />
       </div>
 
       {loading ? (
-        <div style={{ textAlign: 'center', padding: '48px', color: '#666' }}>
+        <div className="text-center py-12 text-gray-600">
           Loading subcontract jobs...
         </div>
       ) : filteredJobs.length === 0 ? (
-        <div style={{
-          textAlign: 'center',
-          padding: '48px',
-          background: 'white',
-          border: '1px solid #e5e7eb',
-          borderRadius: '8px',
-        }}>
-          <p style={{ color: '#666', fontSize: '14px' }}>
+        <div className="text-center py-12 bg-white border border-gray-200 rounded-lg">
+          <p className="text-sm text-gray-600">
             {searchTerm ? 'No jobs match your search.' : 'No subcontract jobs yet. Click "Add Subcontract Job" to get started.'}
           </p>
         </div>
       ) : (
-        <div style={{
-          background: 'white',
-          border: '1px solid #e5e7eb',
-          borderRadius: '8px',
-          overflow: 'hidden',
-        }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-            <thead>
-              <tr style={{ background: '#f9fafb', borderBottom: '1px solid #e5e7eb' }}>
-                <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: 600, color: '#6b7280', textTransform: 'uppercase' }}>
-                  Invoice #
-                </th>
-                <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: 600, color: '#6b7280', textTransform: 'uppercase' }}>
-                  Contractor
-                </th>
-                <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: 600, color: '#6b7280', textTransform: 'uppercase' }}>
-                  Customer
-                </th>
-                <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: 600, color: '#6b7280', textTransform: 'uppercase' }}>
-                  Address
-                </th>
-                <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: 600, color: '#6b7280', textTransform: 'uppercase' }}>
-                  System Size
-                </th>
-                <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: 600, color: '#6b7280', textTransform: 'uppercase' }}>
-                  Gross Revenue
-                </th>
-                <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: 600, color: '#6b7280', textTransform: 'uppercase' }}>
-                  Net Revenue
-                </th>
-                <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: 600, color: '#6b7280', textTransform: 'uppercase' }}>
-                  Status
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredJobs.map((job) => {
-                const statusStyle = getStatusColor(job.subcontract_status || 'install_scheduled');
+        <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[800px] border-collapse">
+              <thead>
+                <tr className="bg-gray-50 border-b border-gray-200">
+                  <th className="px-3 sm:px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider whitespace-nowrap">
+                    Invoice #
+                  </th>
+                  <th className="px-3 sm:px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider whitespace-nowrap">
+                    Contractor
+                  </th>
+                  <th className="px-3 sm:px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider whitespace-nowrap">
+                    Customer
+                  </th>
+                  <th className="px-3 sm:px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider whitespace-nowrap">
+                    Address
+                  </th>
+                  <th className="px-3 sm:px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider whitespace-nowrap">
+                    System Size
+                  </th>
+                  <th className="px-3 sm:px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider whitespace-nowrap">
+                    Gross Revenue
+                  </th>
+                  <th className="px-3 sm:px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider whitespace-nowrap">
+                    Net Revenue
+                  </th>
+                  <th className="px-3 sm:px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider whitespace-nowrap">
+                    Status
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredJobs.map((job) => {
+                  const statusStyle = getStatusColor(job.subcontract_status || 'install_scheduled');
 
-                return (
-                  <tr
-                    key={job.id}
-                    onClick={() => setSelectedJobId(job.id)}
-                    style={{
-                      borderBottom: '1px solid #e5e7eb',
-                      cursor: 'pointer',
-                      transition: 'background 0.15s',
-                    }}
-                    onMouseEnter={(e) => e.currentTarget.style.background = '#f9fafb'}
-                    onMouseLeave={(e) => e.currentTarget.style.background = 'white'}
-                  >
-                    <td style={{ padding: '16px', fontSize: '14px', color: '#1a1a1a', fontWeight: 600 }}>
-                      {job.invoice_number || '-'}
-                    </td>
-                    <td style={{ padding: '16px', fontSize: '14px', color: '#1a1a1a', fontWeight: 500 }}>
-                      {job.contractor_name}
-                    </td>
-                    <td style={{ padding: '16px', fontSize: '14px', color: '#1a1a1a' }}>
-                      {job.subcontract_customer_name || '-'}
-                    </td>
-                    <td style={{ padding: '16px', fontSize: '14px', color: '#6b7280' }}>
-                      {job.installation_address}
-                    </td>
-                    <td style={{ padding: '16px', fontSize: '14px', color: '#1a1a1a' }}>
-                      {job.system_size_kw ? `${job.system_size_kw} kW` : '-'}
-                    </td>
-                    <td style={{ padding: '16px', fontSize: '14px', color: '#059669', fontWeight: 600 }}>
-                      {job.gross_revenue ? `$${job.gross_revenue.toLocaleString('en-US', { minimumFractionDigits: 2 })}` : '-'}
-                    </td>
-                    <td style={{ padding: '16px', fontSize: '14px', color: '#10b981', fontWeight: 700 }}>
-                      {job.net_revenue ? `$${job.net_revenue.toLocaleString('en-US', { minimumFractionDigits: 2 })}` : '-'}
-                    </td>
-                    <td style={{ padding: '16px' }}>
-                      <span style={{
-                        display: 'inline-block',
-                        padding: '4px 8px',
-                        background: statusStyle.bg,
-                        color: statusStyle.color,
-                        fontSize: '12px',
-                        fontWeight: 600,
-                        borderRadius: '4px',
-                      }}>
-                        {formatStatus(job.subcontract_status || 'install_scheduled')}
-                      </span>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+                  return (
+                    <tr
+                      key={job.id}
+                      onClick={() => setSelectedJobId(job.id)}
+                      className="border-b border-gray-200 cursor-pointer transition-colors hover:bg-gray-50"
+                    >
+                      <td className="px-3 sm:px-4 py-3 sm:py-4 text-sm text-gray-900 font-semibold">
+                        {job.invoice_number || '-'}
+                      </td>
+                      <td className="px-3 sm:px-4 py-3 sm:py-4 text-sm text-gray-900 font-medium">
+                        {job.contractor_name}
+                      </td>
+                      <td className="px-3 sm:px-4 py-3 sm:py-4 text-sm text-gray-900">
+                        {job.subcontract_customer_name || '-'}
+                      </td>
+                      <td className="px-3 sm:px-4 py-3 sm:py-4 text-sm text-gray-600">
+                        {job.installation_address}
+                      </td>
+                      <td className="px-3 sm:px-4 py-3 sm:py-4 text-sm text-gray-900">
+                        {job.system_size_kw ? `${job.system_size_kw} kW` : '-'}
+                      </td>
+                      <td className="px-3 sm:px-4 py-3 sm:py-4 text-sm text-emerald-600 font-semibold">
+                        {job.gross_revenue ? `$${job.gross_revenue.toLocaleString('en-US', { minimumFractionDigits: 2 })}` : '-'}
+                      </td>
+                      <td className="px-3 sm:px-4 py-3 sm:py-4 text-sm text-green-600 font-bold">
+                        {job.net_revenue ? `$${job.net_revenue.toLocaleString('en-US', { minimumFractionDigits: 2 })}` : '-'}
+                      </td>
+                      <td className="px-3 sm:px-4 py-3 sm:py-4">
+                        <span
+                          className="inline-block px-2 py-1 text-xs font-semibold rounded"
+                          style={{ backgroundColor: statusStyle.bg, color: statusStyle.color }}
+                        >
+                          {formatStatus(job.subcontract_status || 'install_scheduled')}
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
 

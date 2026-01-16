@@ -220,53 +220,35 @@ export default function Proposals({ initialProposalId, onProposalChange }: Propo
   };
 
   return (
-    <div style={{ display: "flex", height: "calc(100vh - 64px)", background: "#f5f5f7" }}>
-      <div style={{ width: 280, background: "#fff", borderRight: "1px solid #e5e7eb", display: "flex", flexDirection: "column" }}>
-        <div style={{ padding: "16px 20px", borderBottom: "1px solid #e5e7eb" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-            <div style={{ fontSize: 18, fontWeight: 700, color: "#111827" }}>Proposals</div>
+    <div className="flex flex-col lg:flex-row h-[calc(100vh-64px)] bg-gray-50">
+      <div className="w-full lg:w-80 bg-white border-r border-gray-200 flex flex-col">
+        <div className="p-4 sm:p-5 border-b border-gray-200">
+          <div className="flex justify-between items-center gap-3">
+            <div className="text-lg font-bold text-gray-900">Proposals</div>
             <button
               onClick={() => setShowNewProposalModal(true)}
-              style={{
-                padding: "6px 10px",
-                background: "#f97316",
-                color: "#fff",
-                border: "none",
-                borderRadius: 6,
-                cursor: "pointer",
-                display: "flex",
-                alignItems: "center",
-                gap: 4,
-                fontSize: 12,
-                fontWeight: 600,
-              }}
+              className="px-3 py-2 bg-orange-600 text-white rounded-lg cursor-pointer flex items-center gap-2 text-sm font-semibold hover:bg-orange-700 transition-colors min-h-[44px]"
             >
-              <Plus size={14} />
+              <Plus size={16} />
               New
             </button>
           </div>
         </div>
 
-        <div style={{ flex: 1, overflowY: "auto", padding: "12px 8px" }}>
+        <div className="flex-1 overflow-y-auto p-3">
           {proposals.map((proposal) => (
             <div
               key={proposal.id}
-              style={{
-                padding: "12px 14px",
-                background: selectedProposalId === proposal.id ? "#fef3c7" : "#fff",
-                border: selectedProposalId === proposal.id ? "2px solid #f97316" : "1px solid #e5e7eb",
-                borderRadius: 8,
-                marginBottom: 8,
-                position: "relative",
-              }}
+              className={`p-3 sm:p-4 rounded-lg mb-2 relative cursor-pointer transition-all ${
+                selectedProposalId === proposal.id
+                  ? 'bg-amber-50 border-2 border-orange-600'
+                  : 'bg-white border border-gray-200 hover:border-orange-300'
+              }`}
             >
-              <div
-                onClick={() => setSelectedProposalId(proposal.id)}
-                style={{ cursor: "pointer" }}
-              >
-                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
-                  <FileText size={14} color="#f97316" />
-                  <div style={{ fontSize: 13, fontWeight: 600, color: "#111827", flex: 1 }}>
+              <div onClick={() => setSelectedProposalId(proposal.id)}>
+                <div className="flex items-center gap-2 mb-2">
+                  <FileText size={16} className="text-orange-600 flex-shrink-0" />
+                  <div className="text-sm font-semibold text-gray-900 flex-1 truncate">
                     {proposal.customers?.full_name || "Unnamed Customer"}
                   </div>
                   <button
@@ -274,54 +256,42 @@ export default function Proposals({ initialProposalId, onProposalChange }: Propo
                       e.stopPropagation();
                       setProposalToDelete(proposal.id);
                     }}
-                    style={{
-                      padding: "4px",
-                      background: "transparent",
-                      border: "none",
-                      cursor: "pointer",
-                      display: "flex",
-                      alignItems: "center",
-                      color: "#ef4444",
-                      opacity: 0.6,
-                      transition: "opacity 0.2s",
-                    }}
-                    onMouseEnter={(e) => (e.currentTarget.style.opacity = "1")}
-                    onMouseLeave={(e) => (e.currentTarget.style.opacity = "0.6")}
+                    className="p-1 bg-transparent border-none cursor-pointer flex items-center text-red-600 opacity-60 hover:opacity-100 transition-opacity"
                     title="Delete proposal"
                   >
                     <Trash2 size={14} />
                   </button>
                 </div>
-                <div style={{ fontSize: 11, color: "#6b7280", marginBottom: 4 }}>
-                  {proposal.formatted_address?.substring(0, 40) || "No address"}
+                <div className="text-xs text-gray-600 mb-1 truncate">
+                  {proposal.formatted_address?.substring(0, 50) || "No address"}
                 </div>
-                <div style={{ fontSize: 10, color: "#9ca3af" }}>
-                  Status: {proposal.status || "draft"}
+                <div className="text-xs text-gray-400">
+                  Status: <span className="font-medium">{proposal.status || "draft"}</span>
                 </div>
               </div>
             </div>
           ))}
 
           {proposals.length === 0 && (
-            <div style={{ padding: 20, textAlign: "center", color: "#9ca3af", fontSize: 13 }}>
+            <div className="p-6 text-center text-gray-400 text-sm">
               No proposals yet. Click "New" to create one.
             </div>
           )}
         </div>
       </div>
 
-      <div style={{ flex: 1, overflow: "hidden" }}>
+      <div className="flex-1 overflow-hidden">
         {selectedProposalId ? (
           <ProposalWorkspace
             proposalId={selectedProposalId}
             onBack={() => setSelectedProposalId(null)}
           />
         ) : (
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%", color: "#9ca3af" }}>
-            <div style={{ textAlign: "center" }}>
-              <FileText size={48} style={{ margin: "0 auto 16px", opacity: 0.3 }} />
-              <div style={{ fontSize: 16, fontWeight: 600, marginBottom: 8 }}>No Proposal Selected</div>
-              <div style={{ fontSize: 13 }}>Select a proposal from the list or create a new one</div>
+          <div className="flex items-center justify-center h-full text-gray-400 p-8">
+            <div className="text-center">
+              <FileText size={48} className="mx-auto mb-4 opacity-30" />
+              <div className="text-base sm:text-lg font-semibold mb-2">No Proposal Selected</div>
+              <div className="text-sm">Select a proposal from the list or create a new one</div>
             </div>
           </div>
         )}
@@ -329,36 +299,19 @@ export default function Proposals({ initialProposalId, onProposalChange }: Propo
 
       {showNewProposalModal && (
         <div
-          style={{
-            position: "fixed",
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            background: "rgba(0,0,0,0.5)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            zIndex: 1000,
-          }}
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
           onClick={handleModalClose}
         >
           <div
             onClick={(e) => e.stopPropagation()}
-            style={{
-              background: "#fff",
-              borderRadius: 12,
-              padding: 24,
-              maxWidth: 500,
-              width: "90%",
-            }}
+            className="bg-white rounded-xl p-6 max-w-lg w-full"
           >
-            <div style={{ fontSize: 18, fontWeight: 700, color: "#111827", marginBottom: 16 }}>
+            <div className="text-lg sm:text-xl font-bold text-gray-900 mb-4">
               Create New Proposal
             </div>
 
-            <div style={{ marginBottom: 20 }}>
-              <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#374151", marginBottom: 8 }}>
+            <div className="mb-5">
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
                 Property Address
               </label>
               <input
@@ -367,55 +320,35 @@ export default function Proposals({ initialProposalId, onProposalChange }: Propo
                 value={newAddress}
                 onChange={(e) => setNewAddress(e.target.value)}
                 placeholder="Start typing address..."
-                style={{
-                  width: "100%",
-                  padding: "10px 12px",
-                  border: "1px solid #d1d5db",
-                  borderRadius: 6,
-                  fontSize: 14,
-                }}
+                className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-orange-500 focus:border-transparent"
               />
               {newAddress && !selectedPlace && (
-                <div style={{ fontSize: 11, color: "#9ca3af", marginTop: 6 }}>
+                <div className="text-xs text-gray-400 mt-2">
                   Please select an address from the dropdown suggestions
                 </div>
               )}
               {error && (
-                <div style={{ fontSize: 12, color: "#ef4444", marginTop: 6, padding: 8, background: "#fee", borderRadius: 4 }}>
+                <div className="text-sm text-red-600 mt-2 p-2 bg-red-50 rounded">
                   {error}
                 </div>
               )}
             </div>
 
-            <div style={{ display: "flex", gap: 12, justifyContent: "flex-end" }}>
+            <div className="flex flex-col sm:flex-row gap-3 justify-end">
               <button
                 onClick={handleModalClose}
-                style={{
-                  padding: "10px 20px",
-                  background: "#fff",
-                  color: "#374151",
-                  border: "1px solid #d1d5db",
-                  borderRadius: 6,
-                  cursor: "pointer",
-                  fontWeight: 600,
-                  fontSize: 13,
-                }}
+                className="px-5 py-2.5 bg-white text-gray-700 border border-gray-300 rounded-lg font-semibold text-sm hover:bg-gray-50 transition-colors min-h-[44px]"
               >
                 Cancel
               </button>
               <button
                 onClick={createNewProposal}
                 disabled={!selectedPlace || isCreating}
-                style={{
-                  padding: "10px 20px",
-                  background: selectedPlace && !isCreating ? "#f97316" : "#e5e7eb",
-                  color: selectedPlace && !isCreating ? "#fff" : "#9ca3af",
-                  border: "none",
-                  borderRadius: 6,
-                  cursor: selectedPlace && !isCreating ? "pointer" : "not-allowed",
-                  fontWeight: 600,
-                  fontSize: 13,
-                }}
+                className={`px-5 py-2.5 rounded-lg font-semibold text-sm min-h-[44px] transition-colors ${
+                  selectedPlace && !isCreating
+                    ? 'bg-orange-600 text-white hover:bg-orange-700'
+                    : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                }`}
               >
                 {isCreating ? "Creating..." : "Create Proposal"}
               </button>
@@ -426,88 +359,47 @@ export default function Proposals({ initialProposalId, onProposalChange }: Propo
 
       {proposalToDelete && (
         <div
-          style={{
-            position: "fixed",
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            background: "rgba(0,0,0,0.5)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            zIndex: 1000,
-          }}
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
           onClick={() => !isDeleting && setProposalToDelete(null)}
         >
           <div
             onClick={(e) => e.stopPropagation()}
-            style={{
-              background: "#fff",
-              borderRadius: 12,
-              padding: 24,
-              maxWidth: 450,
-              width: "90%",
-            }}
+            className="bg-white rounded-xl p-6 max-w-md w-full"
           >
-            <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
-              <div
-                style={{
-                  width: 48,
-                  height: 48,
-                  borderRadius: "50%",
-                  background: "#fee2e2",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                }}
-              >
-                <Trash2 size={24} color="#ef4444" />
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0">
+                <Trash2 size={24} className="text-red-600" />
               </div>
               <div>
-                <div style={{ fontSize: 18, fontWeight: 700, color: "#111827", marginBottom: 4 }}>
+                <div className="text-lg font-bold text-gray-900 mb-1">
                   Delete Proposal?
                 </div>
-                <div style={{ fontSize: 13, color: "#6b7280" }}>
+                <div className="text-sm text-gray-600">
                   This action cannot be undone
                 </div>
               </div>
             </div>
 
-            <div style={{ fontSize: 14, color: "#374151", marginBottom: 24, paddingLeft: 60 }}>
+            <div className="text-sm text-gray-700 mb-6 pl-0 sm:pl-15">
               This will permanently delete the proposal and all associated data including roof planes, panels, and design information.
             </div>
 
-            <div style={{ display: "flex", gap: 12, justifyContent: "flex-end" }}>
+            <div className="flex flex-col sm:flex-row gap-3 justify-end">
               <button
                 onClick={() => setProposalToDelete(null)}
                 disabled={isDeleting}
-                style={{
-                  padding: "10px 20px",
-                  background: "#fff",
-                  color: "#374151",
-                  border: "1px solid #d1d5db",
-                  borderRadius: 6,
-                  cursor: isDeleting ? "not-allowed" : "pointer",
-                  fontWeight: 600,
-                  fontSize: 13,
-                }}
+                className={`px-5 py-2.5 bg-white text-gray-700 border border-gray-300 rounded-lg font-semibold text-sm min-h-[44px] transition-colors ${
+                  isDeleting ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-50'
+                }`}
               >
                 Cancel
               </button>
               <button
                 onClick={deleteProposal}
                 disabled={isDeleting}
-                style={{
-                  padding: "10px 20px",
-                  background: isDeleting ? "#fca5a5" : "#ef4444",
-                  color: "#fff",
-                  border: "none",
-                  borderRadius: 6,
-                  cursor: isDeleting ? "not-allowed" : "pointer",
-                  fontWeight: 600,
-                  fontSize: 13,
-                }}
+                className={`px-5 py-2.5 rounded-lg font-semibold text-sm text-white min-h-[44px] transition-colors ${
+                  isDeleting ? 'bg-red-300 cursor-not-allowed' : 'bg-red-600 hover:bg-red-700'
+                }`}
               >
                 {isDeleting ? "Deleting..." : "Delete Proposal"}
               </button>

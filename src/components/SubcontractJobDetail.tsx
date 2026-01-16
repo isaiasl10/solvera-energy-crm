@@ -304,19 +304,8 @@ export default function SubcontractJobDetail({ jobId, onClose, onUpdate }: Subco
 
   if (loading) {
     return (
-      <div style={{
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        background: 'rgba(0, 0, 0, 0.5)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        zIndex: 1000,
-      }}>
-        <div style={{ color: 'white', fontSize: '18px' }}>Loading...</div>
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div className="text-white text-lg">Loading...</div>
       </div>
     );
   }
@@ -326,120 +315,59 @@ export default function SubcontractJobDetail({ jobId, onClose, onUpdate }: Subco
   }
 
   return (
-    <div style={{
-      position: 'fixed',
-      top: 0,
-      left: 0,
-      right: 0,
-      bottom: 0,
-      background: 'rgba(0, 0, 0, 0.5)',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      zIndex: 1000,
-      padding: '24px',
-    }}>
-      <div style={{
-        background: 'white',
-        borderRadius: '12px',
-        maxWidth: '900px',
-        width: '100%',
-        maxHeight: '90vh',
-        overflow: 'hidden',
-        display: 'flex',
-        flexDirection: 'column',
-        boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
-      }}>
-        <div style={{
-          padding: '24px',
-          borderBottom: '1px solid #e5e7eb',
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-        }}>
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 sm:p-6">
+      <div className="bg-white rounded-xl w-full max-w-full sm:max-w-3xl lg:max-w-4xl max-h-[90vh] overflow-hidden flex flex-col shadow-2xl">
+        <div className="p-4 sm:p-6 border-b border-gray-200">
           <div>
-            <h2 style={{ fontSize: '20px', fontWeight: 700, color: '#1a1a1a' }}>
+            <h2 className="text-lg sm:text-xl font-bold text-gray-900">
               Subcontract Job Details
             </h2>
-            <p style={{ fontSize: '14px', color: '#6b7280', marginTop: '4px' }}>
+            <p className="text-sm text-gray-600 mt-1">
               {job.contractor_name} - {job.subcontract_customer_name}
             </p>
           </div>
         </div>
 
-        <div style={{
-          display: 'flex',
-          gap: '8px',
-          padding: '16px 24px',
-          borderBottom: '1px solid #e5e7eb',
-        }}>
+        <div className="flex gap-2 p-3 sm:p-4 border-b border-gray-200 overflow-x-auto">
           <button
             onClick={() => setActiveTab('details')}
-            style={{
-              padding: '8px 16px',
-              background: activeTab === 'details' ? '#f97316' : 'transparent',
-              color: activeTab === 'details' ? 'white' : '#6b7280',
-              border: 'none',
-              borderRadius: '6px',
-              fontSize: '14px',
-              fontWeight: 600,
-              cursor: 'pointer',
-            }}
+            className={`px-3 sm:px-4 py-2 rounded-lg text-sm font-semibold whitespace-nowrap transition-colors min-h-[44px] ${
+              activeTab === 'details'
+                ? 'bg-orange-600 text-white'
+                : 'bg-transparent text-gray-600 hover:bg-gray-100'
+            }`}
           >
             Job Details
           </button>
           <button
             onClick={() => setActiveTab('invoice')}
-            style={{
-              padding: '8px 16px',
-              background: activeTab === 'invoice' ? '#f97316' : 'transparent',
-              color: activeTab === 'invoice' ? 'white' : '#6b7280',
-              border: 'none',
-              borderRadius: '6px',
-              fontSize: '14px',
-              fontWeight: 600,
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-            }}
+            className={`px-3 sm:px-4 py-2 rounded-lg text-sm font-semibold whitespace-nowrap transition-colors min-h-[44px] flex items-center gap-2 ${
+              activeTab === 'invoice'
+                ? 'bg-orange-600 text-white'
+                : 'bg-transparent text-gray-600 hover:bg-gray-100'
+            }`}
           >
             <FileText size={16} />
             Invoice
           </button>
           <button
             onClick={() => setActiveTab('scheduling')}
-            style={{
-              padding: '8px 16px',
-              background: activeTab === 'scheduling' ? '#f97316' : 'transparent',
-              color: activeTab === 'scheduling' ? 'white' : '#6b7280',
-              border: 'none',
-              borderRadius: '6px',
-              fontSize: '14px',
-              fontWeight: 600,
-              cursor: 'pointer',
-            }}
+            className={`px-3 sm:px-4 py-2 rounded-lg text-sm font-semibold whitespace-nowrap transition-colors min-h-[44px] ${
+              activeTab === 'scheduling'
+                ? 'bg-orange-600 text-white'
+                : 'bg-transparent text-gray-600 hover:bg-gray-100'
+            }`}
           >
             Scheduling
           </button>
         </div>
 
-        <div style={{ flex: 1, overflow: 'auto', padding: '24px' }}>
+        <div className="flex-1 overflow-auto p-4 sm:p-6">
           {activeTab === 'details' ? (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-              <div style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(2, 1fr)',
-                gap: '16px',
-              }}>
+            <div className="flex flex-col gap-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label style={{
-                    display: 'block',
-                    fontSize: '14px',
-                    fontWeight: 600,
-                    color: '#374151',
-                    marginBottom: '8px',
-                  }}>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
                     System Size (kW) *
                   </label>
                   <input
@@ -447,75 +375,52 @@ export default function SubcontractJobDetail({ jobId, onClose, onUpdate }: Subco
                     step="0.01"
                     value={formData.system_size_kw}
                     onChange={(e) => setFormData({ ...formData, system_size_kw: e.target.value })}
-                    style={{
-                      width: '100%',
-                      padding: '10px 12px',
-                      border: '1px solid #d1d5db',
-                      borderRadius: '6px',
-                      fontSize: '14px',
-                      outline: 'none',
-                    }}
+                    className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-orange-500 focus:border-transparent"
                   />
                 </div>
 
                 <div>
-                  <label style={{
-                    display: 'block',
-                    fontSize: '14px',
-                    fontWeight: 600,
-                    color: '#374151',
-                    marginBottom: '8px',
-                  }}>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
                     Panel Quantity *
                   </label>
                   <input
                     type="number"
                     value={formData.panel_quantity}
                     onChange={(e) => setFormData({ ...formData, panel_quantity: e.target.value })}
-                    style={{
-                      width: '100%',
-                      padding: '10px 12px',
-                      border: '1px solid #d1d5db',
-                      borderRadius: '6px',
-                      fontSize: '14px',
-                      outline: 'none',
-                    }}
+                    className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-orange-500 focus:border-transparent"
                   />
                 </div>
 
                 <div>
-                  <label style={{
-                    display: 'block',
-                    fontSize: '14px',
-                    fontWeight: 600,
-                    color: '#374151',
-                    marginBottom: '8px',
-                  }}>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
                     Install Date
                   </label>
                   <input
                     type="date"
                     value={formData.install_date}
                     onChange={(e) => setFormData({ ...formData, install_date: e.target.value })}
-                    style={{
-                      width: '100%',
-                      padding: '10px 12px',
-                      border: '1px solid #d1d5db',
-                      borderRadius: '6px',
-                      fontSize: '14px',
-                      outline: 'none',
+                    onBlur={async (e) => {
+                      if (e.target.value !== job?.install_date) {
+                        try {
+                          const { error } = await supabase
+                            .from('customers')
+                            .update({ install_date: e.target.value || null })
+                            .eq('id', jobId);
+
+                          if (error) throw error;
+                          await loadJob();
+                          onUpdate();
+                        } catch (error) {
+                          console.error('Error saving install date:', error);
+                        }
+                      }
                     }}
+                    className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-orange-500 focus:border-transparent"
                   />
                 </div>
 
                 <div>
-                  <label style={{
-                    display: 'block',
-                    fontSize: '14px',
-                    fontWeight: 600,
-                    color: '#374151',
-                    marginBottom: '8px',
-                  }}>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
                     Status
                   </label>
                   <select
@@ -533,14 +438,7 @@ export default function SubcontractJobDetail({ jobId, onClose, onUpdate }: Subco
 
                       setFormData({ ...formData, ...updates });
                     }}
-                    style={{
-                      width: '100%',
-                      padding: '10px 12px',
-                      border: '1px solid #d1d5db',
-                      borderRadius: '6px',
-                      fontSize: '14px',
-                      outline: 'none',
-                    }}
+                    className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-orange-500 focus:border-transparent"
                   >
                     <option value="install_scheduled">Install Scheduled</option>
                     <option value="pending_completion">Pending Completion</option>
@@ -772,41 +670,23 @@ export default function SubcontractJobDetail({ jobId, onClose, onUpdate }: Subco
                 </div>
               </div>
 
-              <div style={{
-                padding: '16px',
-                background: '#f9fafb',
-                borderRadius: '8px',
-                border: '1px solid #e5e7eb',
-              }}>
-                <h3 style={{ fontSize: '16px', fontWeight: 600, marginBottom: '12px' }}>
+              <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
+                <h3 className="text-base font-semibold mb-3">
                   Adders
                 </h3>
 
                 {adders.length > 0 && (
-                  <div style={{ marginBottom: '12px' }}>
+                  <div className="mb-3 space-y-2">
                     {adders.map(adder => (
-                      <div key={adder.id} style={{
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center',
-                        padding: '8px 12px',
-                        background: 'white',
-                        borderRadius: '6px',
-                        marginBottom: '8px',
-                      }}>
-                        <span style={{ fontSize: '14px', color: '#1a1a1a' }}>{adder.name}</span>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                          <span style={{ fontSize: '14px', fontWeight: 600, color: '#059669' }}>
+                      <div key={adder.id} className="flex justify-between items-center p-3 bg-white rounded-lg shadow-sm">
+                        <span className="text-sm text-gray-900">{adder.name}</span>
+                        <div className="flex items-center gap-3">
+                          <span className="text-sm font-semibold text-green-600">
                             ${adder.amount.toLocaleString()}
                           </span>
                           <button
                             onClick={() => handleRemoveAdder(adder.id)}
-                            style={{
-                              background: 'none',
-                              border: 'none',
-                              cursor: 'pointer',
-                              color: '#ef4444',
-                            }}
+                            className="text-red-600 hover:text-red-700 transition-colors"
                           >
                             <Trash2 size={16} />
                           </button>
@@ -816,33 +696,18 @@ export default function SubcontractJobDetail({ jobId, onClose, onUpdate }: Subco
                   </div>
                 )}
 
-                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
                   <input
                     type="text"
-                    placeholder="Adder name (e.g. Tile, Critter Guard)"
+                    placeholder="Adder name"
                     value={newAdder.name}
                     onChange={(e) => setNewAdder({ ...newAdder, name: e.target.value })}
-                    style={{
-                      flex: '1 1 150px',
-                      padding: '8px 12px',
-                      border: '1px solid #d1d5db',
-                      borderRadius: '6px',
-                      fontSize: '14px',
-                      outline: 'none',
-                    }}
+                    className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-orange-500 focus:border-transparent"
                   />
                   <select
                     value={newAdder.type}
                     onChange={(e) => setNewAdder({ ...newAdder, type: e.target.value as 'fixed' | 'per_watt' | 'per_panel' })}
-                    style={{
-                      flex: '0 0 130px',
-                      padding: '8px 12px',
-                      border: '1px solid #d1d5db',
-                      borderRadius: '6px',
-                      fontSize: '14px',
-                      outline: 'none',
-                      backgroundColor: 'white',
-                    }}
+                    className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-orange-500 focus:border-transparent bg-white"
                   >
                     <option value="fixed">Fixed Amount</option>
                     <option value="per_watt">Per kW</option>
@@ -851,33 +716,14 @@ export default function SubcontractJobDetail({ jobId, onClose, onUpdate }: Subco
                   <input
                     type="number"
                     step="0.01"
-                    placeholder={newAdder.type === 'fixed' ? 'Amount' : newAdder.type === 'per_watt' ? '$/kW (e.g. 100)' : '$/panel (e.g. 50)'}
+                    placeholder={newAdder.type === 'fixed' ? 'Amount' : newAdder.type === 'per_watt' ? '$/kW' : '$/panel'}
                     value={newAdder.amount}
                     onChange={(e) => setNewAdder({ ...newAdder, amount: e.target.value })}
-                    style={{
-                      flex: '0 0 140px',
-                      padding: '8px 12px',
-                      border: '1px solid #d1d5db',
-                      borderRadius: '6px',
-                      fontSize: '14px',
-                      outline: 'none',
-                    }}
+                    className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-orange-500 focus:border-transparent"
                   />
                   <button
                     onClick={handleAddAdder}
-                    style={{
-                      padding: '8px 12px',
-                      background: '#10b981',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '6px',
-                      fontSize: '14px',
-                      fontWeight: 600,
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '4px',
-                    }}
+                    className="px-3 py-2 bg-green-600 text-white rounded-lg text-sm font-semibold hover:bg-green-700 transition-colors flex items-center justify-center gap-2 min-h-[44px]"
                   >
                     <Plus size={16} />
                     Add
@@ -885,95 +731,64 @@ export default function SubcontractJobDetail({ jobId, onClose, onUpdate }: Subco
                 </div>
               </div>
 
-              <div style={{
-                padding: '16px',
-                background: '#dbeafe',
-                borderRadius: '8px',
-                border: '1px solid #93c5fd',
-              }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                  <span style={{ fontSize: '14px', color: '#1e40af' }}>System Price:</span>
-                  <span style={{ fontSize: '14px', fontWeight: 600, color: '#1e40af' }}>
+              <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
+                <div className="flex justify-between items-center mb-2">
+                  <span className="text-sm text-blue-900">System Price:</span>
+                  <span className="text-sm font-semibold text-blue-900">
                     ${calculateGrossRevenue().toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </span>
                 </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                  <span style={{ fontSize: '14px', color: '#1e40af' }}>Plus: Adders</span>
-                  <span style={{ fontSize: '14px', fontWeight: 600, color: '#059669' }}>
+                <div className="flex justify-between items-center mb-2">
+                  <span className="text-sm text-blue-900">Plus: Adders</span>
+                  <span className="text-sm font-semibold text-green-600">
                     +${calculateAddersTotal().toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </span>
                 </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                  <span style={{ fontSize: '14px', color: '#1e40af' }}>Less: Labor</span>
-                  <span style={{ fontSize: '14px', fontWeight: 600, color: '#dc2626' }}>
+                <div className="flex justify-between items-center mb-2">
+                  <span className="text-sm text-blue-900">Less: Labor</span>
+                  <span className="text-sm font-semibold text-red-600">
                     -${(parseFloat(formData.total_labor) || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </span>
                 </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}>
-                  <span style={{ fontSize: '14px', color: '#1e40af' }}>Less: Expenses</span>
-                  <span style={{ fontSize: '14px', fontWeight: 600, color: '#dc2626' }}>
+                <div className="flex justify-between items-center mb-3">
+                  <span className="text-sm text-blue-900">Less: Expenses</span>
+                  <span className="text-sm font-semibold text-red-600">
                     -${(parseFloat(formData.expenses) || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </span>
                 </div>
-                <div style={{
-                  borderTop: '2px solid #3b82f6',
-                  paddingTop: '12px',
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                }}>
-                  <span style={{ fontSize: '16px', fontWeight: 700, color: '#1e40af' }}>Net Revenue:</span>
-                  <span style={{ fontSize: '16px', fontWeight: 700, color: '#059669' }}>
+                <div className="border-t-2 border-blue-500 pt-3 flex justify-between items-center">
+                  <span className="text-base font-bold text-blue-900">Net Revenue:</span>
+                  <span className="text-base font-bold text-green-600">
                     ${calculateNetRevenue().toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </span>
                 </div>
               </div>
             </div>
           ) : activeTab === 'invoice' ? (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-              <div style={{
-                background: 'white',
-                borderRadius: '12px',
-                border: '2px solid #e5e7eb',
-                boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
-                overflow: 'hidden',
-              }}>
-                <div style={{
-                  background: 'linear-gradient(135deg, #f97316 0%, #ea580c 100%)',
-                  padding: '32px',
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                }}>
+            <div className="flex flex-col gap-6">
+              <div className="bg-white rounded-xl border-2 border-gray-200 shadow-lg overflow-hidden">
+                <div className="bg-gradient-to-r from-orange-600 to-orange-700 p-4 sm:p-8 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                   <div>
                     <img
                       src="/solvera_energy_logo_redesign.png"
                       alt="Solvera Energy Logo"
-                      style={{
-                        maxWidth: '200px',
-                        height: 'auto',
-                        filter: 'brightness(0) invert(1)',
-                      }}
+                      className="max-w-[150px] sm:max-w-[200px] h-auto brightness-0 invert"
                     />
                   </div>
-                  <div style={{ textAlign: 'right' }}>
-                    <h4 style={{ fontSize: '32px', fontWeight: 700, marginBottom: '8px', color: 'white' }}>INVOICE</h4>
-                    <p style={{ fontSize: '14px', color: 'rgba(255, 255, 255, 0.9)', margin: '4px 0' }}>
+                  <div className="text-left sm:text-right">
+                    <h4 className="text-2xl sm:text-3xl font-bold mb-2 text-white">INVOICE</h4>
+                    <p className="text-sm text-white text-opacity-90 my-1">
                       <strong>Invoice #:</strong> {job.invoice_number}
                     </p>
-                    <p style={{ fontSize: '14px', color: 'rgba(255, 255, 255, 0.9)', margin: '4px 0' }}>
+                    <p className="text-sm text-white text-opacity-90 my-1">
                       <strong>Date:</strong> {job.invoice_generated_at ? new Date(job.invoice_generated_at).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
                     </p>
                   </div>
                 </div>
 
-                <div style={{ padding: '32px' }}>
+                <div className="p-4 sm:p-8">
 
-                <div style={{
-                  display: 'grid',
-                  gridTemplateColumns: '1fr 1fr',
-                  gap: '32px',
-                  marginBottom: '32px',
-                }}>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-8 mb-6 sm:mb-8">
                   <div style={{
                     padding: '16px',
                     background: '#f9fafb',
@@ -1121,45 +936,19 @@ export default function SubcontractJobDetail({ jobId, onClose, onUpdate }: Subco
           )}
         </div>
 
-        <div style={{
-          padding: '16px 24px',
-          borderTop: '1px solid #e5e7eb',
-          display: 'flex',
-          gap: '12px',
-          justifyContent: 'space-between',
-        }}>
+        <div className="p-4 sm:p-6 border-t border-gray-200 flex flex-col sm:flex-row gap-3 justify-between">
           <button
             onClick={handleDelete}
-            style={{
-              padding: '10px 20px',
-              border: '1px solid #dc2626',
-              background: 'white',
-              color: '#dc2626',
-              borderRadius: '6px',
-              fontSize: '14px',
-              fontWeight: 600,
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-            }}
+            className="px-4 py-2.5 border border-red-600 bg-white text-red-600 rounded-lg text-sm font-semibold hover:bg-red-50 transition-colors flex items-center justify-center gap-2 min-h-[44px]"
           >
             <Trash2 size={16} />
-            Delete Job
+            <span className="hidden sm:inline">Delete Job</span>
+            <span className="sm:hidden">Delete</span>
           </button>
-          <div style={{ display: 'flex', gap: '12px' }}>
+          <div className="flex gap-3">
             <button
               onClick={onClose}
-              style={{
-                padding: '10px 20px',
-                border: '1px solid #d1d5db',
-                background: 'white',
-                color: '#374151',
-                borderRadius: '6px',
-                fontSize: '14px',
-                fontWeight: 600,
-                cursor: 'pointer',
-              }}
+              className="flex-1 sm:flex-none px-4 py-2.5 border border-gray-300 bg-white text-gray-700 rounded-lg text-sm font-semibold hover:bg-gray-50 transition-colors min-h-[44px]"
             >
               Close
             </button>
@@ -1167,19 +956,9 @@ export default function SubcontractJobDetail({ jobId, onClose, onUpdate }: Subco
               <button
                 onClick={handleSave}
                 disabled={saving}
-                style={{
-                  padding: '10px 20px',
-                  border: 'none',
-                  background: saving ? '#9ca3af' : 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-                  color: 'white',
-                  borderRadius: '6px',
-                  fontSize: '14px',
-                  fontWeight: 600,
-                  cursor: saving ? 'not-allowed' : 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                }}
+                className={`flex-1 sm:flex-none px-4 py-2.5 border-none rounded-lg text-sm font-semibold text-white transition-colors flex items-center justify-center gap-2 min-h-[44px] ${
+                  saving ? 'bg-gray-400 cursor-not-allowed' : 'bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800'
+                }`}
               >
                 <Save size={16} />
                 {saving ? 'Saving...' : 'Save Changes'}

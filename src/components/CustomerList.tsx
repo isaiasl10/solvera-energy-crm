@@ -214,12 +214,12 @@ export default function CustomerList({ refreshTrigger, onSelectCustomer, searchQ
           <div className="text-xs text-gray-500 mb-2">
             {filteredCustomers.length} customer{filteredCustomers.length !== 1 ? 's' : ''} found
           </div>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
             {filteredCustomers.map((customer) => (
         <div
           key={customer.id}
           onClick={() => onSelectCustomer(customer)}
-          className="bg-white border border-gray-200 rounded-lg p-3 hover:shadow-lg transition-all cursor-pointer hover:border-orange-300"
+          className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-lg transition-all cursor-pointer hover:border-orange-400"
         >
           <div className="flex items-start justify-between mb-2">
             <div>

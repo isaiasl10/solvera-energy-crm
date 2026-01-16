@@ -152,13 +152,13 @@ export default function ServiceTicketsQueue() {
 
   return (
     <div className="flex-1 flex flex-col h-screen bg-gray-50">
-      <div className="bg-white border-b border-gray-200 px-3 py-2">
-        <h2 className="text-base font-bold text-gray-900">Service Tickets</h2>
-        <p className="text-xs text-gray-500">Active service tickets for post-activation issues</p>
-        <p className="text-xs text-gray-600 mt-1">{tickets.length} active ticket{tickets.length !== 1 ? 's' : ''}</p>
+      <div className="bg-white border-b border-gray-200 p-4 sm:p-6">
+        <h2 className="text-lg sm:text-xl font-bold text-gray-900">Service Tickets</h2>
+        <p className="text-sm text-gray-500">Active service tickets for post-activation issues</p>
+        <p className="text-sm text-gray-700 font-medium mt-2">{tickets.length} active ticket{tickets.length !== 1 ? 's' : ''}</p>
       </div>
 
-      <div className="flex-1 overflow-auto p-2">
+      <div className="flex-1 overflow-auto p-3 sm:p-4">
         {loading ? (
           <div className="bg-white rounded shadow-sm border border-gray-200 p-6 text-center">
             <div className="flex items-center justify-center gap-2">
@@ -229,19 +229,19 @@ export default function ServiceTicketsQueue() {
                     </div>
                   )}
 
-                  <div className="flex gap-2 mt-2">
+                  <div className="flex flex-col sm:flex-row gap-2 mt-3">
                     <button
                       onClick={() => handleUpdateTicket(ticket.id, { ticket_status: 'in_progress' })}
-                      className="px-2 py-1 text-xs bg-orange-600 text-white rounded hover:bg-orange-700 transition-colors"
+                      className="px-4 py-2.5 text-sm bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed min-h-[44px] font-medium"
                       disabled={ticket.ticket_status === 'in_progress'}
                     >
                       Start Work
                     </button>
                     <button
                       onClick={() => handleCompleteTicket(ticket.id, ticket.customer_id)}
-                      className="px-2 py-1 text-xs bg-green-600 text-white rounded hover:bg-green-700 transition-colors flex items-center gap-1"
+                      className="px-4 py-2.5 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center justify-center gap-2 min-h-[44px] font-medium"
                     >
-                      <CheckCircle2 className="w-3 h-3" />
+                      <CheckCircle2 className="w-4 h-4" />
                       Complete
                     </button>
                   </div>

@@ -79,38 +79,38 @@ export default function CustomerQueue({ initialCustomerId, initialTab, onCustome
 
   return (
     <div className="flex-1 flex flex-col h-screen bg-gray-50">
-      <div className="bg-white border-b border-gray-200 px-3 py-2">
-        <div className="flex items-center justify-between mb-2">
+      <div className="bg-white border-b border-gray-200 p-4 sm:p-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
           <div>
-            <h2 className="text-base font-bold text-gray-900">Customer Projects Queue</h2>
-            <p className="text-xs text-gray-500">Search and manage customer information</p>
+            <h2 className="text-lg sm:text-xl font-bold text-gray-900">Customer Projects Queue</h2>
+            <p className="text-sm text-gray-500">Search and manage customer information</p>
           </div>
           <button
             onClick={() => setShowForm(!showForm)}
-            className="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs bg-orange-600 text-white font-medium rounded hover:bg-orange-700 transition-all"
+            className="inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm bg-orange-600 text-white font-semibold rounded-lg hover:bg-orange-700 transition-all min-h-[44px]"
           >
-            <Plus className="w-3.5 h-3.5" />
+            <Plus className="w-4 h-4" />
             {showForm ? 'Cancel' : 'Add Customer'}
           </button>
         </div>
 
-        <form onSubmit={handleSearch} className="flex gap-2">
+        <form onSubmit={handleSearch} className="flex flex-col sm:flex-row gap-3">
           <div className="flex-1 relative">
-            <Search className="absolute left-2.5 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search by customer ID, name, email, phone, or address..."
-              className="w-full pl-9 pr-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+              placeholder="Search by ID, name, email, phone, or address..."
+              className="w-full pl-10 pr-4 py-2.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
             />
           </div>
-          <div className="relative">
-            <Filter className="absolute left-2.5 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+          <div className="relative min-w-[180px]">
+            <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="pl-9 pr-8 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent appearance-none bg-white"
+              className="w-full pl-10 pr-4 py-2.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent appearance-none bg-white"
             >
               <option value="all">All Status</option>
               <option value="pending">Pending</option>
