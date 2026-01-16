@@ -403,7 +403,7 @@ export default function ContractorManagement() {
                           fontWeight: 500,
                         }}
                       >
-                        {adder.name}: ${adder.amount.toFixed(2)}{adder.type === 'per_watt' ? '/W' : adder.type === 'per_panel' ? '/panel' : ''}
+                        {adder.name}: ${adder.amount.toFixed(2)}{adder.type === 'per_watt' ? '/kW' : adder.type === 'per_panel' ? '/panel' : ''}
                       </span>
                     ))}
                   </div>
@@ -533,7 +533,7 @@ export default function ContractorManagement() {
                           borderRadius: '6px',
                         }}>
                           <span style={{ fontSize: '14px', color: '#1a1a1a' }}>
-                            {adder.name}: ${adder.amount.toFixed(2)} {adder.type === 'per_watt' ? '(per watt)' : adder.type === 'per_panel' ? '(per panel)' : ''}
+                            {adder.name}: ${adder.amount.toFixed(2)} {adder.type === 'per_watt' ? '(per kW)' : adder.type === 'per_panel' ? '(per panel)' : ''}
                           </span>
                           <button
                             type="button"
@@ -582,13 +582,13 @@ export default function ContractorManagement() {
                       }}
                     >
                       <option value="fixed">Fixed Amount</option>
-                      <option value="per_watt">Per Watt</option>
+                      <option value="per_watt">Per kW</option>
                       <option value="per_panel">Per Panel</option>
                     </select>
                     <input
                       type="number"
                       step="0.01"
-                      placeholder={newAdderType === 'fixed' ? 'Amount' : newAdderType === 'per_watt' ? 'Rate ($/W)' : 'Rate ($/panel)'}
+                      placeholder={newAdderType === 'fixed' ? 'Amount' : newAdderType === 'per_watt' ? 'Rate ($/kW)' : 'Rate ($/panel)'}
                       value={newAdderAmount}
                       onChange={(e) => setNewAdderAmount(e.target.value)}
                       style={{

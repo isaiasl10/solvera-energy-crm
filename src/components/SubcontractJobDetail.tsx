@@ -171,7 +171,7 @@ export default function SubcontractJobDetail({ jobId, onClose, onUpdate }: Subco
     const panelQty = parseFloat(formData.panel_quantity) || 0;
     return adders.reduce((sum, adder) => {
       if (adder.type === 'per_watt') {
-        return sum + (adder.amount * systemSize * 1000);
+        return sum + (adder.amount * systemSize);
       } else if (adder.type === 'per_panel') {
         return sum + (adder.amount * panelQty);
       }
@@ -239,7 +239,7 @@ export default function SubcontractJobDetail({ jobId, onClose, onUpdate }: Subco
       adders.forEach(adder => {
         let adderAmount = adder.amount;
         if (adder.type === 'per_watt') {
-          adderAmount = adder.amount * systemSizeKw * 1000;
+          adderAmount = adder.amount * systemSizeKw;
         } else if (adder.type === 'per_panel') {
           adderAmount = adder.amount * panelQty;
         }
@@ -690,13 +690,13 @@ export default function SubcontractJobDetail({ jobId, onClose, onUpdate }: Subco
                     }}
                   >
                     <option value="fixed">Fixed Amount</option>
-                    <option value="per_watt">Per Watt</option>
+                    <option value="per_watt">Per kW</option>
                     <option value="per_panel">Per Panel</option>
                   </select>
                   <input
                     type="number"
                     step="0.01"
-                    placeholder={newAdder.type === 'fixed' ? 'Amount' : newAdder.type === 'per_watt' ? '$/W (e.g. 0.10)' : '$/panel (e.g. 50)'}
+                    placeholder={newAdder.type === 'fixed' ? 'Amount' : newAdder.type === 'per_watt' ? '$/kW (e.g. 100)' : '$/panel (e.g. 50)'}
                     value={newAdder.amount}
                     onChange={(e) => setNewAdder({ ...newAdder, amount: e.target.value })}
                     style={{
@@ -901,8 +901,8 @@ export default function SubcontractJobDetail({ jobId, onClose, onUpdate }: Subco
                           let adderAmount = adder.amount;
                           let description = adder.name;
                           if (adder.type === 'per_watt') {
-                            adderAmount = adder.amount * systemSizeKw * 1000;
-                            description = `${adder.name} ($${adder.amount.toFixed(2)}/W × ${systemSizeKw} kW)`;
+                            adderAmount = adder.amount * systemSizeKw;
+                            description = `${adder.name} ($${adder.amount.toFixed(2)}/kW × ${systemSizeKw} kW)`;
                           } else if (adder.type === 'per_panel') {
                             adderAmount = adder.amount * panelQty;
                             description = `${adder.name} ($${adder.amount.toFixed(2)}/panel × ${panelQty} panels)`;
