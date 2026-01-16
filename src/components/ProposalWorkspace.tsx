@@ -3087,17 +3087,11 @@ export default function ProposalWorkspace({
 
   const renderSolarDesignTab = () => {
     return (
-    <div style={{ display: "flex", flexDirection: "column", height: "calc(100vh - 140px)", minHeight: 0 }}>
-      <div style={{
-        flex: "0 0 auto",
+    <div className="sd-root">
+      <div className="sd-toolbar" style={{
         background: "linear-gradient(135deg, #1e293b 0%, #334155 100%)",
         borderBottom: "2px solid #0ea5e9",
         boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)",
-        padding: "12px",
-        display: "flex",
-        alignItems: "center",
-        gap: 10,
-        flexWrap: "wrap",
       }}>
         <button
           onClick={() => setToolbarCollapsed(!toolbarCollapsed)}
@@ -3138,7 +3132,7 @@ export default function ProposalWorkspace({
               display: "flex",
               alignItems: "center",
               gap: 6,
-              padding: "8px 14px",
+              padding: "7px 12px",
               background: viewMode === "roof" ? "linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%)" : "rgba(255,255,255,0.1)",
               color: "#ffffff",
               border: "1px solid " + (viewMode === "roof" ? "#0ea5e9" : "rgba(255,255,255,0.2)"),
@@ -3148,6 +3142,7 @@ export default function ProposalWorkspace({
               fontSize: 13,
               boxShadow: viewMode === "roof" ? "0 2px 8px rgba(14, 165, 233, 0.3)" : "none",
               transition: "all 0.2s",
+              height: 36,
             }}
           >
             <Grid size={15} />
@@ -3454,6 +3449,7 @@ export default function ProposalWorkspace({
                   onChange={(e) => setRowSpacing(Number(e.target.value))}
                   style={{
                     width: 70,
+                    maxWidth: 110,
                     padding: "7px 8px",
                     background: "rgba(255,255,255,0.1)",
                     border: "1px solid rgba(255,255,255,0.2)",
@@ -3473,6 +3469,7 @@ export default function ProposalWorkspace({
                   onChange={(e) => setColSpacing(Number(e.target.value))}
                   style={{
                     width: 70,
+                    maxWidth: 110,
                     padding: "7px 8px",
                     background: "rgba(255,255,255,0.1)",
                     border: "1px solid rgba(255,255,255,0.2)",
@@ -3489,8 +3486,8 @@ export default function ProposalWorkspace({
         )}
       </div>
 
-      <div style={{ display: "flex", flex: "1 1 auto", minHeight: 0, overflow: "hidden" }}>
-        <div style={{ flex: 1, position: "relative", background: "#f9fafb" }}>
+      <div className="sd-canvas">
+        <div className="sd-map">
           {toolMode !== "none" && (
             <div style={{
               position: "absolute",
@@ -3550,16 +3547,7 @@ export default function ProposalWorkspace({
           </div>
         </div>
 
-        <div style={{
-          width: 350,
-          background: "#ffffff",
-          borderLeft: "2px solid #e5e7eb",
-          overflowY: "auto",
-          padding: "16px",
-          display: "flex",
-          flexDirection: "column",
-          gap: 16,
-        }}>
+        <div className="sd-sidebar">
           <div style={{
             padding: "16px",
             background: "linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%)",
@@ -4092,7 +4080,11 @@ export default function ProposalWorkspace({
           ))}
         </div>
 
-        <div style={{ background: "#f5f5f7", minHeight: "400px" }}>
+        <div style={{
+          background: "#f5f5f7",
+          height: activeTab === "solar-design" ? "calc(100vh - 200px)" : "auto",
+          minHeight: activeTab === "solar-design" ? 0 : "400px",
+        }}>
           {activeTab === "manage" && renderManageTab()}
           {activeTab === "energy" && renderEnergyTab()}
           {activeTab === "solar-design" && renderSolarDesignTab()}
