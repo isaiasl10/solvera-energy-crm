@@ -70,6 +70,7 @@ export default function AppointmentModal({ appointment, defaultDate, onClose, on
       const { data, error } = await supabase
         .from('customers')
         .select('id, first_name, last_name')
+        .eq('is_active', true)
         .order('first_name');
 
       if (error) throw error;

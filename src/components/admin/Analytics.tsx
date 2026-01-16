@@ -42,7 +42,8 @@ export default function Analytics() {
           contract_price,
           bom_cost,
           permit_engineering_cost
-        `);
+        `)
+        .eq('is_active', true);
 
       if (customersError) throw customersError;
 

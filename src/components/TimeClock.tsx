@@ -62,6 +62,7 @@ export default function TimeClock() {
       const { data: customersData, error: customersError } = await supabase
         .from('customers')
         .select('id, full_name')
+        .eq('is_active', true)
         .order('full_name', { ascending: true });
 
       if (customersError) throw customersError;

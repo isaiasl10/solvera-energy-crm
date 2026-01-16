@@ -149,6 +149,7 @@ export default function QueueDetailView({ queueType }: QueueDetailViewProps) {
         .from('customers')
         .select('*')
         .eq('job_source', 'internal')
+        .eq('is_active', true)
         .order('created_at', { ascending: false });
 
       if (userRole === 'sales_rep' && userAppId) {

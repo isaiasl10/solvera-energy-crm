@@ -143,7 +143,8 @@ export default function Calendar({ onViewCustomerProject }: CalendarProps) {
         const { data: customerData } = await supabase
           .from('customers')
           .select('id')
-          .eq('sales_rep_id', userAppId);
+          .eq('sales_rep_id', userAppId)
+          .eq('is_active', true);
 
         salesRepCustomerIds = customerData?.map(c => c.id) || [];
       }

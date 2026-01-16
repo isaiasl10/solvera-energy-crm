@@ -46,7 +46,8 @@ export default function ServiceTicketsQueue() {
 
       const { data: customersData, error: customersError } = await supabase
         .from('customers')
-        .select('*');
+        .select('*')
+        .eq('is_active', true);
 
       if (customersError) throw customersError;
 

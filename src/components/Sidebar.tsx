@@ -87,7 +87,8 @@ export default function Sidebar({ currentView, onViewChange, isMobileOpen, onMob
       let customersQuery = supabase
         .from('customers')
         .select('id')
-        .eq('job_source', 'internal');
+        .eq('job_source', 'internal')
+        .eq('is_active', true);
 
       if (userRole === 'sales_rep' && userAppId) {
         customersQuery = customersQuery.eq('sales_rep_id', userAppId);
