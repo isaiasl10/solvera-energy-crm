@@ -177,7 +177,7 @@ export default function SubcontractJobDetail({ jobId, onClose, onUpdate }: Subco
     doc.text('Bill To:', 20, 70);
     doc.setFontSize(10);
     doc.text(job.subcontract_customer_name || 'N/A', 20, 77);
-    doc.text(job.address || '', 20, 84);
+    doc.text(job.installation_address || '', 20, 84);
 
     doc.setFontSize(12);
     doc.text('Job Details:', 20, 100);
@@ -723,7 +723,7 @@ export default function SubcontractJobDetail({ jobId, onClose, onUpdate }: Subco
                 <div style={{ marginBottom: '24px' }}>
                   <h4 style={{ fontSize: '14px', fontWeight: 600, marginBottom: '8px' }}>Bill To:</h4>
                   <p style={{ fontSize: '14px', color: '#1a1a1a' }}>{job.subcontract_customer_name}</p>
-                  <p style={{ fontSize: '14px', color: '#6b7280' }}>{job.address}</p>
+                  <p style={{ fontSize: '14px', color: '#6b7280' }}>{job.installation_address}</p>
                 </div>
 
                 <div style={{ marginBottom: '24px' }}>

@@ -101,7 +101,7 @@ export default function SubcontractingIntake() {
             job_source: 'subcontract',
             contractor_name: formData.contractor_name,
             subcontract_customer_name: formData.customer_name,
-            address: formData.address,
+            installation_address: formData.address,
             full_name: formData.customer_name,
             system_size_kw: 0,
             subcontract_status: 'install_scheduled',
@@ -139,7 +139,7 @@ export default function SubcontractingIntake() {
   const filteredJobs = jobs.filter(job => {
     const searchLower = searchTerm.toLowerCase();
     return (
-      job.address?.toLowerCase().includes(searchLower) ||
+      job.installation_address?.toLowerCase().includes(searchLower) ||
       job.contractor_name?.toLowerCase().includes(searchLower) ||
       job.subcontract_customer_name?.toLowerCase().includes(searchLower) ||
       job.invoice_number?.toLowerCase().includes(searchLower)
@@ -311,7 +311,7 @@ export default function SubcontractingIntake() {
                       {job.subcontract_customer_name || '-'}
                     </td>
                     <td style={{ padding: '16px', fontSize: '14px', color: '#6b7280' }}>
-                      {job.address}
+                      {job.installation_address}
                     </td>
                     <td style={{ padding: '16px', fontSize: '14px', color: '#1a1a1a' }}>
                       {job.system_size_kw ? `${job.system_size_kw} kW` : '-'}
