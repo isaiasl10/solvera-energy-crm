@@ -198,10 +198,10 @@ export default function SubcontractingIntake() {
       } else if (formData.job_type === 'detach_reset') {
         jobData = {
           ...jobData,
-          price_per_panel: selectedContractor.default_detach_reset_price_per_panel || 0,
-          panel_qty: 0,
-          labor_cost: 0,
-          material_cost: 0,
+          price_per_panel: selectedContractor.default_detach_reset_price_per_panel ?? null,
+          panel_qty: null,
+          labor_cost: null,
+          material_cost: null,
           detach_reset_status: 'detach_scheduled',
         };
       } else if (formData.job_type === 'service') {

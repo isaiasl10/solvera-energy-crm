@@ -141,6 +141,14 @@ export default function SchedulingModal({
       ];
     }
 
+    if (ticketType === 'detach_reset') {
+      return [
+        { value: 'detach', label: 'Detach' },
+        { value: 'reset', label: 'Reset' },
+        { value: 'service', label: 'Service' },
+      ];
+    }
+
     return [
       { value: 'general', label: 'General' },
       { value: 'electrical', label: 'Electrical' },
@@ -354,6 +362,7 @@ export default function SchedulingModal({
                   <option value="service">Service</option>
                   <option value="installation">Installation</option>
                   <option value="inspection">Inspection</option>
+                  <option value="detach_reset">Detach & Reset</option>
                 </select>
               </div>
 
