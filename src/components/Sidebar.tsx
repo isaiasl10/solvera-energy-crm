@@ -3,7 +3,7 @@ import { Calendar, Users, Settings, ChevronDown, ChevronRight, UserCog, LogOut, 
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 
-export type ViewType = 'calendar' | 'customers' | 'proposals' | 'createProposal' | 'customerPricing' | 'user-management' | 'employee-profile' | 'sales-manager-dashboard' | 'role-previews' | 'subcontracting-intake' | 'contractor-management' | 'admin-analytics' | 'admin-custom-adders' | 'admin-inverters' | 'admin-optimizers' | 'admin-batteries' | 'admin-racking' | 'admin-panels' | 'admin-financing' | 'admin-payroll' | 'queue-new-project' | 'queue-site-survey' | 'queue-engineering' | 'queue-utility-permits' | 'queue-ready-to-order' | 'queue-coordinate-install' | 'queue-install-scheduled' | 'queue-ready-inspection' | 'queue-pending-pto' | 'queue-pending-activation' | 'queue-system-activated' | 'queue-service-tickets';
+export type ViewType = 'calendar' | 'customers' | 'proposals' | 'createProposal' | 'customerPricing' | 'user-management' | 'employee-profile' | 'sales-manager-dashboard' | 'role-previews' | 'subcontracting-intake' | 'admin-contractors' | 'admin-analytics' | 'admin-custom-adders' | 'admin-inverters' | 'admin-optimizers' | 'admin-batteries' | 'admin-racking' | 'admin-panels' | 'admin-financing' | 'admin-payroll' | 'queue-new-project' | 'queue-site-survey' | 'queue-engineering' | 'queue-utility-permits' | 'queue-ready-to-order' | 'queue-coordinate-install' | 'queue-install-scheduled' | 'queue-ready-inspection' | 'queue-pending-pto' | 'queue-pending-activation' | 'queue-system-activated' | 'queue-service-tickets';
 
 interface SidebarProps {
   currentView: ViewType;
@@ -164,6 +164,7 @@ export default function Sidebar({ currentView, onViewChange, isMobileOpen, onMob
   const adminSubItems = [
     { id: 'admin-analytics' as ViewType, label: 'Analytics' },
     { id: 'admin-payroll' as ViewType, label: 'Payroll' },
+    { id: 'admin-contractors' as ViewType, label: 'Contractors' },
     { id: 'admin-custom-adders' as ViewType, label: 'Custom Adders' },
     { id: 'admin-financing' as ViewType, label: 'Financing' },
     { id: 'admin-inverters' as ViewType, label: 'Inverters' },
@@ -218,19 +219,6 @@ export default function Sidebar({ currentView, onViewChange, isMobileOpen, onMob
           </li>
           <li>
             <button
-              onClick={() => handleViewChange('customers')}
-              className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg transition-colors text-sm ${
-                currentView === 'customers'
-                  ? 'bg-orange-600 text-white'
-                  : 'text-gray-300 hover:bg-gray-800'
-              }`}
-            >
-              <Users className="w-4 h-4" />
-              <span className="font-medium">Customers</span>
-            </button>
-          </li>
-          <li>
-            <button
               onClick={() => handleViewChange('proposals')}
               className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg transition-colors text-sm ${
                 currentView === 'proposals'
@@ -242,36 +230,19 @@ export default function Sidebar({ currentView, onViewChange, isMobileOpen, onMob
               <span className="font-medium">Proposals</span>
             </button>
           </li>
-          {(isAdmin || isManagement) && (
-            <li>
-              <button
-                onClick={() => handleViewChange('subcontracting-intake')}
-                className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg transition-colors text-sm ${
-                  currentView === 'subcontracting-intake'
-                    ? 'bg-orange-600 text-white'
-                    : 'text-gray-300 hover:bg-gray-800'
-                }`}
-              >
-                <Briefcase className="w-4 h-4" />
-                <span className="font-medium">Subcontracting Intake</span>
-              </button>
-            </li>
-          )}
-          {(isAdmin || isManagement) && (
-            <li>
-              <button
-                onClick={() => handleViewChange('contractor-management')}
-                className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg transition-colors text-sm ${
-                  currentView === 'contractor-management'
-                    ? 'bg-orange-600 text-white'
-                    : 'text-gray-300 hover:bg-gray-800'
-                }`}
-              >
-                <Building2 className="w-4 h-4" />
-                <span className="font-medium">Contractor Management</span>
-              </button>
-            </li>
-          )}
+          <li>
+            <button
+              onClick={() => handleViewChange('customers')}
+              className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg transition-colors text-sm ${
+                currentView === 'customers'
+                  ? 'bg-orange-600 text-white'
+                  : 'text-gray-300 hover:bg-gray-800'
+              }`}
+            >
+              <Users className="w-4 h-4" />
+              <span className="font-medium">Customers</span>
+            </button>
+          </li>
           <li>
             <button
               onClick={() => setQueuesExpanded(!queuesExpanded)}
@@ -313,6 +284,21 @@ export default function Sidebar({ currentView, onViewChange, isMobileOpen, onMob
               </ul>
             )}
           </li>
+          {(isAdmin || isManagement) && (
+            <li>
+              <button
+                onClick={() => handleViewChange('subcontracting-intake')}
+                className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg transition-colors text-sm ${
+                  currentView === 'subcontracting-intake'
+                    ? 'bg-orange-600 text-white'
+                    : 'text-gray-300 hover:bg-gray-800'
+                }`}
+              >
+                <Briefcase className="w-4 h-4" />
+                <span className="font-medium">Third Party</span>
+              </button>
+            </li>
+          )}
           {userRole === 'sales_manager' && (
             <li>
               <button

@@ -185,8 +185,8 @@ function App() {
           return <Calendar onViewCustomerProject={handleViewCustomerProject} />;
         }
         return <SubcontractingIntake />;
-      case 'contractor-management':
-        if (!isAdmin && !isManagement) {
+      case 'admin-contractors':
+        if (!isAdmin) {
           setCurrentView('calendar');
           return <Calendar onViewCustomerProject={handleViewCustomerProject} />;
         }
