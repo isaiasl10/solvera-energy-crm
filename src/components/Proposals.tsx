@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from "react";
-import { FileText, Plus } from "lucide-react";
+import { FileText, Plus, Trash2 } from "lucide-react";
 import { supabase } from "../lib/supabaseClient";
 import ProposalWorkspace from "./ProposalWorkspace";
 import { loadGoogleMaps } from "../lib/loadGoogleMaps";
@@ -20,6 +20,8 @@ export default function Proposals({ initialProposalId, onProposalChange }: Propo
   const [proposals, setProposals] = useState<any[]>([]);
   const [selectedProposalId, setSelectedProposalId] = useState<string | null>(initialProposalId || null);
   const [showNewProposalModal, setShowNewProposalModal] = useState(false);
+  const [proposalToDelete, setProposalToDelete] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     if (onProposalChange) {
@@ -191,6 +193,32 @@ export default function Proposals({ initialProposalId, onProposalChange }: Propo
     autocompleteRef.current = null;
   };
 
+  const deleteProposal = async () => {
+    if (!proposalToDelete) return;
+
+    setIsDeleting(true);
+    try {
+      const { error } = await supabase
+        .from("proposals")
+        .delete()
+        .eq("id", proposalToDelete);
+
+      if (error) throw error;
+
+      if (selectedProposalId === proposalToDelete) {
+        setSelectedProposalId(null);
+      }
+
+      await loadProposals();
+      setProposalToDelete(null);
+    } catch (err: any) {
+      console.error("Error deleting proposal:", err);
+      alert("Failed to delete proposal. Please try again.");
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   return (
     <div style={{ display: "flex", height: "calc(100vh - 64px)", background: "#f5f5f7" }}>
       <div style={{ width: 280, background: "#fff", borderRight: "1px solid #e5e7eb", display: "flex", flexDirection: "column" }}>
@@ -223,27 +251,53 @@ export default function Proposals({ initialProposalId, onProposalChange }: Propo
           {proposals.map((proposal) => (
             <div
               key={proposal.id}
-              onClick={() => setSelectedProposalId(proposal.id)}
               style={{
                 padding: "12px 14px",
                 background: selectedProposalId === proposal.id ? "#fef3c7" : "#fff",
                 border: selectedProposalId === proposal.id ? "2px solid #f97316" : "1px solid #e5e7eb",
                 borderRadius: 8,
-                cursor: "pointer",
                 marginBottom: 8,
+                position: "relative",
               }}
             >
-              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
-                <FileText size={14} color="#f97316" />
-                <div style={{ fontSize: 13, fontWeight: 600, color: "#111827" }}>
-                  {proposal.customers?.full_name || "Unnamed Customer"}
+              <div
+                onClick={() => setSelectedProposalId(proposal.id)}
+                style={{ cursor: "pointer" }}
+              >
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+                  <FileText size={14} color="#f97316" />
+                  <div style={{ fontSize: 13, fontWeight: 600, color: "#111827", flex: 1 }}>
+                    {proposal.customers?.full_name || "Unnamed Customer"}
+                  </div>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setProposalToDelete(proposal.id);
+                    }}
+                    style={{
+                      padding: "4px",
+                      background: "transparent",
+                      border: "none",
+                      cursor: "pointer",
+                      display: "flex",
+                      alignItems: "center",
+                      color: "#ef4444",
+                      opacity: 0.6,
+                      transition: "opacity 0.2s",
+                    }}
+                    onMouseEnter={(e) => (e.currentTarget.style.opacity = "1")}
+                    onMouseLeave={(e) => (e.currentTarget.style.opacity = "0.6")}
+                    title="Delete proposal"
+                  >
+                    <Trash2 size={14} />
+                  </button>
                 </div>
-              </div>
-              <div style={{ fontSize: 11, color: "#6b7280", marginBottom: 4 }}>
-                {proposal.formatted_address?.substring(0, 40) || "No address"}
-              </div>
-              <div style={{ fontSize: 10, color: "#9ca3af" }}>
-                Status: {proposal.status || "draft"}
+                <div style={{ fontSize: 11, color: "#6b7280", marginBottom: 4 }}>
+                  {proposal.formatted_address?.substring(0, 40) || "No address"}
+                </div>
+                <div style={{ fontSize: 10, color: "#9ca3af" }}>
+                  Status: {proposal.status || "draft"}
+                </div>
               </div>
             </div>
           ))}
@@ -364,6 +418,98 @@ export default function Proposals({ initialProposalId, onProposalChange }: Propo
                 }}
               >
                 {isCreating ? "Creating..." : "Create Proposal"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {proposalToDelete && (
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: "rgba(0,0,0,0.5)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 1000,
+          }}
+          onClick={() => !isDeleting && setProposalToDelete(null)}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              background: "#fff",
+              borderRadius: 12,
+              padding: 24,
+              maxWidth: 450,
+              width: "90%",
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
+              <div
+                style={{
+                  width: 48,
+                  height: 48,
+                  borderRadius: "50%",
+                  background: "#fee2e2",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                <Trash2 size={24} color="#ef4444" />
+              </div>
+              <div>
+                <div style={{ fontSize: 18, fontWeight: 700, color: "#111827", marginBottom: 4 }}>
+                  Delete Proposal?
+                </div>
+                <div style={{ fontSize: 13, color: "#6b7280" }}>
+                  This action cannot be undone
+                </div>
+              </div>
+            </div>
+
+            <div style={{ fontSize: 14, color: "#374151", marginBottom: 24, paddingLeft: 60 }}>
+              This will permanently delete the proposal and all associated data including roof planes, panels, and design information.
+            </div>
+
+            <div style={{ display: "flex", gap: 12, justifyContent: "flex-end" }}>
+              <button
+                onClick={() => setProposalToDelete(null)}
+                disabled={isDeleting}
+                style={{
+                  padding: "10px 20px",
+                  background: "#fff",
+                  color: "#374151",
+                  border: "1px solid #d1d5db",
+                  borderRadius: 6,
+                  cursor: isDeleting ? "not-allowed" : "pointer",
+                  fontWeight: 600,
+                  fontSize: 13,
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={deleteProposal}
+                disabled={isDeleting}
+                style={{
+                  padding: "10px 20px",
+                  background: isDeleting ? "#fca5a5" : "#ef4444",
+                  color: "#fff",
+                  border: "none",
+                  borderRadius: 6,
+                  cursor: isDeleting ? "not-allowed" : "pointer",
+                  fontWeight: 600,
+                  fontSize: 13,
+                }}
+              >
+                {isDeleting ? "Deleting..." : "Delete Proposal"}
               </button>
             </div>
           </div>
