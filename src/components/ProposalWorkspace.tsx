@@ -3,6 +3,7 @@ import { supabase } from "../lib/supabaseClient";
 import { sanitizePatch } from "../lib/supabasePatch";
 import { useFinancingOptions } from "../hooks/useFinancingOptions";
 import { User, DollarSign, ArrowLeft, Zap, Package, ChevronDown, ChevronUp, FileText, CreditCard, File, Pencil, Trash2, Square, Circle, TreeDeciduous, Grid, RotateCw, Plus } from "lucide-react";
+import FinancingSection from "./FinancingSection";
 
 const fmt = (n?: number | null, digits = 0) =>
   typeof n === "number" && Number.isFinite(n)
@@ -3652,31 +3653,25 @@ export default function ProposalWorkspace({
   };
 
   const renderPaymentsTab = () => {
+    if (!customer) {
+      return (
+        <div style={{ padding: 20, maxWidth: 1200, margin: "0 auto" }}>
+          <div style={{ background: "#fff", borderRadius: 12, padding: 24, boxShadow: "0 1px 3px rgba(0,0,0,0.1)" }}>
+            <div style={{ fontSize: 18, fontWeight: 600, color: "#111827", marginBottom: 16 }}>
+              Contract & Financing
+            </div>
+            <div style={{ color: "#6b7280", fontSize: 14 }}>
+              Loading customer information...
+            </div>
+          </div>
+        </div>
+      );
+    }
+
     return (
       <div style={{ padding: 20, maxWidth: 1200, margin: "0 auto" }}>
         <div style={{ background: "#fff", borderRadius: 12, padding: 24, boxShadow: "0 1px 3px rgba(0,0,0,0.1)" }}>
-          <div style={{ fontSize: 18, fontWeight: 600, color: "#111827", marginBottom: 16 }}>
-            Payment Options
-          </div>
-
-          {financingOptions && financingOptions.length > 0 ? (
-            <div style={{ display: "grid", gap: 16 }}>
-              {financingOptions.map((option: any) => (
-                <div key={option.id} style={{ padding: 16, border: "1px solid #e5e7eb", borderRadius: 8 }}>
-                  <div style={{ fontSize: 16, fontWeight: 600, color: "#111827", marginBottom: 8 }}>
-                    {option.lender_name} - {option.product_name}
-                  </div>
-                  <div style={{ fontSize: 14, color: "#6b7280" }}>
-                    Term: {option.term_years} years | APR: {option.apr}%
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div style={{ color: "#6b7280", fontSize: 14 }}>
-              No financing options configured. Contact administrator to set up payment options.
-            </div>
-          )}
+          <FinancingSection customer={customer} />
         </div>
       </div>
     );
