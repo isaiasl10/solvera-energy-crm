@@ -2344,6 +2344,36 @@ export default function ProposalWorkspace({
     );
   };
 
+  const electricityInitialData = useMemo(
+    () => ({ annual_consumption: proposalDraft.annual_consumption ?? null }),
+    [proposalDraft.annual_consumption]
+  );
+
+  const electricityRateInitialData = useMemo(
+    () => ({
+      utility_company: proposalDraft.utility_company ?? null,
+      electricity_rate: proposalDraft.electricity_rate ?? null,
+    }),
+    [proposalDraft.utility_company, proposalDraft.electricity_rate]
+  );
+
+  const pricingInitialData = useMemo(
+    () => ({
+      total_price: proposalDraft.total_price ?? null,
+      price_per_watt: proposalDraft.price_per_watt ?? null,
+    }),
+    [proposalDraft.total_price, proposalDraft.price_per_watt]
+  );
+
+  const cashPaymentInitialData = useMemo(
+    () => ({
+      cash_deposit: proposalDraft.cash_deposit ?? null,
+      cash_second_payment: proposalDraft.cash_second_payment ?? null,
+      cash_final_payment: proposalDraft.cash_final_payment ?? null,
+    }),
+    [proposalDraft.cash_deposit, proposalDraft.cash_second_payment, proposalDraft.cash_final_payment]
+  );
+
   const renderManageTab = () => {
     const panelModel = panelModels.find((m) => m.id === selectedPanelModelId);
 
@@ -2405,16 +2435,13 @@ export default function ProposalWorkspace({
       <CollapsibleSection id="electricity" icon={Zap} title="Electricity Usage and Rate">
         <form onSubmit={(e) => e.preventDefault()}>
           <ElectricityUsageInputs
-            initialData={{ annual_consumption: proposalDraft.annual_consumption ?? null }}
+            initialData={electricityInitialData}
             onChange={handleElectricityChange}
           />
 
           <div style={{ marginTop: 16 }}>
             <ElectricityRateInputs
-              initialData={{
-                utility_company: proposalDraft.utility_company ?? null,
-                electricity_rate: proposalDraft.electricity_rate ?? null,
-              }}
+              initialData={electricityRateInitialData}
               onChange={handleElectricityRateChange}
             />
           </div>
@@ -2772,10 +2799,7 @@ export default function ProposalWorkspace({
 
       <CollapsibleSection id="pricing" icon={DollarSign} title="Pricing Details">
         <PricingDetailsInputs
-          initialData={{
-            total_price: proposalDraft.total_price ?? null,
-            price_per_watt: proposalDraft.price_per_watt ?? null,
-          }}
+          initialData={pricingInitialData}
           onChange={handlePricingChange}
           systemSummary={systemSummary}
           salesRepRedline={salesRep?.ppw_redline}
@@ -3020,11 +3044,7 @@ export default function ProposalWorkspace({
               Cash Payment Schedule
             </div>
             <CashPaymentInputs
-              initialData={{
-                cash_deposit: proposalDraft.cash_deposit ?? null,
-                cash_second_payment: proposalDraft.cash_second_payment ?? null,
-                cash_final_payment: proposalDraft.cash_final_payment ?? null,
-              }}
+              initialData={cashPaymentInitialData}
               onChange={handleCashPaymentChange}
             />
             <div style={{ marginTop: 12, fontSize: 11, color: "#6b7280" }}>
@@ -3279,7 +3299,7 @@ export default function ProposalWorkspace({
           <span style={{ fontSize: 11, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.5px" }}>Panel Tools</span>
           <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
             <button
-              onClick={() => { alert("FILL ROOF CLICKED"); setToolMode(toolMode === "fill-roof" ? "none" : "fill-roof"); }}
+              onClick={() => setToolMode(toolMode === "fill-roof" ? "none" : "fill-roof")}
               disabled={!selectedPanelModelId}
               title="Fill Roof - Click on a roof plane to automatically fill it with panels"
               style={{
@@ -3303,7 +3323,7 @@ export default function ProposalWorkspace({
             </button>
 
             <button
-              onClick={() => { alert("ADD PANEL CLICKED"); setToolMode(toolMode === "add-panel" ? "none" : "add-panel"); }}
+              onClick={() => setToolMode(toolMode === "add-panel" ? "none" : "add-panel")}
               disabled={!selectedPanelModelId}
               title="Add Panel - Click on the map to place individual panels"
               style={{
