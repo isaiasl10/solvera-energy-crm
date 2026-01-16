@@ -485,7 +485,7 @@ export default function SubcontractingIntake() {
                       <option value="">Select a contractor...</option>
                       {contractors.map(contractor => (
                         <option key={contractor.id} value={contractor.id}>
-                          {contractor.company_name} {contractor.ppw ? `($${contractor.ppw.toFixed(2)}/kW)` : ''}
+                          {contractor.company_name} {contractor.ppw ? `($${contractor.ppw.toFixed(2)}/W)` : ''}
                         </option>
                       ))}
                     </select>

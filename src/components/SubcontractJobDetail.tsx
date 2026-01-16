@@ -160,7 +160,7 @@ export default function SubcontractJobDetail({ jobId, onClose, onUpdate }: Subco
   const calculateGrossRevenue = () => {
     const systemSize = parseFloat(formData.system_size_kw) || 0;
     const ppw = parseFloat(formData.ppw) || 0;
-    return systemSize * ppw;
+    return systemSize * ppw * 1000;
   };
 
   const calculateAddersTotal = () => {
@@ -217,7 +217,7 @@ export default function SubcontractJobDetail({ jobId, onClose, onUpdate }: Subco
     yPos += 7;
 
     doc.setFontSize(10);
-    doc.text(`System Price (${job.ppw || 0} $/kW):`, 20, yPos);
+    doc.text(`System Price (${job.ppw || 0} $/W):`, 20, yPos);
     doc.text(`$${(job.gross_revenue || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, 160, yPos, { align: 'right' });
     yPos += 7;
 
@@ -482,7 +482,7 @@ export default function SubcontractJobDetail({ jobId, onClose, onUpdate }: Subco
                     color: '#374151',
                     marginBottom: '8px',
                   }}>
-                    Price ($/kW) *
+                    Price ($/W) *
                   </label>
                   <input
                     type="number"
@@ -774,7 +774,7 @@ export default function SubcontractJobDetail({ jobId, onClose, onUpdate }: Subco
                 <div>
                   <h4 style={{ fontSize: '14px', fontWeight: 600, marginBottom: '12px' }}>Invoice Total:</h4>
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                    <span style={{ fontSize: '14px' }}>System Price ({job.ppw} $/kW):</span>
+                    <span style={{ fontSize: '14px' }}>System Price ({job.ppw} $/W):</span>
                     <span style={{ fontSize: '14px', fontWeight: 600 }}>
                       ${(job.gross_revenue || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}
                     </span>

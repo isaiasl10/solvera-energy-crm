@@ -1,6 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '../lib/supabase';
+import { loadGoogleMaps } from '../lib/loadGoogleMaps';
 import { Building2, Plus, X, Pencil, Trash2, DollarSign, Mail, Phone, MapPin } from 'lucide-react';
+
+interface Adder {
+  name: string;
+  amount: number;
+}
 
 interface Contractor {
   id: string;
@@ -9,7 +15,7 @@ interface Contractor {
   phone_number: string | null;
   email: string | null;
   ppw: number | null;
-  adders: string[];
+  adders: Adder[];
   notes: string | null;
   created_at: string;
 }
@@ -20,11 +26,8 @@ interface ContractorFormData {
   phone_number: string;
   email: string;
   ppw: string;
-  adders: string[];
   notes: string;
 }
-
-const AVAILABLE_ADDERS = ['FSU', 'MBE', 'Battery', 'EV Charger', 'Main Panel Upgrade'];
 
 export default function ContractorManagement() {
   const [contractors, setContractors] = useState<Contractor[]>([]);
@@ -32,19 +35,58 @@ export default function ContractorManagement() {
   const [showModal, setShowModal] = useState(false);
   const [editingContractor, setEditingContractor] = useState<Contractor | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [adders, setAdders] = useState<Adder[]>([]);
+  const [newAdderName, setNewAdderName] = useState('');
+  const [newAdderAmount, setNewAdderAmount] = useState('');
   const [formData, setFormData] = useState<ContractorFormData>({
     company_name: '',
     address: '',
     phone_number: '',
     email: '',
     ppw: '',
-    adders: [],
     notes: '',
   });
+
+  const addressInputRef = useRef<HTMLInputElement>(null);
+  const autocompleteRef = useRef<google.maps.places.Autocomplete | null>(null);
 
   useEffect(() => {
     loadContractors();
   }, []);
+
+  useEffect(() => {
+    if (showModal && addressInputRef.current) {
+      initializeAutocomplete();
+    }
+  }, [showModal]);
+
+  const initializeAutocomplete = async () => {
+    try {
+      const google = await loadGoogleMaps();
+
+      if (addressInputRef.current && !autocompleteRef.current) {
+        autocompleteRef.current = new google.maps.places.Autocomplete(
+          addressInputRef.current,
+          {
+            componentRestrictions: { country: 'us' },
+            fields: ['formatted_address'],
+          }
+        );
+
+        autocompleteRef.current.addListener('place_changed', () => {
+          const place = autocompleteRef.current?.getPlace();
+          if (place && place.formatted_address) {
+            setFormData(prev => ({ ...prev, address: place.formatted_address || '' }));
+          }
+        });
+      }
+    } catch (error: any) {
+      console.error('Error initializing Google Maps autocomplete:', error);
+      if (error?.message?.includes('API key')) {
+        console.warn('Google Maps API key is not configured. Address autocomplete will not be available.');
+      }
+    }
+  };
 
   const loadContractors = async () => {
     try {
@@ -71,9 +113,9 @@ export default function ContractorManagement() {
         phone_number: contractor.phone_number || '',
         email: contractor.email || '',
         ppw: contractor.ppw?.toString() || '',
-        adders: contractor.adders || [],
         notes: contractor.notes || '',
       });
+      setAdders(contractor.adders || []);
     } else {
       setEditingContractor(null);
       setFormData({
@@ -82,10 +124,12 @@ export default function ContractorManagement() {
         phone_number: '',
         email: '',
         ppw: '',
-        adders: [],
         notes: '',
       });
+      setAdders([]);
     }
+    setNewAdderName('');
+    setNewAdderAmount('');
     setShowModal(true);
   };
 
@@ -98,9 +142,23 @@ export default function ContractorManagement() {
       phone_number: '',
       email: '',
       ppw: '',
-      adders: [],
       notes: '',
     });
+    setAdders([]);
+    setNewAdderName('');
+    setNewAdderAmount('');
+  };
+
+  const handleAddAdder = () => {
+    if (newAdderName.trim() && newAdderAmount) {
+      setAdders([...adders, { name: newAdderName.trim(), amount: parseFloat(newAdderAmount) }]);
+      setNewAdderName('');
+      setNewAdderAmount('');
+    }
+  };
+
+  const handleRemoveAdder = (index: number) => {
+    setAdders(adders.filter((_, i) => i !== index));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -114,7 +172,7 @@ export default function ContractorManagement() {
         phone_number: formData.phone_number || null,
         email: formData.email || null,
         ppw: formData.ppw ? parseFloat(formData.ppw) : null,
-        adders: formData.adders,
+        adders: adders,
         notes: formData.notes || null,
       };
 
@@ -160,15 +218,6 @@ export default function ContractorManagement() {
       console.error('Error deleting contractor:', error);
       alert(`Error deleting contractor: ${error.message}`);
     }
-  };
-
-  const toggleAdder = (adder: string) => {
-    setFormData(prev => ({
-      ...prev,
-      adders: prev.adders.includes(adder)
-        ? prev.adders.filter(a => a !== adder)
-        : [...prev.adders, adder],
-    }));
   };
 
   if (loading) {
@@ -309,7 +358,7 @@ export default function ContractorManagement() {
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <DollarSign size={16} style={{ color: '#6b7280' }} />
                     <span style={{ fontSize: '14px', color: '#1a1a1a', fontWeight: 600 }}>
-                      ${contractor.ppw.toFixed(2)}/kW
+                      ${contractor.ppw.toFixed(2)}/W
                     </span>
                   </div>
                 )}
@@ -339,9 +388,9 @@ export default function ContractorManagement() {
                     Pays for Adders:
                   </p>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-                    {contractor.adders.map(adder => (
+                    {contractor.adders.map((adder, index) => (
                       <span
-                        key={adder}
+                        key={index}
                         style={{
                           padding: '4px 12px',
                           backgroundColor: '#dbeafe',
@@ -351,7 +400,7 @@ export default function ContractorManagement() {
                           fontWeight: 500,
                         }}
                       >
-                        {adder}
+                        {adder.name}: ${adder.amount.toFixed(2)}
                       </span>
                     ))}
                   </div>
@@ -446,14 +495,14 @@ export default function ContractorManagement() {
 
                 <div>
                   <label style={{ display: 'block', fontSize: '14px', fontWeight: 600, color: '#1a1a1a', marginBottom: '8px' }}>
-                    Price Per Kilowatt ($/kW)
+                    Price Per Watt ($/W)
                   </label>
                   <input
                     type="number"
                     step="0.01"
                     value={formData.ppw}
                     onChange={(e) => setFormData({ ...formData, ppw: e.target.value })}
-                    placeholder="300.00"
+                    placeholder="0.30"
                     style={{
                       width: '100%',
                       padding: '10px 12px',
@@ -466,28 +515,87 @@ export default function ContractorManagement() {
 
                 <div>
                   <label style={{ display: 'block', fontSize: '14px', fontWeight: 600, color: '#1a1a1a', marginBottom: '8px' }}>
-                    Adders Contractor Pays For
+                    Adders
                   </label>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                    {AVAILABLE_ADDERS.map(adder => (
-                      <button
-                        key={adder}
-                        type="button"
-                        onClick={() => toggleAdder(adder)}
-                        style={{
-                          padding: '8px 16px',
-                          backgroundColor: formData.adders.includes(adder) ? '#2563eb' : '#f3f4f6',
-                          color: formData.adders.includes(adder) ? 'white' : '#6b7280',
-                          border: 'none',
+
+                  {adders.length > 0 && (
+                    <div style={{ marginBottom: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                      {adders.map((adder, index) => (
+                        <div key={index} style={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                          padding: '8px 12px',
+                          backgroundColor: '#f3f4f6',
                           borderRadius: '6px',
-                          fontSize: '14px',
-                          fontWeight: 500,
-                          cursor: 'pointer',
-                        }}
-                      >
-                        {adder}
-                      </button>
-                    ))}
+                        }}>
+                          <span style={{ fontSize: '14px', color: '#1a1a1a' }}>
+                            {adder.name}: ${adder.amount.toFixed(2)}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveAdder(index)}
+                            style={{
+                              padding: '4px 8px',
+                              backgroundColor: '#fee2e2',
+                              color: '#dc2626',
+                              border: 'none',
+                              borderRadius: '4px',
+                              fontSize: '12px',
+                              cursor: 'pointer',
+                            }}
+                          >
+                            Remove
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <input
+                      type="text"
+                      placeholder="Adder name (e.g. FSU)"
+                      value={newAdderName}
+                      onChange={(e) => setNewAdderName(e.target.value)}
+                      style={{
+                        flex: 2,
+                        padding: '10px 12px',
+                        border: '1px solid #d1d5db',
+                        borderRadius: '6px',
+                        fontSize: '14px',
+                      }}
+                    />
+                    <input
+                      type="number"
+                      step="0.01"
+                      placeholder="Amount"
+                      value={newAdderAmount}
+                      onChange={(e) => setNewAdderAmount(e.target.value)}
+                      style={{
+                        flex: 1,
+                        padding: '10px 12px',
+                        border: '1px solid #d1d5db',
+                        borderRadius: '6px',
+                        fontSize: '14px',
+                      }}
+                    />
+                    <button
+                      type="button"
+                      onClick={handleAddAdder}
+                      style={{
+                        padding: '10px 16px',
+                        backgroundColor: '#2563eb',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '6px',
+                        fontSize: '14px',
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                      }}
+                    >
+                      Add
+                    </button>
                   </div>
                 </div>
 
@@ -532,6 +640,7 @@ export default function ContractorManagement() {
                     Billing Address
                   </label>
                   <input
+                    ref={addressInputRef}
                     type="text"
                     value={formData.address}
                     onChange={(e) => setFormData({ ...formData, address: e.target.value })}
