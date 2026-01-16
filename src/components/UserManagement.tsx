@@ -319,25 +319,32 @@ export default function UserManagement() {
     setError(null);
 
     try {
-      const newPassword = generateSecurePassword(16);
+      const session = await supabase.auth.getSession();
+      const token = session.data.session?.access_token;
 
-      const { error: updateError } = await supabase.auth.admin.updateUserById(userId, {
-        password: newPassword
+      if (!token) {
+        throw new Error('No active session');
+      }
+
+      const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/reset-user-password`;
+
+      const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({ userId }),
       });
 
-      if (updateError) throw updateError;
+      const result = await response.json();
 
-      const { error: appUserError } = await supabase
-        .from('app_users')
-        .update({
-          first_login: true,
-          password_last_changed: null
-        })
-        .eq('id', userId);
+      if (!response.ok) {
+        console.error('Edge Function error:', result);
+        throw new Error(result.error || 'Failed to reset password');
+      }
 
-      if (appUserError) throw appUserError;
-
-      setResetPasswordResult({ userId, password: newPassword });
+      setResetPasswordResult({ userId, password: result.password });
       await fetchUsers();
     } catch (err) {
       console.error('Error resetting password:', err);
