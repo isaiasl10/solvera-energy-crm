@@ -47,9 +47,14 @@ export default function ProposalPresentation({ proposalId }: ProposalPresentatio
           )
         `)
         .eq('id', proposalId)
-        .single();
+        .maybeSingle();
 
       if (proposalError) throw proposalError;
+
+      if (!proposal) {
+        console.error('Proposal not found with ID:', proposalId);
+        throw new Error('Proposal not found');
+      }
 
       const { data: roofPlanes } = await supabase
         .from('proposal_roof_planes')

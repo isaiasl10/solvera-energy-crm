@@ -197,14 +197,23 @@ CustomerFormInputs.displayName = 'CustomerFormInputs';
 const ElectricityUsageInputs = React.memo(({
   initialData,
   onChange,
+  proposalId,
 }: {
-  initialData: { annual_consumption: number | null };
-  onChange: (data: { annual_consumption: number | null }) => void;
+  initialData: {
+    usage_data_source: string | null;
+    annual_consumption: number | null;
+    monthly_kwh: number[] | null;
+    utility_bill_name: string | null;
+    utility_bill_path: string | null;
+  };
+  onChange: (data: any) => void;
+  proposalId: string;
 }) => {
   const renderCount = useRef(0);
   renderCount.current++;
 
   const [localData, setLocalData] = useState(initialData);
+  const [uploading, setUploading] = useState(false);
   const dataRef = useRef(localData);
 
   useEffect(() => {
@@ -212,7 +221,16 @@ const ElectricityUsageInputs = React.memo(({
     dataRef.current = initialData;
   }, [initialData]);
 
-  const handleChange = useCallback((value: string) => {
+  const handleDataSourceChange = useCallback((value: string) => {
+    setLocalData((prev: any) => {
+      const updated = { ...prev, usage_data_source: value };
+      dataRef.current = updated;
+      onChange(updated);
+      return updated;
+    });
+  }, [onChange]);
+
+  const handleAnnualChange = useCallback((value: string) => {
     setLocalData((prev: any) => {
       const updated = { ...prev, annual_consumption: value === "" ? null : Number(value) };
       dataRef.current = updated;
@@ -220,19 +238,77 @@ const ElectricityUsageInputs = React.memo(({
     });
   }, []);
 
+  const handleMonthlyChange = useCallback((index: number, value: string) => {
+    setLocalData((prev: any) => {
+      const monthlyKwh = prev.monthly_kwh || Array(12).fill(0);
+      const updated = [...monthlyKwh];
+      updated[index] = value === "" ? 0 : Number(value);
+      const result = { ...prev, monthly_kwh: updated };
+      dataRef.current = result;
+      return result;
+    });
+  }, []);
+
+  const handleFileUpload = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploading(true);
+    try {
+      const fileExt = file.name.split('.').pop();
+      const filePath = `${proposalId}/${Date.now()}.${fileExt}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('utility-bills')
+        .upload(filePath, file);
+
+      if (uploadError) throw uploadError;
+
+      const updated = {
+        ...dataRef.current,
+        utility_bill_path: filePath,
+        utility_bill_name: file.name,
+        utility_bill_uploaded_at: new Date().toISOString(),
+      };
+
+      await supabase
+        .from('proposals')
+        .update({
+          utility_bill_path: filePath,
+          utility_bill_name: file.name,
+          utility_bill_uploaded_at: new Date().toISOString(),
+        })
+        .eq('id', proposalId);
+
+      setLocalData(updated);
+      dataRef.current = updated;
+      onChange(updated);
+    } catch (error) {
+      console.error('Upload error:', error);
+      alert('Failed to upload file');
+    } finally {
+      setUploading(false);
+    }
+  }, [proposalId, onChange]);
+
   const handleBlur = useCallback(() => {
     onChange(dataRef.current);
   }, [onChange]);
 
   console.log("ElectricityUsageInputs render", renderCount.current);
 
+  const dataSource = localData.usage_data_source || 'annual';
+  const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
   return (
-    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-      <div>
+    <div>
+      <div style={{ marginBottom: 12 }}>
         <label style={{ display: "block", fontSize: 11, fontWeight: 600, color: "#374151", marginBottom: 6 }}>
           Data source
         </label>
         <select
+          value={dataSource}
+          onChange={(e) => handleDataSourceChange(e.target.value)}
           style={{
             width: "100%",
             padding: "7px 10px",
@@ -243,33 +319,101 @@ const ElectricityUsageInputs = React.memo(({
             color: "#111827",
           }}
         >
-          <option>Annual Consumption (kWh)</option>
-          <option>Monthly Usage</option>
-          <option>Utility Bill</option>
+          <option value="annual">Annual Consumption (kWh)</option>
+          <option value="monthly">Monthly Usage</option>
+          <option value="utility_bill">Utility Bill</option>
         </select>
       </div>
 
-      <div>
-        <label style={{ display: "block", fontSize: 11, fontWeight: 600, color: "#374151", marginBottom: 6 }}>
-          Annual kWh
-        </label>
-        <input
-          type="number"
-          value={localData.annual_consumption ?? ""}
-          onChange={(e) => handleChange(e.target.value)}
-          onBlur={handleBlur}
-          placeholder="23000"
-          style={{
-            width: "100%",
-            padding: "7px 10px",
-            background: "#fff",
-            border: "1px solid #d1d5db",
-            borderRadius: 4,
-            fontSize: 13,
-            color: "#111827",
-          }}
-        />
-      </div>
+      {dataSource === 'annual' && (
+        <div>
+          <label style={{ display: "block", fontSize: 11, fontWeight: 600, color: "#374151", marginBottom: 6 }}>
+            Annual kWh
+          </label>
+          <input
+            type="number"
+            value={localData.annual_consumption ?? ""}
+            onChange={(e) => handleAnnualChange(e.target.value)}
+            onBlur={handleBlur}
+            placeholder="23000"
+            style={{
+              width: "100%",
+              padding: "7px 10px",
+              background: "#fff",
+              border: "1px solid #d1d5db",
+              borderRadius: 4,
+              fontSize: 13,
+              color: "#111827",
+            }}
+          />
+        </div>
+      )}
+
+      {dataSource === 'monthly' && (
+        <div>
+          <label style={{ display: "block", fontSize: 11, fontWeight: 600, color: "#374151", marginBottom: 6 }}>
+            Monthly Usage (kWh)
+          </label>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8 }}>
+            {monthNames.map((month, idx) => (
+              <div key={month}>
+                <label style={{ display: "block", fontSize: 10, color: "#6b7280", marginBottom: 4 }}>
+                  {month}
+                </label>
+                <input
+                  type="number"
+                  value={(localData.monthly_kwh?.[idx] ?? "")}
+                  onChange={(e) => handleMonthlyChange(idx, e.target.value)}
+                  onBlur={handleBlur}
+                  placeholder="0"
+                  style={{
+                    width: "100%",
+                    padding: "6px 8px",
+                    background: "#fff",
+                    border: "1px solid #d1d5db",
+                    borderRadius: 4,
+                    fontSize: 12,
+                    color: "#111827",
+                  }}
+                />
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {dataSource === 'utility_bill' && (
+        <div>
+          <label style={{ display: "block", fontSize: 11, fontWeight: 600, color: "#374151", marginBottom: 6 }}>
+            Upload Utility Bill
+          </label>
+          <input
+            type="file"
+            accept=".pdf,.jpg,.jpeg,.png"
+            onChange={handleFileUpload}
+            disabled={uploading}
+            style={{
+              width: "100%",
+              padding: "7px 10px",
+              background: "#fff",
+              border: "1px solid #d1d5db",
+              borderRadius: 4,
+              fontSize: 13,
+              color: "#111827",
+            }}
+          />
+          {uploading && (
+            <div style={{ fontSize: 11, color: "#6b7280", marginTop: 4 }}>
+              Uploading...
+            </div>
+          )}
+          {localData.utility_bill_name && !uploading && (
+            <div style={{ fontSize: 11, color: "#059669", marginTop: 4 }}>
+              ✓ {localData.utility_bill_name}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 });
@@ -833,11 +977,15 @@ export default function ProposalWorkspace({
     setDraftCustomer(data);
   }, []);
 
-  const handleElectricityChange = useCallback((data: { annual_consumption: number | null }) => {
+  const handleElectricityChange = useCallback((data: any) => {
     isDirtyRef.current = true;
     setProposalDraft((prev: any) => ({
       ...prev,
+      usage_data_source: data.usage_data_source,
       annual_consumption: data.annual_consumption,
+      monthly_kwh: data.monthly_kwh,
+      utility_bill_name: data.utility_bill_name,
+      utility_bill_path: data.utility_bill_path,
     }));
   }, []);
 
@@ -887,6 +1035,7 @@ export default function ProposalWorkspace({
 
   const [activeTab, setActiveTab] = useState<string>("manage");
   const lastLoadedProposalId = useRef<string | null>(null);
+  const [meterFeeDraft, setMeterFeeDraft] = useState<string>("");
 
   const [roofPlanes, setRoofPlanes] = useState<RoofPlaneRow[]>([]);
   const [obstructions, setObstructions] = useState<ObstructionRow[]>([]);
@@ -1052,8 +1201,20 @@ export default function ProposalWorkspace({
   }, [panels, panelModels, proposal, proposalDraft, adderCalculations, batteries]);
 
   const electricityInitialData = useMemo(
-    () => ({ annual_consumption: proposalDraft.annual_consumption ?? null }),
-    [proposalDraft.annual_consumption]
+    () => ({
+      usage_data_source: proposalDraft.usage_data_source ?? 'annual',
+      annual_consumption: proposalDraft.annual_consumption ?? null,
+      monthly_kwh: proposalDraft.monthly_kwh ?? null,
+      utility_bill_name: proposalDraft.utility_bill_name ?? null,
+      utility_bill_path: proposalDraft.utility_bill_path ?? null,
+    }),
+    [
+      proposalDraft.usage_data_source,
+      proposalDraft.annual_consumption,
+      proposalDraft.monthly_kwh,
+      proposalDraft.utility_bill_name,
+      proposalDraft.utility_bill_path,
+    ]
   );
 
   const electricityRateInitialData = useMemo(
@@ -1245,6 +1406,7 @@ export default function ProposalWorkspace({
       if (proposalData) {
         setProposal(proposalData);
         setProposalDraft(proposalData);
+        setMeterFeeDraft(proposalData.meter_fee?.toString() ?? "");
 
         if (proposalData.customer_id) {
           const { data: customerData } = await supabase
@@ -2499,6 +2661,7 @@ export default function ProposalWorkspace({
           <ElectricityUsageInputs
             initialData={electricityInitialData}
             onChange={handleElectricityChange}
+            proposalId={proposalId}
           />
 
           <div style={{ marginTop: 16 }}>
@@ -2515,9 +2678,12 @@ export default function ProposalWorkspace({
             <input
               type="number"
               step="0.01"
-              value={proposalDraft.meter_fee ?? ""}
+              value={meterFeeDraft}
               onChange={(e) => {
-                const value = e.target.value ? parseFloat(e.target.value) : null;
+                setMeterFeeDraft(e.target.value);
+              }}
+              onBlur={() => {
+                const value = meterFeeDraft ? parseFloat(meterFeeDraft) : null;
                 setProposalDraft((p: any) => ({ ...p, meter_fee: value }));
               }}
               placeholder="0.00"
@@ -2542,7 +2708,11 @@ export default function ProposalWorkspace({
               const { error } = await supabase
                 .from("proposals")
                 .update(sanitizePatch({
+                  usage_data_source: proposalDraft.usage_data_source ?? null,
                   annual_consumption: proposalDraft.annual_consumption ?? null,
+                  monthly_kwh: proposalDraft.monthly_kwh ?? null,
+                  utility_bill_name: proposalDraft.utility_bill_name ?? null,
+                  utility_bill_path: proposalDraft.utility_bill_path ?? null,
                   utility_company: proposalDraft.utility_company ?? null,
                   electricity_rate: proposalDraft.electricity_rate ?? null,
                   meter_fee: proposalDraft.meter_fee ?? null,
