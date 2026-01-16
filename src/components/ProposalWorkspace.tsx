@@ -1411,6 +1411,14 @@ export default function ProposalWorkspace({
           .single();
 
         if (!error && data) {
+          const bounds = google.maps.geometry.spherical.computeArea(path.map((p: any) => new google.maps.LatLng(p.lat, p.lng)));
+          const areaSqFt = bounds * 10.764;
+          console.log("[ROOF] created", {
+            id: data.id,
+            pointsCount: path.length,
+            bounds: { minLat: Math.min(...path.map((p: any) => p.lat)), maxLat: Math.max(...path.map((p: any) => p.lat)), minLng: Math.min(...path.map((p: any) => p.lng)), maxLng: Math.max(...path.map((p: any) => p.lng)) },
+            areaSqFt: Math.round(areaSqFt)
+          });
           setRoofPlanes((prev) => [...prev, data]);
         }
 
@@ -1484,13 +1492,19 @@ export default function ProposalWorkspace({
             });
 
             if (clickedRoof) {
+              const model = panelModels.find(m => m.id === currentPanelModelId);
+              console.log("[PANEL] Add click", {
+                selectedRoofPlaneId: clickedRoof.id,
+                panelModel: model ? `${model.brand} ${model.model}` : currentPanelModelId,
+                orientation: panelOrientation
+              });
               addPanelAt(lat, lng, clickedRoof.id);
             } else {
-              console.log("MAP CLICK: Clicked outside of any roof plane");
+              console.log("[PANEL] blocked: clicked outside of any roof plane");
               alert("Please click inside a roof plane");
             }
           } else {
-            console.log("MAP CLICK: Missing panelModelId for add-panel");
+            console.log("[PANEL] blocked: no panel model selected");
             alert("Please select a panel model first");
           }
         } else if (currentToolMode === "circle" || currentToolMode === "rect" || currentToolMode === "tree") {
@@ -1685,6 +1699,7 @@ export default function ProposalWorkspace({
       roofPolysRef.current.set(plane.id, poly);
 
       google.maps.event.addListener(poly, "click", () => {
+        console.log("[ROOF] selected", { selectedRoofPlaneId: plane.id });
         setSelectedRoofId(plane.id);
       });
     });
@@ -1829,9 +1844,14 @@ export default function ProposalWorkspace({
 
     const google = (window as any).google;
 
+    console.log("[PANEL] Rendering panels on map", { panelCount: panels.length });
+
     panels.forEach((panel) => {
       const model = panelModels.find((m) => m.id === panel.panel_model_id);
-      if (!model) return;
+      if (!model) {
+        console.warn("[PANEL] Cannot render panel - model not found", { panelId: panel.id, modelId: panel.panel_model_id });
+        return;
+      }
 
       const lengthMeters = (panel.is_portrait ? model.length_mm : model.width_mm) / 1000;
       const widthMeters = (panel.is_portrait ? model.width_mm : model.length_mm) / 1000;
@@ -1992,9 +2012,14 @@ export default function ProposalWorkspace({
     }
   };
 
-  const addPanelAt = (lat: number, lng: number, roofPlaneId?: string) => {
+  const addPanelAt = async (lat: number, lng: number, roofPlaneId?: string) => {
+    console.log("[PANEL] addPanel enter", { lat, lng, roofPlaneId, selectedPanelModelId, panelOrientation });
+
     const roofId = roofPlaneId || selectedRoofId;
-    if (!roofId || !selectedPanelModelId) return;
+    if (!roofId || !selectedPanelModelId) {
+      console.log("[PANEL] blocked: missing roofId or panelModelId", { roofId, selectedPanelModelId });
+      return;
+    }
 
     const newPanel = {
       id: `temp-${Date.now()}-${Math.random()}`,
@@ -2007,25 +2032,52 @@ export default function ProposalWorkspace({
       is_portrait: panelOrientation === "portrait",
     };
 
+    console.log("[PANEL] adding panel to UI immediately", newPanel);
     setPanels((prev) => [...prev, newPanel]);
+
+    // Save to database in background
+    const { data, error } = await supabase
+      .from("proposal_panels")
+      .insert([newPanel])
+      .select()
+      .maybeSingle();
+
+    if (error) {
+      console.error("[PANEL] database save failed", error);
+    } else if (data) {
+      console.log("[PANEL] added to database", { panelId: data.id, roofPlaneId: roofId, centerLatLng: { lat, lng } });
+      // Update with real ID from database
+      setPanels((prev) => prev.map(p => p.id === newPanel.id ? data : p));
+    }
   };
 
   const fillRoofWithPanels = async (roof: any) => {
-    if (!roof || !selectedPanelModelId) return;
+    console.log("[PANEL] Fill click", { selectedRoofPlaneId: roof.id, roofPlaneArea: roof.area_sqft });
+
+    if (!roof || !selectedPanelModelId) {
+      console.log("[PANEL] blocked: no roof or no panel model selected", { roof: !!roof, selectedPanelModelId });
+      return;
+    }
 
     setBusy("Auto-filling panels...");
 
     const model = panelModels.find((m) => m.id === selectedPanelModelId);
     if (!model) {
+      console.log("[PANEL] blocked: panel model not found in list", { selectedPanelModelId, availableModels: panelModels.length });
       setBusy(null);
       return;
     }
 
+    console.log("[PANEL] Using model", { brand: model.brand, model: model.model, watts: model.watts, length_mm: model.length_mm, width_mm: model.width_mm });
+
     const lengthMeters = (panelOrientation === "portrait" ? model.length_mm : model.width_mm) / 1000;
     const widthMeters = (panelOrientation === "portrait" ? model.width_mm : model.length_mm) / 1000;
 
+    console.log("[PANEL] Panel dimensions", { lengthMeters, widthMeters, orientation: panelOrientation });
+
     const roofPath = roof.path;
     if (roofPath.length < 3) {
+      console.log("[PANEL] blocked: invalid roof polygon", { pointCount: roofPath.length });
       setBusy(null);
       return;
     }
@@ -2048,6 +2100,8 @@ export default function ProposalWorkspace({
     const latStep = latStepMeters / 111320;
     const lngStep = lngStepMeters / (111320 * Math.cos(((minLat + maxLat) / 2) * Math.PI / 180));
 
+    console.log("[PANEL] Grid calculation", { latStep, lngStep, rowSpacing, colSpacing });
+
     const newPanels: any[] = [];
 
     for (let lat = minLat + latStep / 2; lat < maxLat; lat += latStep) {
@@ -2066,6 +2120,7 @@ export default function ProposalWorkspace({
 
         if (allCornersInside) {
           newPanels.push({
+            id: `temp-${Date.now()}-${Math.random()}-${newPanels.length}`,
             proposal_id: proposalId,
             roof_plane_id: roof.id,
             panel_model_id: selectedPanelModelId,
@@ -2078,15 +2133,34 @@ export default function ProposalWorkspace({
       }
     }
 
+    console.log("[PANEL] Fill result", { placedCount: newPanels.length });
+
     if (newPanels.length > 0) {
+      // Add to UI immediately
+      console.log("[PANEL] Adding", newPanels.length, "panels to UI immediately");
+      setPanels((prev) => [...prev, ...newPanels]);
+
+      // Save to database in background
       const { data, error } = await supabase
         .from("proposal_panels")
-        .insert(newPanels)
+        .insert(newPanels.map(({ id, ...panel }) => panel))
         .select();
 
-      if (!error && data) {
-        setPanels((prev) => [...prev, ...data]);
+      if (error) {
+        console.error("[PANEL] Database save failed", error);
+      } else if (data) {
+        console.log("[PANEL] Saved", data.length, "panels to database");
+        // Replace temp IDs with real database IDs
+        setPanels((prev) => {
+          const tempIds = newPanels.map(p => p.id);
+          return prev.map((p, i) => {
+            const tempIndex = tempIds.indexOf(p.id);
+            return tempIndex >= 0 && data[tempIndex] ? data[tempIndex] : p;
+          });
+        });
       }
+    } else {
+      console.log("[PANEL] Fill result: placedCount = 0 (no panels fit in roof plane)");
     }
 
     setBusy(null);
