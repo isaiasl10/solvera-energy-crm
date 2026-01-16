@@ -907,6 +907,7 @@ export default function ProposalWorkspace({
   const [toolMode, setToolMode] = useState<ToolMode>("none");
   const [selectedRoofId, setSelectedRoofId] = useState<string | null>(null);
   const [selectedObstruction, setSelectedObstruction] = useState<ObstructionRow | null>(null);
+  const [toolbarCollapsed, setToolbarCollapsed] = useState<boolean>(false);
 
   const [selectedPanelModelId, setSelectedPanelModelId] = useState<string | null>(null);
   const [panelOrientation, setPanelOrientation] = useState<"portrait" | "landscape">("portrait");
@@ -3086,17 +3087,42 @@ export default function ProposalWorkspace({
 
   const renderSolarDesignTab = () => {
     return (
-    <div style={{ display: "flex", flexDirection: "column", height: "700px", maxHeight: "calc(100vh - 250px)" }}>
+    <div style={{ display: "flex", flexDirection: "column", height: "calc(100vh - 140px)", minHeight: 0 }}>
       <div style={{
+        flex: "0 0 auto",
         background: "linear-gradient(135deg, #1e293b 0%, #334155 100%)",
         borderBottom: "2px solid #0ea5e9",
         boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)",
-        padding: "16px 20px",
+        padding: "12px",
         display: "flex",
         alignItems: "center",
-        gap: 20,
+        gap: 10,
         flexWrap: "wrap",
       }}>
+        <button
+          onClick={() => setToolbarCollapsed(!toolbarCollapsed)}
+          title={toolbarCollapsed ? "Expand Toolbar" : "Collapse Toolbar"}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 6,
+            padding: "7px 12px",
+            background: "rgba(255,255,255,0.1)",
+            color: "#ffffff",
+            border: "1px solid rgba(255,255,255,0.2)",
+            borderRadius: 6,
+            cursor: "pointer",
+            fontWeight: 600,
+            fontSize: 13,
+            transition: "all 0.2s",
+          }}
+        >
+          {toolbarCollapsed ? <ChevronDown size={15} /> : <ChevronUp size={15} />}
+          <span>{toolbarCollapsed ? "Expand" : "Collapse"}</span>
+        </button>
+
+        <div style={{ height: 32, width: 1, background: "rgba(255,255,255,0.2)" }} />
+
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <span style={{ fontSize: 11, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.5px" }}>View</span>
           <button
@@ -3334,10 +3360,12 @@ export default function ProposalWorkspace({
           </div>
         </div>
 
-        <div style={{ height: 32, width: 1, background: "rgba(255,255,255,0.2)" }} />
+        {!toolbarCollapsed && (
+          <>
+            <div style={{ height: 32, width: 1, background: "rgba(255,255,255,0.2)" }} />
 
-        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-          <span style={{ fontSize: 11, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.5px" }}>Panel Configuration</span>
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              <span style={{ fontSize: 11, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.5px" }}>Panel Configuration</span>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
               <label style={{ fontSize: 10, fontWeight: 600, color: "#cbd5e1" }}>Model</label>
@@ -3457,9 +3485,11 @@ export default function ProposalWorkspace({
             </div>
           </div>
         </div>
+          </>
+        )}
       </div>
 
-      <div style={{ display: "flex", flex: 1, overflow: "hidden" }}>
+      <div style={{ display: "flex", flex: "1 1 auto", minHeight: 0, overflow: "hidden" }}>
         <div style={{ flex: 1, position: "relative", background: "#f9fafb" }}>
           {toolMode !== "none" && (
             <div style={{
