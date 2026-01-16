@@ -63,8 +63,11 @@ export default function SubcontractingIntake() {
           }
         });
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error initializing Google Maps autocomplete:', error);
+      if (error?.message?.includes('API key')) {
+        console.warn('Google Maps API key is not configured. Address autocomplete will not be available.');
+      }
     }
   };
 
@@ -107,7 +110,10 @@ export default function SubcontractingIntake() {
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('Database error:', error);
+        throw error;
+      }
 
       setShowAddModal(false);
       setFormData({
@@ -121,9 +127,10 @@ export default function SubcontractingIntake() {
       if (data) {
         setSelectedJobId(data.id);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error creating subcontract job:', error);
-      alert('Error creating subcontract job. Please try again.');
+      const errorMessage = error?.message || 'Unknown error occurred';
+      alert(`Error creating subcontract job: ${errorMessage}\n\nPlease check the console for more details.`);
     } finally {
       setSubmitting(false);
     }

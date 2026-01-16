@@ -1,12 +1,11 @@
-export async function loadGoogleMaps(): Promise<void> {
+export async function loadGoogleMaps(): Promise<typeof google> {
   if (typeof (window as any).google !== 'undefined' && (window as any).google.maps) {
-    return;
+    return (window as any).google;
   }
 
   const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
   if (!apiKey) {
-    console.warn('Google Maps API key not found');
-    return;
+    throw new Error('Google Maps API key not found. Please add VITE_GOOGLE_MAPS_API_KEY to your .env file');
   }
 
   return new Promise((resolve, reject) => {
@@ -14,7 +13,7 @@ export async function loadGoogleMaps(): Promise<void> {
     script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places,drawing,geometry&v=weekly`;
     script.async = true;
     script.defer = true;
-    script.onload = () => resolve();
+    script.onload = () => resolve((window as any).google);
     script.onerror = () => reject(new Error('Failed to load Google Maps'));
     document.head.appendChild(script);
   });
