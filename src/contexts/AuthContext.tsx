@@ -158,6 +158,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
       setUser(null);
+      localStorage.removeItem('currentView');
+      localStorage.removeItem('selectedCustomerId');
+      localStorage.removeItem('customerProjectTab');
+      localStorage.removeItem('selectedProposalId');
+      window.location.reload();
     } catch (error) {
       console.error('Logout error:', error);
     }
