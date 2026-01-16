@@ -141,6 +141,33 @@ export default function SubcontractJobDetail({ jobId, onClose, onUpdate }: Subco
     }
   };
 
+  const handleDelete = async () => {
+    const customerName = job?.subcontract_customer_name || 'this job';
+    if (!confirm(`Are you sure you want to delete ${customerName}? This will remove the job from the system and cannot be undone.`)) {
+      return;
+    }
+
+    try {
+      await supabase
+        .from('scheduling')
+        .update({ is_active: false })
+        .eq('customer_id', jobId);
+
+      const { error } = await supabase
+        .from('customers')
+        .update({ is_active: false })
+        .eq('id', jobId);
+
+      if (error) throw error;
+
+      onUpdate();
+      onClose();
+    } catch (error) {
+      console.error('Error deleting job:', error);
+      alert('Error deleting job');
+    }
+  };
+
   const handleAddAdder = () => {
     if (!newAdder.name || !newAdder.amount) {
       alert('Please enter both name and amount for the adder');
@@ -971,45 +998,66 @@ export default function SubcontractJobDetail({ jobId, onClose, onUpdate }: Subco
           borderTop: '1px solid #e5e7eb',
           display: 'flex',
           gap: '12px',
-          justifyContent: 'flex-end',
+          justifyContent: 'space-between',
         }}>
           <button
-            onClick={onClose}
+            onClick={handleDelete}
             style={{
               padding: '10px 20px',
-              border: '1px solid #d1d5db',
+              border: '1px solid #dc2626',
               background: 'white',
-              color: '#374151',
+              color: '#dc2626',
               borderRadius: '6px',
               fontSize: '14px',
               fontWeight: 600,
               cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
             }}
           >
-            Close
+            <Trash2 size={16} />
+            Delete Job
           </button>
-          {activeTab === 'details' && (
+          <div style={{ display: 'flex', gap: '12px' }}>
             <button
-              onClick={handleSave}
-              disabled={saving}
+              onClick={onClose}
               style={{
                 padding: '10px 20px',
-                border: 'none',
-                background: saving ? '#9ca3af' : 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-                color: 'white',
+                border: '1px solid #d1d5db',
+                background: 'white',
+                color: '#374151',
                 borderRadius: '6px',
                 fontSize: '14px',
                 fontWeight: 600,
-                cursor: saving ? 'not-allowed' : 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
+                cursor: 'pointer',
               }}
             >
-              <Save size={16} />
-              {saving ? 'Saving...' : 'Save Changes'}
+              Close
             </button>
-          )}
+            {activeTab === 'details' && (
+              <button
+                onClick={handleSave}
+                disabled={saving}
+                style={{
+                  padding: '10px 20px',
+                  border: 'none',
+                  background: saving ? '#9ca3af' : 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                  color: 'white',
+                  borderRadius: '6px',
+                  fontSize: '14px',
+                  fontWeight: 600,
+                  cursor: saving ? 'not-allowed' : 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                }}
+              >
+                <Save size={16} />
+                {saving ? 'Saving...' : 'Save Changes'}
+              </button>
+            )}
+          </div>
         </div>
       </div>
     </div>

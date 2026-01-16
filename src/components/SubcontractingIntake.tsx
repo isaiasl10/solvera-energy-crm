@@ -52,6 +52,29 @@ export default function SubcontractingIntake() {
     loadContractors();
   }, []);
 
+  useEffect(() => {
+    const channelName = `subcontracting_${Date.now()}`;
+    const subscription = supabase
+      .channel(channelName)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'customers',
+          filter: 'job_source=eq.subcontract',
+        },
+        () => {
+          loadSubcontractJobs();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(subscription);
+    };
+  }, []);
+
   const loadContractors = async () => {
     try {
       const { data, error } = await supabase
@@ -107,6 +130,7 @@ export default function SubcontractingIntake() {
         .from('customers')
         .select('*')
         .eq('job_source', 'subcontract')
+        .eq('is_active', true)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
