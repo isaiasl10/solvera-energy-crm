@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { X, Save, Plus, Trash2, FileText, Download } from 'lucide-react';
 import jsPDF from 'jspdf';
+import SchedulingSection from './SchedulingSection';
 
 interface ContractorInfo {
   company_name: string;
@@ -47,7 +48,7 @@ export default function SubcontractJobDetail({ jobId, onClose, onUpdate }: Subco
   const [job, setJob] = useState<SubcontractJob | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [activeTab, setActiveTab] = useState<'details' | 'invoice'>('details');
+  const [activeTab, setActiveTab] = useState<'details' | 'invoice' | 'scheduling'>('details');
 
   const [formData, setFormData] = useState({
     system_size_kw: '',
@@ -160,7 +161,7 @@ export default function SubcontractJobDetail({ jobId, onClose, onUpdate }: Subco
   const calculateGrossRevenue = () => {
     const systemSize = parseFloat(formData.system_size_kw) || 0;
     const ppw = parseFloat(formData.ppw) || 0;
-    return systemSize * ppw * 1000;
+    return systemSize * ppw;
   };
 
   const calculateAddersTotal = () => {
@@ -217,7 +218,7 @@ export default function SubcontractJobDetail({ jobId, onClose, onUpdate }: Subco
     yPos += 7;
 
     doc.setFontSize(10);
-    doc.text(`System Price (${job.ppw || 0} $/W):`, 20, yPos);
+    doc.text(`System Price (${job.ppw || 0} $/kW):`, 20, yPos);
     doc.text(`$${(job.gross_revenue || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, 160, yPos, { align: 'right' });
     yPos += 7;
 
@@ -360,6 +361,21 @@ export default function SubcontractJobDetail({ jobId, onClose, onUpdate }: Subco
             <FileText size={16} />
             Invoice
           </button>
+          <button
+            onClick={() => setActiveTab('scheduling')}
+            style={{
+              padding: '8px 16px',
+              background: activeTab === 'scheduling' ? '#f97316' : 'transparent',
+              color: activeTab === 'scheduling' ? 'white' : '#6b7280',
+              border: 'none',
+              borderRadius: '6px',
+              fontSize: '14px',
+              fontWeight: 600,
+              cursor: 'pointer',
+            }}
+          >
+            Scheduling
+          </button>
         </div>
 
         <div style={{ flex: 1, overflow: 'auto', padding: '24px' }}>
@@ -482,7 +498,7 @@ export default function SubcontractJobDetail({ jobId, onClose, onUpdate }: Subco
                     color: '#374151',
                     marginBottom: '8px',
                   }}>
-                    Price ($/W) *
+                    Price ($/kW) *
                   </label>
                   <input
                     type="number"
@@ -715,89 +731,153 @@ export default function SubcontractJobDetail({ jobId, onClose, onUpdate }: Subco
                 </div>
               </div>
             </div>
-          ) : (
+          ) : activeTab === 'invoice' ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
               <div style={{
-                padding: '24px',
-                background: '#f9fafb',
-                borderRadius: '8px',
-                border: '1px solid #e5e7eb',
+                padding: '32px',
+                background: 'white',
+                borderRadius: '12px',
+                border: '2px solid #e5e7eb',
+                boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
               }}>
-                <h3 style={{ fontSize: '18px', fontWeight: 700, marginBottom: '16px', textAlign: 'center' }}>
-                  SOLVERA ENERGY
-                </h3>
-
-                <div style={{ marginBottom: '24px', textAlign: 'center' }}>
-                  <h4 style={{ fontSize: '16px', fontWeight: 600, marginBottom: '8px' }}>INVOICE</h4>
-                  <p style={{ fontSize: '14px', color: '#6b7280' }}>
-                    Invoice #: {job.invoice_number}
-                  </p>
-                  <p style={{ fontSize: '14px', color: '#6b7280' }}>
-                    Date: {job.invoice_generated_at ? new Date(job.invoice_generated_at).toLocaleDateString() : new Date().toLocaleDateString()}
-                  </p>
-                </div>
-
-                <div style={{ marginBottom: '24px' }}>
-                  <h4 style={{ fontSize: '14px', fontWeight: 600, marginBottom: '8px' }}>Bill To:</h4>
-                  {(() => {
-                    const contractorInfo = job.contractors as ContractorInfo;
-                    return (
-                      <>
-                        <p style={{ fontSize: '14px', color: '#1a1a1a' }}>
-                          {contractorInfo?.company_name || job.contractor_name}
-                        </p>
-                        {contractorInfo?.address && (
-                          <p style={{ fontSize: '14px', color: '#6b7280' }}>{contractorInfo.address}</p>
-                        )}
-                        {contractorInfo?.phone_number && (
-                          <p style={{ fontSize: '14px', color: '#6b7280' }}>{contractorInfo.phone_number}</p>
-                        )}
-                        {contractorInfo?.email && (
-                          <p style={{ fontSize: '14px', color: '#6b7280' }}>{contractorInfo.email}</p>
-                        )}
-                      </>
-                    );
-                  })()}
-                </div>
-
-                <div style={{ marginBottom: '24px' }}>
-                  <h4 style={{ fontSize: '14px', fontWeight: 600, marginBottom: '8px' }}>Job Details:</h4>
-                  <p style={{ fontSize: '14px', color: '#6b7280' }}>Customer: {job.subcontract_customer_name}</p>
-                  <p style={{ fontSize: '14px', color: '#6b7280' }}>Address: {job.installation_address}</p>
-                  <p style={{ fontSize: '14px', color: '#6b7280' }}>System Size: {job.system_size_kw} kW</p>
-                  <p style={{ fontSize: '14px', color: '#6b7280' }}>Panel Quantity: {job.panel_quantity}</p>
-                  <p style={{ fontSize: '14px', color: '#6b7280' }}>
-                    Install Date: {job.install_date ? new Date(job.install_date).toLocaleDateString() : 'N/A'}
-                  </p>
-                </div>
-
-                <div>
-                  <h4 style={{ fontSize: '14px', fontWeight: 600, marginBottom: '12px' }}>Invoice Total:</h4>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                    <span style={{ fontSize: '14px' }}>System Price ({job.ppw} $/W):</span>
-                    <span style={{ fontSize: '14px', fontWeight: 600 }}>
-                      ${(job.gross_revenue || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}
-                    </span>
+                <div style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'flex-start',
+                  marginBottom: '32px',
+                  paddingBottom: '24px',
+                  borderBottom: '3px solid #f97316',
+                }}>
+                  <div>
+                    <img
+                      src="/solvera_energy_logo_redesign.png"
+                      alt="Solvera Energy Logo"
+                      style={{
+                        maxWidth: '180px',
+                        height: 'auto',
+                        marginBottom: '12px',
+                      }}
+                    />
+                    <p style={{ fontSize: '12px', color: '#6b7280', margin: 0 }}>Solar Energy Solutions</p>
                   </div>
-                  {adders.length > 0 && adders.map(adder => (
-                    <div key={adder.id} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                      <span style={{ fontSize: '14px', paddingLeft: '12px' }}>- {adder.name}:</span>
-                      <span style={{ fontSize: '14px', fontWeight: 600 }}>
-                        ${adder.amount.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                  <div style={{ textAlign: 'right' }}>
+                    <h4 style={{ fontSize: '28px', fontWeight: 700, marginBottom: '8px', color: '#1a1a1a' }}>INVOICE</h4>
+                    <p style={{ fontSize: '14px', color: '#6b7280', margin: '4px 0' }}>
+                      <strong>Invoice #:</strong> {job.invoice_number}
+                    </p>
+                    <p style={{ fontSize: '14px', color: '#6b7280', margin: '4px 0' }}>
+                      <strong>Date:</strong> {job.invoice_generated_at ? new Date(job.invoice_generated_at).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
+                    </p>
+                  </div>
+                </div>
+
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: '1fr 1fr',
+                  gap: '32px',
+                  marginBottom: '32px',
+                }}>
+                  <div style={{
+                    padding: '16px',
+                    background: '#f9fafb',
+                    borderRadius: '8px',
+                    border: '1px solid #e5e7eb',
+                  }}>
+                    <h4 style={{ fontSize: '12px', fontWeight: 700, marginBottom: '12px', color: '#f97316', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Bill To:</h4>
+                    {(() => {
+                      const contractorInfo = job.contractors as ContractorInfo;
+                      return (
+                        <>
+                          <p style={{ fontSize: '15px', fontWeight: 600, color: '#1a1a1a', marginBottom: '4px' }}>
+                            {contractorInfo?.company_name || job.contractor_name}
+                          </p>
+                          {contractorInfo?.address && (
+                            <p style={{ fontSize: '13px', color: '#6b7280', marginBottom: '2px' }}>{contractorInfo.address}</p>
+                          )}
+                          {contractorInfo?.phone_number && (
+                            <p style={{ fontSize: '13px', color: '#6b7280', marginBottom: '2px' }}>{contractorInfo.phone_number}</p>
+                          )}
+                          {contractorInfo?.email && (
+                            <p style={{ fontSize: '13px', color: '#6b7280' }}>{contractorInfo.email}</p>
+                          )}
+                        </>
+                      );
+                    })()}
+                  </div>
+
+                  <div style={{
+                    padding: '16px',
+                    background: '#f9fafb',
+                    borderRadius: '8px',
+                    border: '1px solid #e5e7eb',
+                  }}>
+                    <h4 style={{ fontSize: '12px', fontWeight: 700, marginBottom: '12px', color: '#f97316', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Project Details:</h4>
+                    <div style={{ fontSize: '13px', color: '#6b7280', lineHeight: '1.6' }}>
+                      <p style={{ marginBottom: '2px' }}><strong>Customer:</strong> {job.subcontract_customer_name}</p>
+                      <p style={{ marginBottom: '2px' }}><strong>Address:</strong> {job.installation_address}</p>
+                      <p style={{ marginBottom: '2px' }}><strong>System Size:</strong> {job.system_size_kw} kW</p>
+                      <p style={{ marginBottom: '2px' }}><strong>Panels:</strong> {job.panel_quantity}</p>
+                      <p><strong>Install Date:</strong> {job.install_date ? new Date(job.install_date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : 'N/A'}</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div style={{
+                  border: '2px solid #e5e7eb',
+                  borderRadius: '8px',
+                  overflow: 'hidden',
+                }}>
+                  <div style={{
+                    background: '#f97316',
+                    color: 'white',
+                    padding: '12px 20px',
+                    fontSize: '16px',
+                    fontWeight: 700,
+                  }}>
+                    INVOICE SUMMARY
+                  </div>
+                  <div style={{ padding: '20px' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                      <thead>
+                        <tr style={{ borderBottom: '2px solid #e5e7eb' }}>
+                          <th style={{ textAlign: 'left', padding: '12px 0', fontSize: '13px', fontWeight: 600, color: '#6b7280', textTransform: 'uppercase' }}>Description</th>
+                          <th style={{ textAlign: 'right', padding: '12px 0', fontSize: '13px', fontWeight: 600, color: '#6b7280', textTransform: 'uppercase' }}>Amount</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr style={{ borderBottom: '1px solid #f3f4f6' }}>
+                          <td style={{ padding: '16px 0', fontSize: '14px', color: '#1a1a1a' }}>
+                            System Installation ({job.system_size_kw} kW @ ${job.ppw}/kW)
+                          </td>
+                          <td style={{ textAlign: 'right', padding: '16px 0', fontSize: '14px', fontWeight: 600, color: '#1a1a1a' }}>
+                            ${(job.gross_revenue || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          </td>
+                        </tr>
+                        {adders.length > 0 && adders.map(adder => (
+                          <tr key={adder.id} style={{ borderBottom: '1px solid #f3f4f6' }}>
+                            <td style={{ padding: '16px 0 16px 20px', fontSize: '14px', color: '#6b7280' }}>
+                              {adder.name}
+                            </td>
+                            <td style={{ textAlign: 'right', padding: '16px 0', fontSize: '14px', fontWeight: 600, color: '#1a1a1a' }}>
+                              ${adder.amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                    <div style={{
+                      marginTop: '20px',
+                      paddingTop: '20px',
+                      borderTop: '3px solid #f97316',
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                    }}>
+                      <span style={{ fontSize: '20px', fontWeight: 700, color: '#1a1a1a' }}>TOTAL AMOUNT DUE:</span>
+                      <span style={{ fontSize: '24px', fontWeight: 700, color: '#f97316' }}>
+                        ${((job.gross_revenue || 0) + adders.reduce((sum, a) => sum + a.amount, 0)).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </span>
                     </div>
-                  ))}
-                  <div style={{
-                    borderTop: '2px solid #1a1a1a',
-                    paddingTop: '12px',
-                    marginTop: '12px',
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                  }}>
-                    <span style={{ fontSize: '16px', fontWeight: 700 }}>Total Amount:</span>
-                    <span style={{ fontSize: '16px', fontWeight: 700, color: '#059669' }}>
-                      ${((job.gross_revenue || 0) + adders.reduce((sum, a) => sum + a.amount, 0)).toLocaleString('en-US', { minimumFractionDigits: 2 })}
-                    </span>
                   </div>
                 </div>
               </div>
@@ -822,6 +902,10 @@ export default function SubcontractJobDetail({ jobId, onClose, onUpdate }: Subco
                 <Download size={20} />
                 Download Invoice PDF
               </button>
+            </div>
+          ) : (
+            <div>
+              <SchedulingSection customer={job} />
             </div>
           )}
         </div>

@@ -41,6 +41,7 @@ export default function SubcontractingIntake() {
     customer_name: '',
     address: '',
   });
+  const [selectedAdders, setSelectedAdders] = useState<{name: string; amount: number}[]>([]);
   const [submitting, setSubmitting] = useState(false);
 
   const addressInputRef = useRef<HTMLInputElement>(null);
@@ -146,7 +147,7 @@ export default function SubcontractingIntake() {
             system_size_kw: 0,
             ppw: selectedContractor.ppw || 0,
             subcontract_status: 'install_scheduled',
-            subcontract_adders: selectedContractor.adders || [],
+            subcontract_adders: selectedAdders,
           },
         ])
         .select()
@@ -163,6 +164,7 @@ export default function SubcontractingIntake() {
         customer_name: '',
         address: '',
       });
+      setSelectedAdders([]);
 
       await loadSubcontractJobs();
 
@@ -419,7 +421,10 @@ export default function SubcontractingIntake() {
                 Add Subcontract Job
               </h2>
               <button
-                onClick={() => setShowAddModal(false)}
+                onClick={() => {
+                  setShowAddModal(false);
+                  setSelectedAdders([]);
+                }}
                 style={{
                   background: 'none',
                   border: 'none',
@@ -471,7 +476,10 @@ export default function SubcontractingIntake() {
                     <select
                       required
                       value={formData.contractor_id}
-                      onChange={(e) => setFormData({ ...formData, contractor_id: e.target.value })}
+                      onChange={(e) => {
+                        setFormData({ ...formData, contractor_id: e.target.value });
+                        setSelectedAdders([]);
+                      }}
                       style={{
                         width: '100%',
                         padding: '10px 12px',
@@ -485,12 +493,55 @@ export default function SubcontractingIntake() {
                       <option value="">Select a contractor...</option>
                       {contractors.map(contractor => (
                         <option key={contractor.id} value={contractor.id}>
-                          {contractor.company_name} {contractor.ppw ? `($${contractor.ppw.toFixed(2)}/W)` : ''}
+                          {contractor.company_name} {contractor.ppw ? `($${contractor.ppw.toFixed(2)}/kW)` : ''}
                         </option>
                       ))}
                     </select>
                   )}
                 </div>
+
+                {formData.contractor_id && contractors.find(c => c.id === formData.contractor_id)?.adders?.length > 0 && (
+                  <div>
+                    <label style={{
+                      display: 'block',
+                      fontSize: '14px',
+                      fontWeight: 600,
+                      color: '#374151',
+                      marginBottom: '8px',
+                    }}>
+                      Select Adders (Optional)
+                    </label>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                      {contractors.find(c => c.id === formData.contractor_id)?.adders.map((adder, index) => (
+                        <label key={index} style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                          padding: '8px 12px',
+                          backgroundColor: selectedAdders.find(a => a.name === adder.name) ? '#dbeafe' : '#f3f4f6',
+                          borderRadius: '6px',
+                          cursor: 'pointer',
+                        }}>
+                          <input
+                            type="checkbox"
+                            checked={selectedAdders.some(a => a.name === adder.name)}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setSelectedAdders([...selectedAdders, adder]);
+                              } else {
+                                setSelectedAdders(selectedAdders.filter(a => a.name !== adder.name));
+                              }
+                            }}
+                            style={{ cursor: 'pointer' }}
+                          />
+                          <span style={{ fontSize: '14px', color: '#1a1a1a' }}>
+                            {adder.name}: ${adder.amount.toFixed(2)}
+                          </span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
                 <div>
                   <label style={{
@@ -564,7 +615,10 @@ export default function SubcontractingIntake() {
               }}>
                 <button
                   type="button"
-                  onClick={() => setShowAddModal(false)}
+                  onClick={() => {
+                    setShowAddModal(false);
+                    setSelectedAdders([]);
+                  }}
                   disabled={submitting}
                   style={{
                     padding: '10px 20px',

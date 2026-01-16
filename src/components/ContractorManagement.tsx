@@ -358,7 +358,7 @@ export default function ContractorManagement() {
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <DollarSign size={16} style={{ color: '#6b7280' }} />
                     <span style={{ fontSize: '14px', color: '#1a1a1a', fontWeight: 600 }}>
-                      ${contractor.ppw.toFixed(2)}/W
+                      ${contractor.ppw.toFixed(2)}/kW
                     </span>
                   </div>
                 )}
@@ -495,14 +495,14 @@ export default function ContractorManagement() {
 
                 <div>
                   <label style={{ display: 'block', fontSize: '14px', fontWeight: 600, color: '#1a1a1a', marginBottom: '8px' }}>
-                    Price Per Watt ($/W)
+                    Price Per Kilowatt ($/kW)
                   </label>
                   <input
                     type="number"
                     step="0.01"
                     value={formData.ppw}
                     onChange={(e) => setFormData({ ...formData, ppw: e.target.value })}
-                    placeholder="0.30"
+                    placeholder="300.00"
                     style={{
                       width: '100%',
                       padding: '10px 12px',
