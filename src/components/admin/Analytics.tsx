@@ -41,7 +41,10 @@ export default function Analytics() {
           system_size_kw,
           contract_price,
           bom_cost,
-          permit_engineering_cost
+          permit_engineering_cost,
+          job_source,
+          gross_revenue,
+          net_revenue
         `)
         .eq('is_active', true);
 
@@ -101,10 +104,17 @@ export default function Analytics() {
         const metric = groupedData.get(periodKey)!;
         metric.panelsInstalled += customer.panel_quantity || 0;
         metric.totalKw += parseFloat(customer.system_size_kw?.toString() || '0');
-        metric.grossRevenue += parseFloat(customer.contract_price?.toString() || '0');
-        metric.bomCost += parseFloat(customer.bom_cost?.toString() || '0');
-        metric.permitEngineeringCost += parseFloat(customer.permit_engineering_cost?.toString() || '0');
-        metric.netRevenue = metric.grossRevenue - metric.bomCost - metric.permitEngineeringCost;
+
+        if (customer.job_source === 'subcontract') {
+          metric.grossRevenue += parseFloat(customer.gross_revenue?.toString() || '0');
+          metric.netRevenue += parseFloat(customer.net_revenue?.toString() || '0');
+        } else {
+          metric.grossRevenue += parseFloat(customer.contract_price?.toString() || '0');
+          metric.bomCost += parseFloat(customer.bom_cost?.toString() || '0');
+          metric.permitEngineeringCost += parseFloat(customer.permit_engineering_cost?.toString() || '0');
+          metric.netRevenue += metric.grossRevenue - metric.bomCost - metric.permitEngineeringCost;
+        }
+
         metric.projectCount += 1;
 
         const installDate = timelineMap.get(customer.id);

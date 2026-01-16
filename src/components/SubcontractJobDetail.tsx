@@ -59,6 +59,10 @@ export default function SubcontractJobDetail({ jobId, onClose, onUpdate }: Subco
     total_labor: '',
     expenses: '',
     subcontract_status: 'install_scheduled',
+    invoice_sent_date: '',
+    invoice_paid_date: '',
+    payment_type: '',
+    check_number: '',
   });
 
   const [adders, setAdders] = useState<Adder[]>([]);
@@ -97,6 +101,10 @@ export default function SubcontractJobDetail({ jobId, onClose, onUpdate }: Subco
         total_labor: data.total_labor?.toString() || '',
         expenses: data.expenses?.toString() || '',
         subcontract_status: data.subcontract_status || 'install_scheduled',
+        invoice_sent_date: data.invoice_sent_date || '',
+        invoice_paid_date: data.invoice_paid_date || '',
+        payment_type: data.payment_type || '',
+        check_number: data.check_number || '',
       });
 
       const existingAdders = data.subcontract_adders || [];
@@ -125,6 +133,10 @@ export default function SubcontractJobDetail({ jobId, onClose, onUpdate }: Subco
           expenses: formData.expenses ? parseFloat(formData.expenses) : null,
           subcontract_status: formData.subcontract_status,
           subcontract_adders: addersToSave,
+          invoice_sent_date: formData.invoice_sent_date || null,
+          invoice_paid_date: formData.invoice_paid_date || null,
+          payment_type: formData.payment_type || null,
+          check_number: formData.check_number || null,
         })
         .eq('id', jobId);
 
@@ -520,7 +532,19 @@ export default function SubcontractJobDetail({ jobId, onClose, onUpdate }: Subco
                   </label>
                   <select
                     value={formData.subcontract_status}
-                    onChange={(e) => setFormData({ ...formData, subcontract_status: e.target.value })}
+                    onChange={(e) => {
+                      const newStatus = e.target.value;
+                      const updates: any = { subcontract_status: newStatus };
+
+                      if (newStatus === 'invoice_sent' && !formData.invoice_sent_date) {
+                        updates.invoice_sent_date = new Date().toISOString().split('T')[0];
+                      }
+                      if (newStatus === 'invoice_paid' && !formData.invoice_paid_date) {
+                        updates.invoice_paid_date = new Date().toISOString().split('T')[0];
+                      }
+
+                      setFormData({ ...formData, ...updates });
+                    }}
                     style={{
                       width: '100%',
                       padding: '10px 12px',
@@ -533,8 +557,123 @@ export default function SubcontractJobDetail({ jobId, onClose, onUpdate }: Subco
                     <option value="install_scheduled">Install Scheduled</option>
                     <option value="install_complete">Install Complete</option>
                     <option value="install_complete_pending_payment">Install Complete - Pending Payment</option>
+                    <option value="invoice_sent">Invoice Sent</option>
+                    <option value="invoice_paid">Invoice Paid</option>
                   </select>
                 </div>
+
+                {(formData.subcontract_status === 'invoice_sent' || formData.subcontract_status === 'invoice_paid') && (
+                  <div>
+                    <label style={{
+                      display: 'block',
+                      fontSize: '14px',
+                      fontWeight: 600,
+                      color: '#374151',
+                      marginBottom: '8px',
+                    }}>
+                      Invoice Sent Date
+                    </label>
+                    <input
+                      type="date"
+                      value={formData.invoice_sent_date}
+                      onChange={(e) => setFormData({ ...formData, invoice_sent_date: e.target.value })}
+                      style={{
+                        width: '100%',
+                        padding: '10px 12px',
+                        border: '1px solid #d1d5db',
+                        borderRadius: '6px',
+                        fontSize: '14px',
+                        outline: 'none',
+                      }}
+                    />
+                  </div>
+                )}
+
+                {formData.subcontract_status === 'invoice_paid' && (
+                  <>
+                    <div>
+                      <label style={{
+                        display: 'block',
+                        fontSize: '14px',
+                        fontWeight: 600,
+                        color: '#374151',
+                        marginBottom: '8px',
+                      }}>
+                        Invoice Paid Date
+                      </label>
+                      <input
+                        type="date"
+                        value={formData.invoice_paid_date}
+                        onChange={(e) => setFormData({ ...formData, invoice_paid_date: e.target.value })}
+                        style={{
+                          width: '100%',
+                          padding: '10px 12px',
+                          border: '1px solid #d1d5db',
+                          borderRadius: '6px',
+                          fontSize: '14px',
+                          outline: 'none',
+                        }}
+                      />
+                    </div>
+
+                    <div>
+                      <label style={{
+                        display: 'block',
+                        fontSize: '14px',
+                        fontWeight: 600,
+                        color: '#374151',
+                        marginBottom: '8px',
+                      }}>
+                        Payment Type
+                      </label>
+                      <select
+                        value={formData.payment_type}
+                        onChange={(e) => setFormData({ ...formData, payment_type: e.target.value })}
+                        style={{
+                          width: '100%',
+                          padding: '10px 12px',
+                          border: '1px solid #d1d5db',
+                          borderRadius: '6px',
+                          fontSize: '14px',
+                          outline: 'none',
+                        }}
+                      >
+                        <option value="">Select Payment Type</option>
+                        <option value="CHECK">Check</option>
+                        <option value="ACH">ACH</option>
+                        <option value="WIRE">Wire</option>
+                      </select>
+                    </div>
+
+                    {formData.payment_type === 'CHECK' && (
+                      <div>
+                        <label style={{
+                          display: 'block',
+                          fontSize: '14px',
+                          fontWeight: 600,
+                          color: '#374151',
+                          marginBottom: '8px',
+                        }}>
+                          Check Number
+                        </label>
+                        <input
+                          type="text"
+                          value={formData.check_number}
+                          onChange={(e) => setFormData({ ...formData, check_number: e.target.value })}
+                          placeholder="Enter check number"
+                          style={{
+                            width: '100%',
+                            padding: '10px 12px',
+                            border: '1px solid #d1d5db',
+                            borderRadius: '6px',
+                            fontSize: '14px',
+                            outline: 'none',
+                          }}
+                        />
+                      </div>
+                    )}
+                  </>
+                )}
 
                 <div>
                   <label style={{
