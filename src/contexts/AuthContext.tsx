@@ -155,16 +155,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logout = async () => {
     try {
-      const { error } = await supabase.auth.signOut();
-      if (error) throw error;
       setUser(null);
-      localStorage.removeItem('currentView');
-      localStorage.removeItem('selectedCustomerId');
-      localStorage.removeItem('customerProjectTab');
-      localStorage.removeItem('selectedProposalId');
-      window.location.reload();
+      localStorage.clear();
+      sessionStorage.clear();
+
+      await supabase.auth.signOut({ scope: 'local' });
+
+      window.location.href = '/';
     } catch (error) {
       console.error('Logout error:', error);
+      setUser(null);
+      localStorage.clear();
+      sessionStorage.clear();
+      window.location.href = '/';
     }
   };
 

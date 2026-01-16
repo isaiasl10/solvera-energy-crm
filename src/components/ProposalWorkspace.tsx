@@ -1447,8 +1447,17 @@ export default function ProposalWorkspace({
         if (currentToolMode === "fill-roof") {
           // Determine which roof plane was clicked
           const currentRoofPlanes = roofPlanesRef.current;
+          console.log("Fill-roof mode - checking roof planes:", currentRoofPlanes.length);
+          console.log("Current panel model ID:", currentPanelModelId);
+
           const clickedRoof = currentRoofPlanes.find((roof) => {
-            return isPointInPolygon({ lat, lng }, roof.path);
+            if (!roof.path || !Array.isArray(roof.path) || roof.path.length < 3) {
+              console.log("Roof plane has invalid path:", roof.id, roof.path);
+              return false;
+            }
+            const isInside = isPointInPolygon({ lat, lng }, roof.path);
+            console.log("Checking roof", roof.id, "- point inside:", isInside);
+            return isInside;
           });
 
           if (clickedRoof && currentPanelModelId) {
@@ -1456,13 +1465,21 @@ export default function ProposalWorkspace({
             fillRoofWithPanels(clickedRoof);
             setToolMode("none");
           } else {
-            console.log("No roof plane found at click location or no panel model selected");
+            console.log("Cannot fill roof - clickedRoof:", !!clickedRoof, "panelModelId:", !!currentPanelModelId);
+            if (!currentPanelModelId) {
+              alert("Please select a panel model first");
+            } else if (!clickedRoof) {
+              alert("Please click inside a roof plane");
+            }
           }
         } else if (currentToolMode === "add-panel") {
           if (currentPanelModelId) {
             // Find which roof plane was clicked
             const currentRoofPlanes = roofPlanesRef.current;
             const clickedRoof = currentRoofPlanes.find((roof) => {
+              if (!roof.path || !Array.isArray(roof.path) || roof.path.length < 3) {
+                return false;
+              }
               return isPointInPolygon({ lat, lng }, roof.path);
             });
 
@@ -1470,9 +1487,11 @@ export default function ProposalWorkspace({
               addPanelAt(lat, lng, clickedRoof.id);
             } else {
               console.log("MAP CLICK: Clicked outside of any roof plane");
+              alert("Please click inside a roof plane");
             }
           } else {
             console.log("MAP CLICK: Missing panelModelId for add-panel");
+            alert("Please select a panel model first");
           }
         } else if (currentToolMode === "circle" || currentToolMode === "rect" || currentToolMode === "tree") {
           setDrawingStart((prev) => {
@@ -2993,7 +3012,7 @@ export default function ProposalWorkspace({
 
   const renderSolarDesignTab = () => {
     return (
-    <div style={{ display: "flex", flexDirection: "column", height: "calc(100vh - 180px)" }}>
+    <div style={{ display: "flex", flexDirection: "column", height: "700px", maxHeight: "calc(100vh - 250px)" }}>
       <div style={{
         background: "linear-gradient(135deg, #1e293b 0%, #334155 100%)",
         borderBottom: "2px solid #0ea5e9",
