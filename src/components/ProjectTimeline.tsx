@@ -619,38 +619,12 @@ export default function ProjectTimeline({ customer }: ProjectTimelineProps) {
               {timeline.installation_status !== 'scheduled' ? (
                 <div className="mt-2 text-sm text-amber-600 flex items-center gap-2">
                   <AlertCircle className="w-4 h-4" />
-                  Material can only be ordered once installation is scheduled (48 hours in advance)
+                  Material can only be ordered once installation is scheduled
                 </div>
               ) : timeline.material_order_status === 'not_ordered' ? (
                 <div className="mt-2 space-y-2">
-                  {timeline.installation_scheduled_date && (() => {
-                    const installDate = new Date(timeline.installation_scheduled_date);
-                    const now = new Date();
-                    const hoursDiff = (installDate.getTime() - now.getTime()) / (1000 * 60 * 60);
-                    const canOrder = hoursDiff >= 48;
-
-                    if (!canOrder) {
-                      return (
-                        <div className="text-sm text-red-600 flex items-center gap-2">
-                          <AlertCircle className="w-4 h-4" />
-                          Installation must be scheduled at least 48 hours in advance before ordering material
-                        </div>
-                      );
-                    }
-                    return null;
-                  })()}
                   <button
                     onClick={() => {
-                      if (timeline.installation_scheduled_date) {
-                        const installDate = new Date(timeline.installation_scheduled_date);
-                        const now = new Date();
-                        const hoursDiff = (installDate.getTime() - now.getTime()) / (1000 * 60 * 60);
-
-                        if (hoursDiff < 48) {
-                          alert('Installation must be scheduled at least 48 hours in advance before ordering material.');
-                          return;
-                        }
-                      }
                       updateTimeline({
                         material_order_status: 'ordered',
                         material_ordered_date: new Date().toISOString()
