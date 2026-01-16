@@ -3083,8 +3083,8 @@ export default function ProposalWorkspace({
 
   const renderSolarDesignTab = () => {
     return (
-    <div className="sd-root">
-      <div className="sd-toolbar" style={{
+    <div style={{ height: "100%", display: "flex", flexDirection: "column", minHeight: 0 }}>
+      <div style={{ flex: "0 0 auto", padding: 12, display: "flex", flexWrap: "wrap", gap: 10, alignItems: "center",
         background: "linear-gradient(135deg, #1e293b 0%, #334155 100%)",
         borderBottom: "2px solid #0ea5e9",
         boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)",
@@ -3482,8 +3482,8 @@ export default function ProposalWorkspace({
         )}
       </div>
 
-      <div className="sd-canvas">
-        <div className="sd-map">
+      <div style={{ flex: "1 1 auto", minHeight: 0, position: "relative", overflow: "hidden", display: "flex" }}>
+        <div style={{ flex: 1, position: "relative", background: "#f9fafb" }}>
           {toolMode !== "none" && (
             <div style={{
               position: "absolute",
@@ -3543,7 +3543,7 @@ export default function ProposalWorkspace({
           </div>
         </div>
 
-        <div className="sd-sidebar">
+        <div style={{ width: 350, background: "#ffffff", borderLeft: "2px solid #e5e7eb", overflowY: "auto", padding: 16, display: "flex", flexDirection: "column", gap: 16 }}>
           <div style={{
             padding: "16px",
             background: "linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%)",
