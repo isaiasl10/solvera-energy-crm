@@ -12,6 +12,7 @@ interface Contractor {
   address: string | null;
   phone_number: string | null;
   email: string | null;
+  default_detach_reset_price_per_panel: number | null;
 }
 
 interface SubcontractJob {
@@ -27,6 +28,10 @@ interface SubcontractJob {
   subcontract_status: string;
   invoice_number: string;
   created_at: string;
+  job_type: string;
+  panel_qty: number;
+  gross_amount: number;
+  detach_reset_status: string;
 }
 
 export default function SubcontractingIntake() {
@@ -40,6 +45,7 @@ export default function SubcontractingIntake() {
     contractor_id: '',
     customer_name: '',
     address: '',
+    job_type: 'new_install' as 'new_install' | 'detach_reset' | 'service',
   });
   const [selectedAdders, setSelectedAdders] = useState<{name: string; amount: number}[]>([]);
   const [submitting, setSubmitting] = useState(false);
@@ -79,7 +85,7 @@ export default function SubcontractingIntake() {
     try {
       const { data, error } = await supabase
         .from('contractors')
-        .select('id, company_name, ppw, adders, address, phone_number, email')
+        .select('id, company_name, ppw, adders, address, phone_number, email, default_detach_reset_price_per_panel')
         .order('company_name');
 
       if (error) throw error;
@@ -169,22 +175,45 @@ export default function SubcontractingIntake() {
         throw new Error('Selected contractor not found');
       }
 
+      const baseJobData = {
+        job_source: 'subcontract',
+        job_type: formData.job_type,
+        contractor_id: formData.contractor_id,
+        contractor_name: selectedContractor.company_name,
+        subcontract_customer_name: formData.customer_name,
+        installation_address: formData.address,
+        full_name: formData.customer_name,
+      };
+
+      let jobData: any = { ...baseJobData };
+
+      if (formData.job_type === 'new_install') {
+        jobData = {
+          ...jobData,
+          system_size_kw: 0,
+          ppw: selectedContractor.ppw || 0,
+          subcontract_status: 'install_scheduled',
+          subcontract_adders: selectedAdders,
+        };
+      } else if (formData.job_type === 'detach_reset') {
+        jobData = {
+          ...jobData,
+          price_per_panel: selectedContractor.default_detach_reset_price_per_panel || 0,
+          panel_qty: 0,
+          labor_cost: 0,
+          material_cost: 0,
+          detach_reset_status: 'detach_scheduled',
+        };
+      } else if (formData.job_type === 'service') {
+        jobData = {
+          ...jobData,
+          subcontract_status: 'pending',
+        };
+      }
+
       const { data, error } = await supabase
         .from('customers')
-        .insert([
-          {
-            job_source: 'subcontract',
-            contractor_id: formData.contractor_id,
-            contractor_name: selectedContractor.company_name,
-            subcontract_customer_name: formData.customer_name,
-            installation_address: formData.address,
-            full_name: formData.customer_name,
-            system_size_kw: 0,
-            ppw: selectedContractor.ppw || 0,
-            subcontract_status: 'install_scheduled',
-            subcontract_adders: selectedAdders,
-          },
-        ])
+        .insert([jobData])
         .select()
         .single();
 
@@ -198,6 +227,7 @@ export default function SubcontractingIntake() {
         contractor_id: '',
         customer_name: '',
         address: '',
+        job_type: 'new_install',
       });
       setSelectedAdders([]);
 
@@ -242,6 +272,19 @@ export default function SubcontractingIntake() {
     return status.split('_').map(word =>
       word.charAt(0).toUpperCase() + word.slice(1)
     ).join(' ');
+  };
+
+  const getJobTypeBadge = (jobType: string) => {
+    switch (jobType) {
+      case 'new_install':
+        return { label: 'NEW INSTALL', bg: '#dbeafe', color: '#1e40af' };
+      case 'detach_reset':
+        return { label: 'DETACH & RESET', bg: '#fef3c7', color: '#92400e' };
+      case 'service':
+        return { label: 'SERVICE', bg: '#e0e7ff', color: '#3730a3' };
+      default:
+        return { label: 'NEW INSTALL', bg: '#dbeafe', color: '#1e40af' };
+    }
   };
 
   return (
@@ -295,6 +338,9 @@ export default function SubcontractingIntake() {
                     Invoice #
                   </th>
                   <th className="px-3 sm:px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider whitespace-nowrap">
+                    Job Type
+                  </th>
+                  <th className="px-3 sm:px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider whitespace-nowrap">
                     Contractor
                   </th>
                   <th className="px-3 sm:px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider whitespace-nowrap">
@@ -330,6 +376,17 @@ export default function SubcontractingIntake() {
                       <td className="px-3 sm:px-4 py-3 sm:py-4 text-sm text-gray-900 font-semibold">
                         {job.invoice_number || '-'}
                       </td>
+                      <td className="px-3 sm:px-4 py-3 sm:py-4">
+                        <span
+                          className="inline-block px-2 py-1 text-xs font-bold rounded"
+                          style={{
+                            backgroundColor: getJobTypeBadge(job.job_type || 'new_install').bg,
+                            color: getJobTypeBadge(job.job_type || 'new_install').color,
+                          }}
+                        >
+                          {getJobTypeBadge(job.job_type || 'new_install').label}
+                        </span>
+                      </td>
                       <td className="px-3 sm:px-4 py-3 sm:py-4 text-sm text-gray-900 font-medium">
                         {job.contractor_name}
                       </td>
@@ -340,10 +397,14 @@ export default function SubcontractingIntake() {
                         {job.installation_address}
                       </td>
                       <td className="px-3 sm:px-4 py-3 sm:py-4 text-sm text-gray-900">
-                        {job.system_size_kw ? `${job.system_size_kw} kW` : '-'}
+                        {job.job_type === 'detach_reset'
+                          ? (job.panel_qty ? `${job.panel_qty} panels` : '-')
+                          : (job.system_size_kw ? `${job.system_size_kw} kW` : '-')}
                       </td>
                       <td className="px-3 sm:px-4 py-3 sm:py-4 text-sm text-emerald-600 font-semibold">
-                        {job.gross_revenue ? `$${job.gross_revenue.toLocaleString('en-US', { minimumFractionDigits: 2 })}` : '-'}
+                        {job.job_type === 'detach_reset'
+                          ? (job.gross_amount ? `$${job.gross_amount.toLocaleString('en-US', { minimumFractionDigits: 2 })}` : '-')
+                          : (job.gross_revenue ? `$${job.gross_revenue.toLocaleString('en-US', { minimumFractionDigits: 2 })}` : '-')}
                       </td>
                       <td className="px-3 sm:px-4 py-3 sm:py-4 text-sm text-green-600 font-bold">
                         {job.net_revenue ? `$${job.net_revenue.toLocaleString('en-US', { minimumFractionDigits: 2 })}` : '-'}
@@ -478,7 +539,49 @@ export default function SubcontractingIntake() {
                   )}
                 </div>
 
-                {formData.contractor_id && contractors.find(c => c.id === formData.contractor_id)?.adders?.length > 0 && (
+                <div>
+                  <label style={{
+                    display: 'block',
+                    fontSize: '14px',
+                    fontWeight: 600,
+                    color: '#374151',
+                    marginBottom: '8px',
+                  }}>
+                    Job Type *
+                  </label>
+                  <select
+                    required
+                    value={formData.job_type}
+                    onChange={(e) => {
+                      setFormData({ ...formData, job_type: e.target.value as 'new_install' | 'detach_reset' | 'service' });
+                    }}
+                    style={{
+                      width: '100%',
+                      padding: '10px 12px',
+                      border: '1px solid #d1d5db',
+                      borderRadius: '6px',
+                      fontSize: '14px',
+                      outline: 'none',
+                      backgroundColor: 'white',
+                    }}
+                  >
+                    <option value="new_install">New Install</option>
+                    <option value="detach_reset">Detach & Reset</option>
+                    <option value="service">Service</option>
+                  </select>
+                  <p style={{
+                    fontSize: '12px',
+                    color: '#6b7280',
+                    marginTop: '6px',
+                    fontStyle: 'italic',
+                  }}>
+                    {formData.job_type === 'new_install' && 'Standard installation job with system size and PPW pricing'}
+                    {formData.job_type === 'detach_reset' && 'Panel detach and reset job with per-panel pricing'}
+                    {formData.job_type === 'service' && 'Service job for maintenance or repairs'}
+                  </p>
+                </div>
+
+                {formData.contractor_id && formData.job_type === 'new_install' && contractors.find(c => c.id === formData.contractor_id)?.adders?.length > 0 && (
                   <div>
                     <label style={{
                       display: 'block',

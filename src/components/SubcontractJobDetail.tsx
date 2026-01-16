@@ -30,6 +30,19 @@ interface SubcontractJob {
   invoice_number: string;
   invoice_generated_at: string | null;
   contractors?: ContractorInfo;
+  job_type: string;
+  price_per_panel: number;
+  panel_qty: number;
+  gross_amount: number;
+  labor_cost: number;
+  material_cost: number;
+  detach_date: string | null;
+  reset_date: string | null;
+  detach_reset_status: string;
+  invoice_sent_date: string | null;
+  paid_date: string | null;
+  payment_method: string | null;
+  check_number: string | null;
 }
 
 interface Adder {
@@ -63,6 +76,14 @@ export default function SubcontractJobDetail({ jobId, onClose, onUpdate }: Subco
     invoice_paid_date: '',
     payment_type: '',
     check_number: '',
+    price_per_panel: '',
+    panel_qty: '',
+    labor_cost: '',
+    material_cost: '',
+    detach_date: '',
+    reset_date: '',
+    detach_reset_status: 'detach_scheduled',
+    payment_method: '',
   });
 
   const [adders, setAdders] = useState<Adder[]>([]);
@@ -105,6 +126,14 @@ export default function SubcontractJobDetail({ jobId, onClose, onUpdate }: Subco
         invoice_paid_date: data.invoice_paid_date || '',
         payment_type: data.payment_type || '',
         check_number: data.check_number || '',
+        price_per_panel: data.price_per_panel?.toString() || '',
+        panel_qty: data.panel_qty?.toString() || '',
+        labor_cost: data.labor_cost?.toString() || '',
+        material_cost: data.material_cost?.toString() || '',
+        detach_date: data.detach_date || '',
+        reset_date: data.reset_date || '',
+        detach_reset_status: data.detach_reset_status || 'detach_scheduled',
+        payment_method: data.payment_method || '',
       });
 
       const existingAdders = data.subcontract_adders || [];
@@ -122,22 +151,38 @@ export default function SubcontractJobDetail({ jobId, onClose, onUpdate }: Subco
     try {
       const addersToSave = adders.map(({ name, amount }) => ({ name, amount }));
 
+      const updateData: any = {
+        system_size_kw: formData.system_size_kw ? parseFloat(formData.system_size_kw) : null,
+        panel_quantity: formData.panel_quantity ? parseInt(formData.panel_quantity) : null,
+        install_date: formData.install_date || null,
+        ppw: formData.ppw ? parseFloat(formData.ppw) : null,
+        total_labor: formData.total_labor ? parseFloat(formData.total_labor) : null,
+        expenses: formData.expenses ? parseFloat(formData.expenses) : null,
+        subcontract_status: formData.subcontract_status,
+        subcontract_adders: addersToSave,
+        invoice_sent_date: formData.invoice_sent_date || null,
+        invoice_paid_date: formData.invoice_paid_date || null,
+        payment_type: formData.payment_type || null,
+        check_number: formData.check_number || null,
+      };
+
+      if (job?.job_type === 'detach_reset') {
+        updateData.price_per_panel = formData.price_per_panel ? parseFloat(formData.price_per_panel) : null;
+        updateData.panel_qty = formData.panel_qty ? parseInt(formData.panel_qty) : null;
+        updateData.labor_cost = formData.labor_cost ? parseFloat(formData.labor_cost) : null;
+        updateData.material_cost = formData.material_cost ? parseFloat(formData.material_cost) : null;
+        updateData.detach_date = formData.detach_date || null;
+        updateData.reset_date = formData.reset_date || null;
+        updateData.detach_reset_status = formData.detach_reset_status;
+        updateData.invoice_sent_date = formData.invoice_sent_date || null;
+        updateData.paid_date = formData.invoice_paid_date || null;
+        updateData.payment_method = formData.payment_method || null;
+        updateData.check_number = formData.check_number || null;
+      }
+
       const { error } = await supabase
         .from('customers')
-        .update({
-          system_size_kw: formData.system_size_kw ? parseFloat(formData.system_size_kw) : null,
-          panel_quantity: formData.panel_quantity ? parseInt(formData.panel_quantity) : null,
-          install_date: formData.install_date || null,
-          ppw: formData.ppw ? parseFloat(formData.ppw) : null,
-          total_labor: formData.total_labor ? parseFloat(formData.total_labor) : null,
-          expenses: formData.expenses ? parseFloat(formData.expenses) : null,
-          subcontract_status: formData.subcontract_status,
-          subcontract_adders: addersToSave,
-          invoice_sent_date: formData.invoice_sent_date || null,
-          invoice_paid_date: formData.invoice_paid_date || null,
-          payment_type: formData.payment_type || null,
-          check_number: formData.check_number || null,
-        })
+        .update(updateData)
         .eq('id', jobId);
 
       if (error) throw error;
@@ -365,31 +410,49 @@ export default function SubcontractJobDetail({ jobId, onClose, onUpdate }: Subco
         <div className="flex-1 overflow-auto p-4 sm:p-6">
           {activeTab === 'details' ? (
             <div className="flex flex-col gap-6">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    System Size (kW) *
-                  </label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    value={formData.system_size_kw}
-                    onChange={(e) => setFormData({ ...formData, system_size_kw: e.target.value })}
-                    className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-                  />
+              {/* TODO: Add full Detach & Reset UI section with panel_qty, price_per_panel, dates, status dropdown */}
+              {job?.job_type === 'detach_reset' && (
+                <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg">
+                  <h3 className="text-sm font-bold text-amber-900 mb-2">Detach & Reset Job</h3>
+                  <p className="text-xs text-amber-700">
+                    Panel Qty: {job.panel_qty || 0} | Price/Panel: ${job.price_per_panel || 0} |
+                    Gross: ${job.gross_amount || 0} | Net: ${job.net_revenue || 0}
+                  </p>
+                  <p className="text-xs text-amber-700 mt-1">
+                    Status: {job.detach_reset_status || 'detach_scheduled'}
+                  </p>
                 </div>
+              )}
 
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Panel Quantity *
-                  </label>
-                  <input
-                    type="number"
-                    value={formData.panel_quantity}
-                    onChange={(e) => setFormData({ ...formData, panel_quantity: e.target.value })}
-                    className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-                  />
-                </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {job?.job_type === 'new_install' && (
+                  <>
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">
+                        System Size (kW) *
+                      </label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        value={formData.system_size_kw}
+                        onChange={(e) => setFormData({ ...formData, system_size_kw: e.target.value })}
+                        className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">
+                        Panel Quantity *
+                      </label>
+                      <input
+                        type="number"
+                        value={formData.panel_quantity}
+                        onChange={(e) => setFormData({ ...formData, panel_quantity: e.target.value })}
+                        className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                      />
+                    </div>
+                  </>
+                )}
 
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">
