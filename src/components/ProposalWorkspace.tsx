@@ -1051,6 +1051,36 @@ export default function ProposalWorkspace({
     };
   }, [panels, panelModels, proposal, proposalDraft, adderCalculations, batteries]);
 
+  const electricityInitialData = useMemo(
+    () => ({ annual_consumption: proposalDraft.annual_consumption ?? null }),
+    [proposalDraft.annual_consumption]
+  );
+
+  const electricityRateInitialData = useMemo(
+    () => ({
+      utility_company: proposalDraft.utility_company ?? null,
+      electricity_rate: proposalDraft.electricity_rate ?? null,
+    }),
+    [proposalDraft.utility_company, proposalDraft.electricity_rate]
+  );
+
+  const pricingInitialData = useMemo(
+    () => ({
+      total_price: proposalDraft.total_price ?? null,
+      price_per_watt: proposalDraft.price_per_watt ?? null,
+    }),
+    [proposalDraft.total_price, proposalDraft.price_per_watt]
+  );
+
+  const cashPaymentInitialData = useMemo(
+    () => ({
+      cash_deposit: proposalDraft.cash_deposit ?? null,
+      cash_second_payment: proposalDraft.cash_second_payment ?? null,
+      cash_final_payment: proposalDraft.cash_final_payment ?? null,
+    }),
+    [proposalDraft.cash_deposit, proposalDraft.cash_second_payment, proposalDraft.cash_final_payment]
+  );
+
   useEffect(() => {
     const isCash = (proposalDraft.finance_type ?? proposal?.finance_type ?? "cash") === "cash";
     if (isCash && systemSummary.totalContractPrice > 0) {
@@ -2343,36 +2373,6 @@ export default function ProposalWorkspace({
       </div>
     );
   };
-
-  const electricityInitialData = useMemo(
-    () => ({ annual_consumption: proposalDraft.annual_consumption ?? null }),
-    [proposalDraft.annual_consumption]
-  );
-
-  const electricityRateInitialData = useMemo(
-    () => ({
-      utility_company: proposalDraft.utility_company ?? null,
-      electricity_rate: proposalDraft.electricity_rate ?? null,
-    }),
-    [proposalDraft.utility_company, proposalDraft.electricity_rate]
-  );
-
-  const pricingInitialData = useMemo(
-    () => ({
-      total_price: proposalDraft.total_price ?? null,
-      price_per_watt: proposalDraft.price_per_watt ?? null,
-    }),
-    [proposalDraft.total_price, proposalDraft.price_per_watt]
-  );
-
-  const cashPaymentInitialData = useMemo(
-    () => ({
-      cash_deposit: proposalDraft.cash_deposit ?? null,
-      cash_second_payment: proposalDraft.cash_second_payment ?? null,
-      cash_final_payment: proposalDraft.cash_final_payment ?? null,
-    }),
-    [proposalDraft.cash_deposit, proposalDraft.cash_second_payment, proposalDraft.cash_final_payment]
-  );
 
   const renderManageTab = () => {
     const panelModel = panelModels.find((m) => m.id === selectedPanelModelId);
