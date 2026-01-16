@@ -148,6 +148,7 @@ export default function QueueDetailView({ queueType }: QueueDetailViewProps) {
       let customersQuery = supabase
         .from('customers')
         .select('*')
+        .eq('job_source', 'internal')
         .order('created_at', { ascending: false });
 
       if (userRole === 'sales_rep' && userAppId) {

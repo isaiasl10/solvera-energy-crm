@@ -1940,10 +1940,8 @@ export default function ProposalWorkspace({
 
       // Click listener for delete-panel mode
       google.maps.event.addListener(rect, "click", (e: any) => {
-        console.log("[PANEL] Panel clicked", { panelId: panel.id, toolMode: toolModeRef.current });
         if (toolModeRef.current === "delete-panel") {
           e.stop();
-          console.log("[PANEL] Deleting panel", { panelId: panel.id });
           deletePanelById(panel.id);
         }
       });
@@ -1995,24 +1993,16 @@ export default function ProposalWorkspace({
   }, [toolMode]);
 
   const deletePanelById = async (panelId: string) => {
-    console.log("[PANEL] deletePanelById called", { panelId, isTemp: panelId.startsWith('temp-') });
-
     // Delete from database if it's not a temp panel
     if (!panelId.startsWith('temp-')) {
       const { error } = await supabase.from("proposal_panels").delete().eq("id", panelId);
       if (error) {
-        console.error("[PANEL] Error deleting from database:", error);
-      } else {
-        console.log("[PANEL] Successfully deleted from database", { panelId });
+        console.error("Error deleting panel from database:", error);
       }
     }
 
     // Remove from local state
-    setPanels((prev) => {
-      const filtered = prev.filter((p) => p.id !== panelId);
-      console.log("[PANEL] Updated panels state", { before: prev.length, after: filtered.length });
-      return filtered;
-    });
+    setPanels((prev) => prev.filter((p) => p.id !== panelId));
   };
 
   const deleteObstructionById = (obstructionId: string) => {

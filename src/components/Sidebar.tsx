@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
-import { Calendar, Users, Settings, ChevronDown, ChevronRight, UserCog, LogOut, User, Eye, Layers, X, FileText } from 'lucide-react';
+import { Calendar, Users, Settings, ChevronDown, ChevronRight, UserCog, LogOut, User, Eye, Layers, X, FileText, Briefcase } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 
-export type ViewType = 'calendar' | 'customers' | 'proposals' | 'createProposal' | 'customerPricing' | 'user-management' | 'employee-profile' | 'sales-manager-dashboard' | 'role-previews' | 'admin-analytics' | 'admin-custom-adders' | 'admin-inverters' | 'admin-optimizers' | 'admin-batteries' | 'admin-racking' | 'admin-panels' | 'admin-financing' | 'admin-payroll' | 'queue-new-project' | 'queue-site-survey' | 'queue-engineering' | 'queue-utility-permits' | 'queue-ready-to-order' | 'queue-coordinate-install' | 'queue-install-scheduled' | 'queue-ready-inspection' | 'queue-pending-pto' | 'queue-pending-activation' | 'queue-system-activated' | 'queue-service-tickets';
+export type ViewType = 'calendar' | 'customers' | 'proposals' | 'createProposal' | 'customerPricing' | 'user-management' | 'employee-profile' | 'sales-manager-dashboard' | 'role-previews' | 'subcontracting-intake' | 'admin-analytics' | 'admin-custom-adders' | 'admin-inverters' | 'admin-optimizers' | 'admin-batteries' | 'admin-racking' | 'admin-panels' | 'admin-financing' | 'admin-payroll' | 'queue-new-project' | 'queue-site-survey' | 'queue-engineering' | 'queue-utility-permits' | 'queue-ready-to-order' | 'queue-coordinate-install' | 'queue-install-scheduled' | 'queue-ready-inspection' | 'queue-pending-pto' | 'queue-pending-activation' | 'queue-system-activated' | 'queue-service-tickets';
 
 interface SidebarProps {
   currentView: ViewType;
@@ -84,7 +84,10 @@ export default function Sidebar({ currentView, onViewChange, isMobileOpen, onMob
 
   const loadQueueCounts = async () => {
     try {
-      let customersQuery = supabase.from('customers').select('id');
+      let customersQuery = supabase
+        .from('customers')
+        .select('id')
+        .eq('job_source', 'internal');
 
       if (userRole === 'sales_rep' && userAppId) {
         customersQuery = customersQuery.eq('sales_rep_id', userAppId);
@@ -239,6 +242,21 @@ export default function Sidebar({ currentView, onViewChange, isMobileOpen, onMob
               <span className="font-medium">Proposals</span>
             </button>
           </li>
+          {(isAdmin || isManagement) && (
+            <li>
+              <button
+                onClick={() => handleViewChange('subcontracting-intake')}
+                className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg transition-colors text-sm ${
+                  currentView === 'subcontracting-intake'
+                    ? 'bg-orange-600 text-white'
+                    : 'text-gray-300 hover:bg-gray-800'
+                }`}
+              >
+                <Briefcase className="w-4 h-4" />
+                <span className="font-medium">Subcontracting Intake</span>
+              </button>
+            </li>
+          )}
           <li>
             <button
               onClick={() => setQueuesExpanded(!queuesExpanded)}

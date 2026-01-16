@@ -20,6 +20,7 @@ import FieldTechDashboard from './components/FieldTechDashboard';
 import SalesManagerDashboard from './components/SalesManagerDashboard';
 import EmployeeProfileView from './components/EmployeeProfileView';
 import RolePreviews from './components/RolePreviews';
+import SubcontractingIntake from './components/SubcontractingIntake';
 import Login from './components/Login';
 import ResetPassword from './components/ResetPassword';
 import FirstLoginPasswordReset from './components/FirstLoginPasswordReset';
@@ -177,6 +178,12 @@ function App() {
             onProposalChange={(proposalId) => setSelectedProposalId(proposalId)}
           />
         );
+      case 'subcontracting-intake':
+        if (!isAdmin && !isManagement) {
+          setCurrentView('calendar');
+          return <Calendar onViewCustomerProject={handleViewCustomerProject} />;
+        }
+        return <SubcontractingIntake />;
       case 'user-management':
         if (!isAdmin && !isManagement) {
           setCurrentView('calendar');

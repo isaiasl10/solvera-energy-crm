@@ -117,7 +117,7 @@ export default function Calendar({ onViewCustomerProject }: CalendarProps) {
         .from('appointments')
         .select(`
           *,
-          customer:customers(full_name)
+          customer:customers(full_name, job_source, address)
         `)
         .gte('scheduled_date', startDateStr)
         .lte('scheduled_date', endDateStr);
@@ -139,6 +139,8 @@ export default function Calendar({ onViewCustomerProject }: CalendarProps) {
             last_name: customer.full_name?.split(' ').slice(1).join(' ') || '',
           } : undefined,
           isSchedulingTicket: false,
+          job_source: customer?.job_source || 'internal',
+          address: customer?.address || '',
         };
       });
 
@@ -146,7 +148,7 @@ export default function Calendar({ onViewCustomerProject }: CalendarProps) {
         .from('scheduling')
         .select(`
           *,
-          customer:customers(full_name)
+          customer:customers(full_name, job_source, address)
         `)
         .not('scheduled_date', 'is', null)
         .gte('scheduled_date', startDateStr)
@@ -187,6 +189,8 @@ export default function Calendar({ onViewCustomerProject }: CalendarProps) {
           } : undefined,
           isSchedulingTicket: true,
           closed_at: ticket.closed_at || null,
+          job_source: customer?.job_source || 'internal',
+          address: customer?.address || '',
         };
       });
 
@@ -471,8 +475,11 @@ export default function Calendar({ onViewCustomerProject }: CalendarProps) {
                       <div className="space-y-0.5">
                         {dayAppointments.slice(0, 5).map(apt => {
                           const isClosed = apt.closed_at !== null && apt.closed_at !== undefined;
+                          const isSubcontract = (apt as any).job_source === 'subcontract';
                           const colorClass = isClosed
                             ? 'bg-green-100 text-green-800 border-green-400'
+                            : isSubcontract
+                            ? 'bg-orange-100 text-orange-800 border-orange-400'
                             : typeColors[apt.type];
 
                           return (
@@ -481,7 +488,12 @@ export default function Calendar({ onViewCustomerProject }: CalendarProps) {
                               onClick={(e) => handleAppointmentClick(apt, e)}
                               className={`text-[10px] p-0.5 rounded border truncate ${colorClass} hover:shadow-md transition-all cursor-pointer`}
                             >
-                              <div className="font-medium truncate leading-tight">{apt.title}</div>
+                              <div className="flex items-center gap-0.5">
+                                {isSubcontract && (
+                                  <span className="text-[8px] font-bold bg-orange-600 text-white px-1 rounded">SUB</span>
+                                )}
+                                <div className="font-medium truncate leading-tight flex-1">{apt.title}</div>
+                              </div>
                               {apt.technician_name && (
                                 <div className="truncate opacity-75 leading-tight">{apt.technician_name.split(' - ')[0]}</div>
                               )}

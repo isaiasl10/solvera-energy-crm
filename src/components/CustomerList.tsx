@@ -134,6 +134,7 @@ export default function CustomerList({ refreshTrigger, onSelectCustomer, searchQ
       const { data: customersData, error: fetchError } = await supabase
         .from('customers')
         .select('*')
+        .eq('job_source', 'internal')
         .order('created_at', { ascending: false });
 
       if (fetchError) throw fetchError;
