@@ -2108,8 +2108,9 @@ export default function ProposalWorkspace({
       return;
     }
 
+    const tempId = `temp-${Date.now()}-${Math.random()}`;
     const newPanel = {
-      id: `temp-${Date.now()}-${Math.random()}`,
+      id: tempId,
       proposal_id: proposalId,
       roof_plane_id: roofId,
       panel_model_id: selectedPanelModelId,
@@ -2122,10 +2123,11 @@ export default function ProposalWorkspace({
     console.log("[PANEL] adding panel to UI immediately", newPanel);
     setPanels((prev) => [...prev, newPanel]);
 
-    // Save to database in background
+    // Save to database in background (without temp ID)
+    const { id, ...panelDataToInsert } = newPanel;
     const { data, error } = await supabase
       .from("proposal_panels")
-      .insert([newPanel])
+      .insert([panelDataToInsert])
       .select()
       .maybeSingle();
 
@@ -2134,7 +2136,7 @@ export default function ProposalWorkspace({
     } else if (data) {
       console.log("[PANEL] added to database", { panelId: data.id, roofPlaneId: roofId, centerLatLng: { lat, lng } });
       // Update with real ID from database
-      setPanels((prev) => prev.map(p => p.id === newPanel.id ? data : p));
+      setPanels((prev) => prev.map(p => p.id === tempId ? data : p));
     }
   };
 
