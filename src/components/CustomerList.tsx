@@ -135,6 +135,7 @@ export default function CustomerList({ refreshTrigger, onSelectCustomer, searchQ
         .from('customers')
         .select('*')
         .eq('job_source', 'internal')
+        .eq('is_active', true)
         .order('created_at', { ascending: false });
 
       if (fetchError) throw fetchError;

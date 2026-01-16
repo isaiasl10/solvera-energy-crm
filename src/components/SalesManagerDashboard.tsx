@@ -163,7 +163,8 @@ export default function SalesManagerDashboard() {
       const { data: customers, error: customersError } = await supabase
         .from('customers')
         .select('id, full_name, system_size_kw, contract_price, created_at')
-        .eq('sales_rep_id', rep.id);
+        .eq('sales_rep_id', rep.id)
+        .eq('is_active', true);
 
       if (customersError) throw customersError;
 

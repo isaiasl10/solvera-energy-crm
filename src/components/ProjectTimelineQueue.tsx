@@ -182,6 +182,7 @@ export default function ProjectTimelineQueue() {
       const { data: customersData, error: customersError } = await supabase
         .from('customers')
         .select('*')
+        .eq('is_active', true)
         .order('created_at', { ascending: false });
 
       if (customersError) throw customersError;

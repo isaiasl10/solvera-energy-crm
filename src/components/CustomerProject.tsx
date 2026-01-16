@@ -618,9 +618,14 @@ export default function CustomerProject({ customer: initialCustomer, onBack, ini
     setError(null);
 
     try {
+      await supabase
+        .from('scheduling')
+        .update({ is_active: false })
+        .eq('customer_id', customer.id);
+
       const { error: deleteError } = await supabase
         .from('customers')
-        .delete()
+        .update({ is_active: false })
         .eq('id', customer.id);
 
       if (deleteError) throw deleteError;
