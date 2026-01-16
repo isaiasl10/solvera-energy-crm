@@ -1729,9 +1729,31 @@ export default function ProposalWorkspace({
       poly.setMap(mapRef.current);
       roofPolysRef.current.set(plane.id, poly);
 
-      google.maps.event.addListener(poly, "click", () => {
-        console.log("[ROOF] selected", { selectedRoofPlaneId: plane.id });
-        setSelectedRoofId(plane.id);
+      google.maps.event.addListener(poly, "click", (e: any) => {
+        const currentToolMode = toolModeRef.current;
+        const currentPanelModelId = selectedPanelModelIdRef.current;
+
+        if (currentToolMode === "add-panel" && currentPanelModelId && e?.latLng) {
+          // Handle panel placement on roof polygon click
+          const lat = e.latLng.lat();
+          const lng = e.latLng.lng();
+          console.log("[PANEL] Add click on roof polygon", {
+            roofPlaneId: plane.id,
+            panelModelId: currentPanelModelId,
+            lat,
+            lng
+          });
+          addPanelAt(lat, lng, plane.id);
+        } else if (currentToolMode === "fill-roof" && currentPanelModelId) {
+          // Handle fill-roof on polygon click
+          console.log("Filling roof plane from polygon click:", plane.id);
+          fillRoofWithPanels(plane);
+          setToolMode("none");
+        } else {
+          // Default behavior - select the roof plane
+          console.log("[ROOF] selected", { selectedRoofPlaneId: plane.id });
+          setSelectedRoofId(plane.id);
+        }
       });
     });
   }, [roofPlanes, selectedRoofId]);
