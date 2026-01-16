@@ -3637,52 +3637,188 @@ export default function ProposalWorkspace({
   };
 
   const renderEnergyTab = () => {
+    const annualConsumption = proposalDraft?.annual_consumption || proposal?.annual_consumption || 0;
+    const electricityRate = proposalDraft?.electricity_rate || proposal?.electricity_rate || 0;
+    const systemKw = systemSummary.systemKw || 0;
+    const annualProduction = systemSummary.annualProductionKwh || 0;
+    const totalContractPrice = systemSummary.totalContractPrice || 0;
+    const financeType = proposalDraft?.finance_type || proposal?.finance_type || "cash";
+    const meterFee = proposalDraft?.meter_fee || proposal?.meter_fee || 0;
+
+    const monthlyConsumptionKwh = annualConsumption / 12;
+    const monthlyUtilityBill = monthlyConsumptionKwh * electricityRate;
+    const annualUtilityBill = monthlyUtilityBill * 12;
+
+    const systemOffsetPercent = annualConsumption > 0 ? (annualProduction / annualConsumption) * 100 : 0;
+    const monthlyProductionKwh = annualProduction / 12;
+    const uncoveredMonthlyKwh = Math.max(0, monthlyConsumptionKwh - monthlyProductionKwh);
+    const monthlyRemainingUtility = uncoveredMonthlyKwh * electricityRate;
+
+    let monthlySolarPayment = 0;
+    if (financeType === "loan") {
+      const loanAmount = totalContractPrice;
+      const loanRate = 0.0599 / 12;
+      const loanTermMonths = 300;
+      if (loanAmount > 0) {
+        monthlySolarPayment = (loanAmount * loanRate * Math.pow(1 + loanRate, loanTermMonths)) / (Math.pow(1 + loanRate, loanTermMonths) - 1);
+      }
+    } else if (financeType === "cash") {
+      monthlySolarPayment = 0;
+    }
+
+    const totalMonthlyWithSolar = monthlySolarPayment + monthlyRemainingUtility + meterFee;
+    const monthlySavings = monthlyUtilityBill - totalMonthlyWithSolar;
+
+    let total25YearUtilityBill = 0;
+    let currentAnnualBill = annualUtilityBill;
+    for (let year = 0; year < 25; year++) {
+      total25YearUtilityBill += currentAnnualBill;
+      currentAnnualBill *= 1.03;
+    }
+
+    let total25YearRemainingUtility = 0;
+    let currentAnnualRemainingUtility = monthlyRemainingUtility * 12;
+    for (let year = 0; year < 25; year++) {
+      total25YearRemainingUtility += currentAnnualRemainingUtility;
+      currentAnnualRemainingUtility *= 1.03;
+    }
+
+    const total25YearMeterFees = meterFee * 12 * 25;
+    const total25YearSolarPayments = financeType === "loan" ? monthlySolarPayment * 300 : totalContractPrice;
+    const total25YearSolarCost = total25YearSolarPayments + total25YearRemainingUtility + total25YearMeterFees;
+    const total25YearSavings = total25YearUtilityBill - total25YearSolarCost;
+    const roi = totalContractPrice > 0 ? (total25YearSavings / totalContractPrice) * 100 : 0;
+
     return (
       <div style={{ padding: 20, maxWidth: 1200, margin: "0 auto" }}>
-        <div style={{ background: "#fff", borderRadius: 12, padding: 24, boxShadow: "0 1px 3px rgba(0,0,0,0.1)" }}>
-          <div style={{ fontSize: 18, fontWeight: 600, color: "#111827", marginBottom: 16 }}>
-            Energy Usage & Production
-          </div>
-          <div style={{ color: "#6b7280", fontSize: 14 }}>
-            Energy analysis and production calculations will be displayed here.
-          </div>
-        </div>
-      </div>
-    );
-  };
+        <div style={{ background: "#fff", padding: 24, borderRadius: 8, border: "1px solid #e5e7eb", marginBottom: 20 }}>
+          <div style={{ fontSize: 18, fontWeight: 700, color: "#111827", marginBottom: 20 }}>Energy Usage Analysis</div>
 
-  const renderPaymentsTab = () => {
-    const { financingOptions } = useFinancingOptions();
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24, marginBottom: 24 }}>
+            <div>
+              <div style={{ fontSize: 12, fontWeight: 600, color: "#6b7280", marginBottom: 8 }}>CURRENT UTILITY</div>
+              <div style={{ background: "#fef3c7", padding: 16, borderRadius: 6, border: "1px solid #fbbf24" }}>
+                <div style={{ fontSize: 11, color: "#78350f", marginBottom: 4 }}>Monthly Utility Bill</div>
+                <div style={{ fontSize: 28, fontWeight: 700, color: "#78350f" }}>${fmt(monthlyUtilityBill, 2)}</div>
+                <div style={{ fontSize: 11, color: "#78350f", marginTop: 8 }}>Annual: ${fmt(annualUtilityBill, 2)}</div>
+              </div>
+            </div>
 
-    return (
-      <div style={{ padding: 20, maxWidth: 1200, margin: "0 auto" }}>
-        <div style={{ background: "#fff", borderRadius: 12, padding: 24, boxShadow: "0 1px 3px rgba(0,0,0,0.1)" }}>
-          <div style={{ fontSize: 18, fontWeight: 600, color: "#111827", marginBottom: 16 }}>
-            Payment Options
+            <div>
+              <div style={{ fontSize: 12, fontWeight: 600, color: "#6b7280", marginBottom: 8 }}>WITH SOLAR</div>
+              <div style={{ background: "#dcfce7", padding: 16, borderRadius: 6, border: "1px solid #22c55e" }}>
+                <div style={{ fontSize: 11, color: "#14532d", marginBottom: 4 }}>
+                  Total Monthly Cost
+                </div>
+                <div style={{ fontSize: 28, fontWeight: 700, color: "#14532d" }}>${fmt(totalMonthlyWithSolar, 2)}</div>
+                <div style={{ fontSize: 10, color: "#14532d", marginTop: 8, paddingTop: 8, borderTop: "1px solid #86efac" }}>
+                  {financeType === "loan" && monthlySolarPayment > 0 && (
+                    <div style={{ marginBottom: 3 }}>Solar Payment: ${fmt(monthlySolarPayment, 2)}</div>
+                  )}
+                  {monthlyRemainingUtility > 0 && (
+                    <div style={{ marginBottom: 3 }}>Remaining Utility: ${fmt(monthlyRemainingUtility, 2)}</div>
+                  )}
+                  {meterFee > 0 && (
+                    <div style={{ marginBottom: 3 }}>Meter Fee: ${fmt(meterFee, 2)}</div>
+                  )}
+                  {financeType === "cash" && (
+                    <div style={{ fontStyle: "italic" }}>Solar paid upfront</div>
+                  )}
+                </div>
+              </div>
+            </div>
           </div>
 
-          {financingOptions && financingOptions.length > 0 ? (
-            <div style={{ display: "grid", gap: 16 }}>
-              {financingOptions.map((option: any) => (
-                <div key={option.id} style={{ padding: 16, border: "1px solid #e5e7eb", borderRadius: 8 }}>
-                  <div style={{ fontSize: 16, fontWeight: 600, color: "#111827", marginBottom: 8 }}>
-                    {option.lender_name} - {option.product_name}
-                  </div>
-                  <div style={{ fontSize: 14, color: "#6b7280" }}>
-                    Term: {option.term_years} years | APR: {option.apr}%
+          <div style={{ background: "#f0fdf4", padding: 20, borderRadius: 8, border: "2px solid #22c55e", marginBottom: 24 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <div>
+                <div style={{ fontSize: 12, fontWeight: 600, color: "#166534", marginBottom: 4 }}>ESTIMATED MONTHLY SAVINGS</div>
+                <div style={{ fontSize: 36, fontWeight: 700, color: "#059669" }}>${fmt(monthlySavings, 2)}</div>
+              </div>
+              <div style={{ textAlign: "right" }}>
+                <div style={{ fontSize: 11, color: "#166534" }}>Savings compared to utility</div>
+                <div style={{ fontSize: 11, color: "#166534", marginTop: 2 }}>
+                  {monthlyUtilityBill > 0 ? ((monthlySavings / monthlyUtilityBill) * 100).toFixed(1) : 0}% reduction
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div style={{ borderTop: "1px solid #e5e7eb", paddingTop: 24 }}>
+            <div style={{ fontSize: 16, fontWeight: 700, color: "#111827", marginBottom: 16 }}>25-Year Financial Projection</div>
+            <div style={{ fontSize: 11, color: "#6b7280", marginBottom: 16 }}>
+              Includes 3% annual utility rate escalation
+            </div>
+
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 16, marginBottom: 20 }}>
+              <div style={{ background: "#fef2f2", padding: 16, borderRadius: 6, border: "1px solid #fca5a5" }}>
+                <div style={{ fontSize: 11, fontWeight: 600, color: "#991b1b", marginBottom: 8 }}>WITHOUT SOLAR</div>
+                <div style={{ fontSize: 11, color: "#991b1b", marginBottom: 4 }}>25-Year Utility Costs</div>
+                <div style={{ fontSize: 20, fontWeight: 700, color: "#dc2626" }}>${fmt(total25YearUtilityBill, 0)}</div>
+              </div>
+
+              <div style={{ background: "#dbeafe", padding: 16, borderRadius: 6, border: "1px solid #60a5fa" }}>
+                <div style={{ fontSize: 11, fontWeight: 600, color: "#1e40af", marginBottom: 8 }}>WITH SOLAR</div>
+                <div style={{ fontSize: 11, color: "#1e40af", marginBottom: 4 }}>25-Year Solar Costs</div>
+                <div style={{ fontSize: 20, fontWeight: 700, color: "#2563eb" }}>${fmt(total25YearSolarCost, 0)}</div>
+              </div>
+
+              <div style={{ background: "#d1fae5", padding: 16, borderRadius: 6, border: "1px solid #34d399" }}>
+                <div style={{ fontSize: 11, fontWeight: 600, color: "#065f46", marginBottom: 8 }}>TOTAL SAVINGS</div>
+                <div style={{ fontSize: 11, color: "#065f46", marginBottom: 4 }}>25-Year Savings</div>
+                <div style={{ fontSize: 20, fontWeight: 700, color: "#059669" }}>${fmt(total25YearSavings, 0)}</div>
+              </div>
+            </div>
+
+            <div style={{ background: "#f9fafb", padding: 16, borderRadius: 6, border: "1px solid #e5e7eb" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div>
+                  <div style={{ fontSize: 11, fontWeight: 600, color: "#374151", marginBottom: 4 }}>RETURN ON INVESTMENT (ROI)</div>
+                  <div style={{ fontSize: 13, color: "#6b7280" }}>
+                    Based on 25-year savings vs. system cost
                   </div>
                 </div>
-              ))}
+                <div style={{ textAlign: "right" }}>
+                  <div style={{ fontSize: 32, fontWeight: 700, color: roi >= 0 ? "#059669" : "#dc2626" }}>
+                    {fmt(roi, 1)}%
+                  </div>
+                </div>
+              </div>
             </div>
-          ) : (
-            <div style={{ color: "#6b7280", fontSize: 14 }}>
-              No financing options configured. Contact administrator to set up payment options.
+          </div>
+
+          <div style={{ marginTop: 20, padding: 16, background: "#fefce8", borderRadius: 6, border: "1px solid #facc15" }}>
+            <div style={{ fontSize: 11, fontWeight: 600, color: "#854d0e", marginBottom: 8 }}>SYSTEM DETAILS</div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, fontSize: 11, color: "#713f12" }}>
+              <div>
+                <div style={{ marginBottom: 4 }}>System Size</div>
+                <div style={{ fontWeight: 600 }}>{fmt(systemKw, 2)} kW</div>
+              </div>
+              <div>
+                <div style={{ marginBottom: 4 }}>Annual Production</div>
+                <div style={{ fontWeight: 600 }}>{fmt(annualProduction, 0)} kWh</div>
+              </div>
+              <div>
+                <div style={{ marginBottom: 4 }}>System Offset</div>
+                <div style={{ fontWeight: 600 }}>
+                  {annualConsumption > 0 ? fmt((annualProduction / annualConsumption) * 100, 1) : 0}%
+                </div>
+              </div>
             </div>
-          )}
+          </div>
         </div>
       </div>
     );
   };
+
+  const renderPaymentsTab = () => (
+    <div style={{ padding: 20 }}>
+      <div style={{ background: "#fff", padding: 20, borderRadius: 8, border: "1px solid #e5e7eb" }}>
+        <div style={{ fontSize: 15, fontWeight: 600, color: "#111827", marginBottom: 16 }}>Payment Details</div>
+        <div style={{ color: "#6b7280", fontSize: 14 }}>Payment information and history will be displayed here.</div>
+      </div>
+    </div>
+  );
 
   const renderOnlineProposalTab = () => {
     return (
