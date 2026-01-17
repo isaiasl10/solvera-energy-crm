@@ -44,6 +44,7 @@ type CustomerSubcontractRow = {
   created_at: string;
   updated_at: string;
 
+  // IMPORTANT: do NOT ever reference contractors.name (it doesn't exist)
   contractor?: {
     company_name?: string | null;
   } | null;
@@ -59,38 +60,84 @@ export default function SubcontractJobDetail({ jobId, onClose, onUpdate }: Subco
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [jobId]);
 
+  /**
+   * WHY THIS FIX:
+   * - Your DB error shows queries were attempting contractors(name,...)
+   * - Your contractors table has company_name, not name
+   * - Also, if RLS blocks the row, the request returns 0 rows -> we show the same error message
+   *
+   * So we:
+   * 1) Fetch the job from customers WITHOUT joining contractors (no chance of "name" join bug)
+   * 2) If contractor_id exists, we fetch contractor separately selecting ONLY company_name
+   */
   const fetchJob = async () => {
     try {
       setLoading(true);
       setError(null);
 
-      // IMPORTANT: we read from customers because Intake creates subcontract jobs there
-      const { data, error: fetchError } = await supabase
+      // Step 1: get the subcontract job row (no join)
+      const { data: jobRow, error: jobErr } = await supabase
         .from('customers')
         .select(
-          `
-          *,
-          contractor:contractors(
-            company_name
-          )
-        `
+          [
+            'id',
+            'job_source',
+            'job_type',
+            'contractor_id',
+            'contractor_name',
+            'subcontract_customer_name',
+            'installation_address',
+            'system_size_kw',
+            'ppw',
+            'gross_revenue',
+            'panel_qty',
+            'price_per_panel',
+            'gross_amount',
+            'net_revenue',
+            'subcontract_status',
+            'detach_reset_status',
+            'invoice_number',
+            'created_at',
+            'updated_at',
+          ].join(',')
         )
         .eq('id', jobId)
         .eq('job_source', 'subcontract')
         .maybeSingle();
 
-      if (fetchError) throw fetchError;
+      if (jobErr) throw jobErr;
 
-      if (!data) {
+      if (!jobRow) {
         setJob(null);
         setError('Job not found (0 rows). This is usually RLS blocking access to that record.');
         return;
       }
 
-      setJob(data as CustomerSubcontractRow);
-    } catch (err) {
+      // Step 2: optionally fetch contractor company_name (separate query, no "name" column ever)
+      let contractorCompanyName: string | null = null;
+
+      if (jobRow.contractor_id) {
+        const { data: contractorRow, error: contractorErr } = await supabase
+          .from('contractors')
+          .select('company_name')
+          .eq('id', jobRow.contractor_id)
+          .maybeSingle();
+
+        // If contractor fetch fails due to RLS, we do NOT block viewing the job
+        if (!contractorErr && contractorRow) {
+          contractorCompanyName = contractorRow.company_name ?? null;
+        }
+      }
+
+      const merged: CustomerSubcontractRow = {
+        ...(jobRow as CustomerSubcontractRow),
+        contractor: { company_name: contractorCompanyName },
+      };
+
+      setJob(merged);
+    } catch (err: any) {
       console.error('Error fetching job:', err);
-      setError(err instanceof Error ? err.message : 'Failed to fetch job');
+      setError(err?.message || 'Failed to fetch job');
       setJob(null);
     } finally {
       setLoading(false);
@@ -143,8 +190,7 @@ export default function SubcontractJobDetail({ jobId, onClose, onUpdate }: Subco
 
   const jobType = (job.job_type || 'new_install') as JobType;
 
-  // We adapt the row into the shape your existing detail components expect
-  // WITHOUT changing their UI.
+  // Keep your existing detail components exactly as-is (no UI changes)
   const adapted: any = {
     ...job,
     job_type: jobType,
@@ -164,7 +210,7 @@ export default function SubcontractJobDetail({ jobId, onClose, onUpdate }: Subco
     return <DetachResetJobDetail job={adapted} onUpdate={handleUpdate as any} />;
   }
 
-  // new_install fallback
+  // new_install fallback (unchanged UI)
   return (
     <div className="bg-white rounded-lg shadow p-6">
       <h2 className="text-2xl font-bold text-gray-900 mb-4">New Install Subcontract Job</h2>
