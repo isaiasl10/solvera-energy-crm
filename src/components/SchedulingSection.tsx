@@ -25,7 +25,7 @@ export default function SchedulingSection({ customer }: SchedulingSectionProps) 
   const [filterProblemCode, setFilterProblemCode] = useState<string>('all');
   const [filterTicketStatus, setFilterTicketStatus] = useState<string>('all');
   const [filterPriority, setFilterPriority] = useState<string>('all');
-  const [showActiveOnly, setShowActiveOnly] = useState(true);
+  const [showActiveOnly, setShowActiveOnly] = useState(false);
 
   useEffect(() => {
     fetchTickets();
@@ -309,14 +309,21 @@ export default function SchedulingSection({ customer }: SchedulingSectionProps) 
           </div>
         ) : (
           <div className="divide-y divide-gray-200">
-            {filteredTickets.map((ticket) => (
-              <div key={ticket.id} className="p-4 hover:bg-gray-50 transition-colors">
+            {filteredTickets.map((ticket) => {
+              const isClosed = ticket.closed_at !== null && ticket.closed_at !== undefined;
+              return (
+              <div key={ticket.id} className={`p-4 hover:bg-gray-50 transition-colors ${isClosed ? 'bg-green-50 border-l-4 border-green-500' : ''}`}>
                 <div className="flex items-start justify-between mb-3">
                   <div
                     className="flex-1 cursor-pointer"
                     onClick={() => handleViewTicket(ticket)}
                   >
                     <div className="flex items-center gap-3 mb-2">
+                      {isClosed && (
+                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-bold bg-green-600 text-white">
+                          COMPLETED
+                        </span>
+                      )}
                       <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getPriorityColor(ticket.priority || 'normal')}`}>
                         {formatLabel(ticket.priority || 'normal')}
                       </span>
@@ -381,7 +388,8 @@ export default function SchedulingSection({ customer }: SchedulingSectionProps) 
                   </div>
                 </div>
               </div>
-            ))}
+            );
+            })}
           </div>
         )}
       </div>

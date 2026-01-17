@@ -707,20 +707,33 @@ export default function TicketDetailModal({ ticketId, onClose, onUpdate, onViewP
                   {formatTimeRange(ticket.scheduled_date, ticket.time_window_start, ticket.time_window_end)}
                 </div>
 
-                <div className="grid grid-cols-3 gap-2 sm:gap-3">
-                  <div className="bg-gray-900 text-white rounded p-2 sm:p-3 text-center">
-                    <div className="text-xs text-gray-400">Panels</div>
-                    <div className="text-base sm:text-lg font-bold text-orange-500">{customer.panel_quantity}</div>
+                {ticket.ticket_type === 'service' ? (
+                  <div className="grid grid-cols-2 gap-2 sm:gap-3">
+                    <div className="bg-gray-900 text-white rounded p-2 sm:p-3 text-center">
+                      <div className="text-xs text-gray-400">Panel Quantity</div>
+                      <div className="text-base sm:text-lg font-bold text-orange-500">{customer.panel_quantity || '-'}</div>
+                    </div>
+                    <div className="bg-gray-900 text-white rounded p-2 sm:p-3 text-center">
+                      <div className="text-xs text-gray-400">Roof</div>
+                      <div className="text-base sm:text-lg font-bold text-orange-500">{customer.roof_type || '-'}</div>
+                    </div>
                   </div>
-                  <div className="bg-gray-900 text-white rounded p-2 sm:p-3 text-center">
-                    <div className="text-xs text-gray-400">Size (kW)</div>
-                    <div className="text-base sm:text-lg font-bold text-orange-500">{(customer.system_size_kw / 1000).toFixed(2)}</div>
+                ) : (
+                  <div className="grid grid-cols-3 gap-2 sm:gap-3">
+                    <div className="bg-gray-900 text-white rounded p-2 sm:p-3 text-center">
+                      <div className="text-xs text-gray-400">Panels</div>
+                      <div className="text-base sm:text-lg font-bold text-orange-500">{customer.panel_quantity}</div>
+                    </div>
+                    <div className="bg-gray-900 text-white rounded p-2 sm:p-3 text-center">
+                      <div className="text-xs text-gray-400">Size (kW)</div>
+                      <div className="text-base sm:text-lg font-bold text-orange-500">{(customer.system_size_kw / 1000).toFixed(2)}</div>
+                    </div>
+                    <div className="bg-gray-900 text-white rounded p-2 sm:p-3 text-center">
+                      <div className="text-xs text-gray-400">Roof</div>
+                      <div className="text-base sm:text-lg font-bold text-orange-500">{customer.roof_type || '-'}</div>
+                    </div>
                   </div>
-                  <div className="bg-gray-900 text-white rounded p-2 sm:p-3 text-center">
-                    <div className="text-xs text-gray-400">Roof</div>
-                    <div className="text-base sm:text-lg font-bold text-orange-500">{customer.roof_type || '-'}</div>
-                  </div>
-                </div>
+                )}
               </div>
             </div>
           )}

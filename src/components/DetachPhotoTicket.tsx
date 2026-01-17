@@ -296,7 +296,8 @@ export default function DetachPhotoTicket({ ticketId, onClose }: DetachPhotoTick
                     Footing Quantity
                   </label>
                   <input
-                    type="text"
+                    type="number"
+                    min="0"
                     value={footingQuantity}
                     onChange={(e) => {
                       setFootingQuantity(e.target.value);

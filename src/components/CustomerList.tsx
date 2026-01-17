@@ -156,18 +156,33 @@ export default function CustomerList({ refreshTrigger, onSelectCustomer, searchQ
         .select('id, full_name')
         .in('id', salesRepIds);
 
+      const { data: proposalsData } = await supabase
+        .from('proposals')
+        .select('customer_id, status')
+        .in('customer_id', customerIds);
+
       const customersWithTimeline = (customersData || [])
         .map(customer => {
           const timeline = timelinesData?.find(t => t.customer_id === customer.id);
           const salesRep = salesRepsData?.find(rep => rep.id === customer.sales_rep_id);
+          const proposal = proposalsData?.find(p => p.customer_id === customer.id);
           return {
             ...customer,
             timeline,
             timelineStage: getTimelineStage(timeline),
             salesRepName: salesRep?.full_name || 'Not assigned',
+            proposalStatus: proposal?.status,
           };
         })
-        .filter(customer => customer.timeline && customer.timeline.approved_for_site_survey === true);
+        .filter(customer => {
+          if (!customer.timeline || customer.timeline.approved_for_site_survey !== true) {
+            return false;
+          }
+          if (!customer.proposalStatus) {
+            return false;
+          }
+          return customer.proposalStatus === 'customer_signed' || customer.proposalStatus === 'closed_deal';
+        });
 
       setCustomers(customersWithTimeline);
       setFilteredCustomers(customersWithTimeline);
