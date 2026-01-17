@@ -39,7 +39,6 @@ export interface SubcontractJob {
   updated_at: string;
 
   contractor?: {
-    name: string;
     company_name?: string | null;
     default_new_install_ppw?: number | null;
     default_detach_reset_price_per_panel?: number | null;
@@ -63,7 +62,6 @@ export function useSubcontractJobs() {
           `
           *,
           contractor:contractors(
-            name,
             company_name,
             default_new_install_ppw,
             default_detach_reset_price_per_panel,
@@ -86,7 +84,6 @@ export function useSubcontractJobs() {
 
   const createJob = async (jobData: Partial<SubcontractJob>) => {
     try {
-      // IMPORTANT: create must insert into subcontract_jobs (not customers)
       const { data, error: createError } = await supabase
         .from("subcontract_jobs")
         .insert([jobData])
@@ -94,7 +91,6 @@ export function useSubcontractJobs() {
           `
           *,
           contractor:contractors(
-            name,
             company_name,
             default_new_install_ppw,
             default_detach_reset_price_per_panel,
@@ -126,7 +122,6 @@ export function useSubcontractJobs() {
           `
           *,
           contractor:contractors(
-            name,
             company_name,
             default_new_install_ppw,
             default_detach_reset_price_per_panel,
@@ -175,7 +170,6 @@ export function useSubcontractJobs() {
           `
           *,
           contractor:contractors(
-            name,
             company_name,
             default_new_install_ppw,
             default_detach_reset_price_per_panel,
