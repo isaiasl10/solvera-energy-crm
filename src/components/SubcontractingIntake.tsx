@@ -4,26 +4,17 @@ import { loadGoogleMaps } from "../lib/loadGoogleMaps";
 import { Plus, Search, X } from "lucide-react";
 import SubcontractJobDetail from "./SubcontractJobDetail";
 
-/**
- * ✅ Keep ORIGINAL UI/Design exactly
- * ✅ Fix the errors by:
- *   1) Stop using `customers` table for subcontract intake
- *   2) Use `subcontract_jobs` table for CRUD
- *   3) Keep contractors table using `company_name` (no `name` column)
- *   4) Subscribe to changes on `subcontract_jobs` (not customers)
- */
-
 type JobType = "new_install" | "detach_reset" | "service";
 
 interface Contractor {
   id: string;
   company_name: string;
-  ppw: number | null;
-  adders: any[]; // keep compatible with your existing data shape
+  ppw: number | string | null;
+  adders: any[];
   address: string | null;
   phone_number: string | null;
   email: string | null;
-  default_detach_reset_price_per_panel: number | null;
+  default_detach_reset_price_per_panel: number | string | null;
 }
 
 interface SubcontractJob {
@@ -31,32 +22,32 @@ interface SubcontractJob {
   contractor_id: string;
   job_type: JobType;
 
-  // your UI expects these names:
   contractor_name: string;
   subcontract_customer_name: string;
   installation_address: string;
 
-  // for UI display:
-  system_size_kw: number | null;
+  system_size_kw: number | string | null;
   ppw: number | null;
 
-  // for UI display:
-  gross_revenue: number | null; // mapped from gross_amount
-  net_revenue: number | null;
+  gross_revenue: number | string | null;
+  net_revenue: number | string | null;
 
-  // status columns:
   subcontract_status: string | null;
   detach_reset_status: string | null;
 
-  // invoice:
   invoice_number: string | null;
 
-  // detach/reset fields:
-  panel_qty: number | null;
-  gross_amount: number | null;
+  panel_qty: number | string | null;
+  gross_amount: number | string | null;
 
   created_at: string;
 }
+
+const toNum = (v: any): number | null => {
+  if (v === null || v === undefined || v === "") return null;
+  const n = typeof v === "number" ? v : Number(v);
+  return Number.isFinite(n) ? n : null;
+};
 
 export default function SubcontractingIntake() {
   const [jobs, setJobs] = useState<SubcontractJob[]>([]);
@@ -83,10 +74,6 @@ export default function SubcontractingIntake() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  /**
-   * ✅ Subscribe to subcontract_jobs table changes (not customers)
-   * This keeps your live refresh behavior without touching customers triggers.
-   */
   useEffect(() => {
     const channelName = `subcontract_jobs_${Date.now()}`;
 
@@ -94,14 +81,8 @@ export default function SubcontractingIntake() {
       .channel(channelName)
       .on(
         "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "subcontract_jobs",
-        },
-        () => {
-          loadSubcontractJobs();
-        }
+        { event: "*", schema: "public", table: "subcontract_jobs" },
+        () => loadSubcontractJobs()
       )
       .subscribe();
 
@@ -113,13 +94,14 @@ export default function SubcontractingIntake() {
 
   const loadContractors = async () => {
     try {
-      // ✅ contractors has company_name, not name
       const { data, error } = await supabase
         .from("contractors")
         .select("id, company_name, ppw, adders, address, phone_number, email, default_detach_reset_price_per_panel")
         .order("company_name", { ascending: true });
 
       if (error) throw error;
+
+      // ✅ prevent .toFixed crash later: keep ppw as-is but we will format safely in UI
       setContractors((data || []) as Contractor[]);
     } catch (error) {
       console.error("Error loading contractors:", error);
@@ -127,9 +109,7 @@ export default function SubcontractingIntake() {
   };
 
   useEffect(() => {
-    if (showAddModal && addressInputRef.current) {
-      initializeAutocomplete();
-    }
+    if (showAddModal && addressInputRef.current) initializeAutocomplete();
 
     return () => {
       if (autocompleteRef.current) {
@@ -145,9 +125,7 @@ export default function SubcontractingIntake() {
       const google = await loadGoogleMaps();
 
       if (addressInputRef.current) {
-        if (autocompleteRef.current) {
-          google.maps.event.clearInstanceListeners(autocompleteRef.current);
-        }
+        if (autocompleteRef.current) google.maps.event.clearInstanceListeners(autocompleteRef.current);
 
         autocompleteRef.current = new google.maps.places.Autocomplete(addressInputRef.current, {
           types: ["address"],
@@ -163,15 +141,9 @@ export default function SubcontractingIntake() {
       }
     } catch (error: any) {
       console.error("Error initializing Google Maps autocomplete:", error);
-      if (error?.message?.includes("API key")) {
-        console.warn("Google Maps API key is not configured. Address autocomplete will not be available.");
-      }
     }
   };
 
-  /**
-   * ✅ Read jobs from subcontract_jobs, but map fields to your ORIGINAL UI names
-   */
   const loadSubcontractJobs = async () => {
     setLoading(true);
     try {
@@ -199,40 +171,37 @@ export default function SubcontractingIntake() {
 
       if (error) throw error;
 
-      const mapped: SubcontractJob[] =
-        (data || []).map((row: any) => {
-          const contractorName = row?.contractor?.company_name || "";
-          const contractorPpw = row?.contractor?.ppw ?? null;
+      const mapped: SubcontractJob[] = (data || []).map((row: any) => {
+        const contractorName = row?.contractor?.company_name || "";
+        const contractorPpw = toNum(row?.contractor?.ppw);
 
-          // workflow_status is your canonical status field on subcontract_jobs
-          // your UI expects subcontract_status and detach_reset_status
-          const status = row?.workflow_status ?? null;
+        const status = row?.workflow_status ?? null;
 
-          return {
-            id: row.id,
-            contractor_id: row.contractor_id,
-            job_type: row.job_type,
+        return {
+          id: row.id,
+          contractor_id: row.contractor_id,
+          job_type: row.job_type,
 
-            contractor_name: contractorName,
-            subcontract_customer_name: row.customer_name ?? "",
-            installation_address: row.address ?? "",
+          contractor_name: contractorName,
+          subcontract_customer_name: row.customer_name ?? "",
+          installation_address: row.address ?? "",
 
-            system_size_kw: row.system_size_kw ?? null,
-            ppw: contractorPpw, // keep your UI showing PPW if you later add column; for now it comes from contractor
+          system_size_kw: row.system_size_kw ?? null,
+          ppw: contractorPpw,
 
-            gross_amount: row.gross_amount ?? null,
-            gross_revenue: row.gross_amount ?? null, // map gross_amount to gross_revenue (your UI uses gross_revenue)
-            net_revenue: row.net_revenue ?? null,
+          gross_amount: row.gross_amount ?? null,
+          gross_revenue: row.gross_amount ?? null,
+          net_revenue: row.net_revenue ?? null,
 
-            subcontract_status: status, // your UI uses this for new_install + service
-            detach_reset_status: status, // your UI uses this for detach_reset
+          subcontract_status: status,
+          detach_reset_status: status,
 
-            invoice_number: row.invoice_number ?? null,
+          invoice_number: row.invoice_number ?? null,
 
-            panel_qty: row.panel_qty ?? null,
-            created_at: row.created_at,
-          };
-        }) || [];
+          panel_qty: row.panel_qty ?? null,
+          created_at: row.created_at,
+        };
+      });
 
       setJobs(mapped);
     } catch (error) {
@@ -242,10 +211,6 @@ export default function SubcontractingIntake() {
     }
   };
 
-  /**
-   * ✅ Create job in subcontract_jobs (NOT customers)
-   * ✅ Keep your original modal and behaviors
-   */
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -258,18 +223,13 @@ export default function SubcontractingIntake() {
 
     try {
       const selectedContractor = contractors.find((c) => c.id === formData.contractor_id);
-      if (!selectedContractor) {
-        throw new Error("Selected contractor not found");
-      }
+      if (!selectedContractor) throw new Error("Selected contractor not found");
 
-      // Build payload for subcontract_jobs
       const payload: any = {
         contractor_id: formData.contractor_id,
         job_type: formData.job_type,
         customer_name: formData.customer_name,
         address: formData.address,
-
-        // ✅ status stored in workflow_status on subcontract_jobs
         workflow_status:
           formData.job_type === "new_install"
             ? "install_scheduled"
@@ -279,47 +239,26 @@ export default function SubcontractingIntake() {
       };
 
       if (formData.job_type === "new_install") {
-        payload.system_size_kw = null; // you can fill on detail screen
-        // Save adders in notes to preserve data without changing schema
-        if (selectedAdders?.length) {
-          payload.notes = JSON.stringify({ subcontract_adders: selectedAdders });
-        }
+        if (selectedAdders?.length) payload.notes = JSON.stringify({ subcontract_adders: selectedAdders });
       }
 
       if (formData.job_type === "detach_reset") {
-        payload.panel_qty = null;
-        payload.price_per_panel = selectedContractor.default_detach_reset_price_per_panel ?? null;
-      }
-
-      if (formData.job_type === "service") {
-        // keep minimal, detail screen can fill labor/material
+        payload.price_per_panel = toNum(selectedContractor.default_detach_reset_price_per_panel);
       }
 
       const { data, error } = await supabase.from("subcontract_jobs").insert([payload]).select("id").single();
-
-      if (error) {
-        console.error("Database error:", error);
-        throw error;
-      }
+      if (error) throw error;
 
       setShowAddModal(false);
-      setFormData({
-        contractor_id: "",
-        customer_name: "",
-        address: "",
-        job_type: "new_install",
-      });
+      setFormData({ contractor_id: "", customer_name: "", address: "", job_type: "new_install" });
       setSelectedAdders([]);
 
       await loadSubcontractJobs();
 
-      if (data?.id) {
-        setSelectedJobId(data.id);
-      }
+      if (data?.id) setSelectedJobId(data.id);
     } catch (error: any) {
       console.error("Error creating subcontract job:", error);
-      const errorMessage = error?.message || "Unknown error occurred";
-      alert(`Error creating subcontract job: ${errorMessage}\n\nPlease check the console for more details.`);
+      alert(`Error creating subcontract job: ${error?.message || "Unknown error"}\n\nCheck console for details.`);
     } finally {
       setSubmitting(false);
     }
@@ -348,12 +287,11 @@ export default function SubcontractingIntake() {
     }
   };
 
-  const formatStatus = (status: string) => {
-    return status
+  const formatStatus = (status: string) =>
+    status
       .split("_")
-      .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+      .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
       .join(" ");
-  };
 
   const getJobTypeBadge = (jobType: string) => {
     switch (jobType) {
@@ -368,11 +306,14 @@ export default function SubcontractingIntake() {
     }
   };
 
+  const money = (v: any) => {
+    const n = toNum(v);
+    return n == null ? "-" : `$${n.toLocaleString("en-US", { minimumFractionDigits: 2 })}`;
+  };
+
   return (
-    <div
-      className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto"
-      style={{ maxHeight: "100vh", overflowY: "auto" }}
-    >
+    // ✅ Scroll-safe wrapper (does not change your layout)
+    <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto min-h-screen overflow-y-auto">
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-4 sm:mb-6">
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-1">Subcontracting Jobs Intake</h1>
@@ -412,33 +353,15 @@ export default function SubcontractingIntake() {
             <table className="w-full min-w-[800px] border-collapse">
               <thead>
                 <tr className="bg-gray-50 border-b border-gray-200">
-                  <th className="px-3 sm:px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider whitespace-nowrap">
-                    Invoice #
-                  </th>
-                  <th className="px-3 sm:px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider whitespace-nowrap">
-                    Job Type
-                  </th>
-                  <th className="px-3 sm:px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider whitespace-nowrap">
-                    Contractor
-                  </th>
-                  <th className="px-3 sm:px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider whitespace-nowrap">
-                    Customer
-                  </th>
-                  <th className="px-3 sm:px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider whitespace-nowrap">
-                    Address
-                  </th>
-                  <th className="px-3 sm:px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider whitespace-nowrap">
-                    System Size
-                  </th>
-                  <th className="px-3 sm:px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider whitespace-nowrap">
-                    Gross Revenue
-                  </th>
-                  <th className="px-3 sm:px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider whitespace-nowrap">
-                    Net Revenue
-                  </th>
-                  <th className="px-3 sm:px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider whitespace-nowrap">
-                    Status
-                  </th>
+                  <th className="px-3 sm:px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider whitespace-nowrap">Invoice #</th>
+                  <th className="px-3 sm:px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider whitespace-nowrap">Job Type</th>
+                  <th className="px-3 sm:px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider whitespace-nowrap">Contractor</th>
+                  <th className="px-3 sm:px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider whitespace-nowrap">Customer</th>
+                  <th className="px-3 sm:px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider whitespace-nowrap">Address</th>
+                  <th className="px-3 sm:px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider whitespace-nowrap">System Size</th>
+                  <th className="px-3 sm:px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider whitespace-nowrap">Gross Revenue</th>
+                  <th className="px-3 sm:px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider whitespace-nowrap">Net Revenue</th>
+                  <th className="px-3 sm:px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider whitespace-nowrap">Status</th>
                 </tr>
               </thead>
               <tbody>
@@ -476,17 +399,9 @@ export default function SubcontractingIntake() {
                           : "-"}
                       </td>
                       <td className="px-3 sm:px-4 py-3 sm:py-4 text-sm text-emerald-600 font-semibold">
-                        {job.job_type === "detach_reset"
-                          ? job.gross_amount
-                            ? `$${job.gross_amount.toLocaleString("en-US", { minimumFractionDigits: 2 })}`
-                            : "-"
-                          : job.gross_revenue
-                          ? `$${job.gross_revenue.toLocaleString("en-US", { minimumFractionDigits: 2 })}`
-                          : "-"}
+                        {job.job_type === "detach_reset" ? money(job.gross_amount) : money(job.gross_revenue)}
                       </td>
-                      <td className="px-3 sm:px-4 py-3 sm:py-4 text-sm text-green-600 font-bold">
-                        {job.net_revenue ? `$${job.net_revenue.toLocaleString("en-US", { minimumFractionDigits: 2 })}` : "-"}
-                      </td>
+                      <td className="px-3 sm:px-4 py-3 sm:py-4 text-sm text-green-600 font-bold">{money(job.net_revenue)}</td>
                       <td className="px-3 sm:px-4 py-3 sm:py-4">
                         <span className="inline-block px-2 py-1 text-xs font-semibold rounded" style={{ backgroundColor: statusStyle.bg, color: statusStyle.color }}>
                           {formatStatus(job.subcontract_status || "install_scheduled")}
@@ -543,13 +458,7 @@ export default function SubcontractingIntake() {
                   setShowAddModal(false);
                   setSelectedAdders([]);
                 }}
-                style={{
-                  background: "none",
-                  border: "none",
-                  cursor: "pointer",
-                  padding: "4px",
-                  color: "#6b7280",
-                }}
+                style={{ background: "none", border: "none", cursor: "pointer", padding: "4px", color: "#6b7280" }}
               >
                 <X size={24} />
               </button>
@@ -574,16 +483,7 @@ export default function SubcontractingIntake() {
                 <div>
                   <label style={{ display: "block", fontSize: "14px", fontWeight: 600, color: "#374151", marginBottom: "8px" }}>Select Contractor *</label>
                   {contractors.length === 0 ? (
-                    <div
-                      style={{
-                        padding: "10px 12px",
-                        backgroundColor: "#fef3c7",
-                        border: "1px solid #f59e0b",
-                        borderRadius: "6px",
-                        fontSize: "14px",
-                        color: "#92400e",
-                      }}
-                    >
+                    <div style={{ padding: "10px 12px", backgroundColor: "#fef3c7", border: "1px solid #f59e0b", borderRadius: "6px", fontSize: "14px", color: "#92400e" }}>
                       No contractors available. Please add a contractor first.
                     </div>
                   ) : (
@@ -594,22 +494,17 @@ export default function SubcontractingIntake() {
                         setFormData({ ...formData, contractor_id: e.target.value });
                         setSelectedAdders([]);
                       }}
-                      style={{
-                        width: "100%",
-                        padding: "10px 12px",
-                        border: "1px solid #d1d5db",
-                        borderRadius: "6px",
-                        fontSize: "14px",
-                        outline: "none",
-                        backgroundColor: "white",
-                      }}
+                      style={{ width: "100%", padding: "10px 12px", border: "1px solid #d1d5db", borderRadius: "6px", fontSize: "14px", outline: "none", backgroundColor: "white" }}
                     >
                       <option value="">Select a contractor...</option>
-                      {contractors.map((contractor) => (
-                        <option key={contractor.id} value={contractor.id}>
-                          {contractor.company_name} {contractor.ppw ? `($${contractor.ppw.toFixed(2)}/kW)` : ""}
-                        </option>
-                      ))}
+                      {contractors.map((contractor) => {
+                        const ppwNum = toNum(contractor.ppw);
+                        return (
+                          <option key={contractor.id} value={contractor.id}>
+                            {contractor.company_name} {ppwNum != null ? `($${ppwNum.toFixed(2)}/kW)` : ""}
+                          </option>
+                        );
+                      })}
                     </select>
                   )}
                 </div>
@@ -619,18 +514,8 @@ export default function SubcontractingIntake() {
                   <select
                     required
                     value={formData.job_type}
-                    onChange={(e) => {
-                      setFormData({ ...formData, job_type: e.target.value as JobType });
-                    }}
-                    style={{
-                      width: "100%",
-                      padding: "10px 12px",
-                      border: "1px solid #d1d5db",
-                      borderRadius: "6px",
-                      fontSize: "14px",
-                      outline: "none",
-                      backgroundColor: "white",
-                    }}
+                    onChange={(e) => setFormData({ ...formData, job_type: e.target.value as JobType })}
+                    style={{ width: "100%", padding: "10px 12px", border: "1px solid #d1d5db", borderRadius: "6px", fontSize: "14px", outline: "none", backgroundColor: "white" }}
                   >
                     <option value="new_install">New Install</option>
                     <option value="detach_reset">Detach & Reset</option>
@@ -647,9 +532,7 @@ export default function SubcontractingIntake() {
                   formData.job_type === "new_install" &&
                   (contractors.find((c) => c.id === formData.contractor_id)?.adders as any[])?.length > 0 && (
                     <div>
-                      <label style={{ display: "block", fontSize: "14px", fontWeight: 600, color: "#374151", marginBottom: "8px" }}>
-                        Select Adders (Optional)
-                      </label>
+                      <label style={{ display: "block", fontSize: "14px", fontWeight: 600, color: "#374151", marginBottom: "8px" }}>Select Adders (Optional)</label>
                       <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
                         {(contractors.find((c) => c.id === formData.contractor_id)?.adders as any[]).map((adder: any, index: number) => (
                           <label
@@ -691,14 +574,7 @@ export default function SubcontractingIntake() {
                     value={formData.customer_name}
                     onChange={(e) => setFormData({ ...formData, customer_name: e.target.value })}
                     placeholder="John Smith"
-                    style={{
-                      width: "100%",
-                      padding: "10px 12px",
-                      border: "1px solid #d1d5db",
-                      borderRadius: "6px",
-                      fontSize: "14px",
-                      outline: "none",
-                    }}
+                    style={{ width: "100%", padding: "10px 12px", border: "1px solid #d1d5db", borderRadius: "6px", fontSize: "14px", outline: "none" }}
                   />
                 </div>
 
@@ -711,14 +587,7 @@ export default function SubcontractingIntake() {
                     value={formData.address}
                     onChange={(e) => setFormData({ ...formData, address: e.target.value })}
                     placeholder="Start typing address..."
-                    style={{
-                      width: "100%",
-                      padding: "10px 12px",
-                      border: "1px solid #d1d5db",
-                      borderRadius: "6px",
-                      fontSize: "14px",
-                      outline: "none",
-                    }}
+                    style={{ width: "100%", padding: "10px 12px", border: "1px solid #d1d5db", borderRadius: "6px", fontSize: "14px", outline: "none" }}
                   />
                   <p style={{ fontSize: "12px", color: "#6b7280", marginTop: "6px", fontStyle: "italic" }}>Start typing to see address suggestions</p>
                 </div>
@@ -732,16 +601,7 @@ export default function SubcontractingIntake() {
                     setSelectedAdders([]);
                   }}
                   disabled={submitting}
-                  style={{
-                    padding: "10px 20px",
-                    border: "1px solid #d1d5db",
-                    background: "white",
-                    color: "#374151",
-                    borderRadius: "6px",
-                    fontSize: "14px",
-                    fontWeight: 600,
-                    cursor: "pointer",
-                  }}
+                  style={{ padding: "10px 20px", border: "1px solid #d1d5db", background: "white", color: "#374151", borderRadius: "6px", fontSize: "14px", fontWeight: 600, cursor: "pointer" }}
                 >
                   Cancel
                 </button>
@@ -767,9 +627,7 @@ export default function SubcontractingIntake() {
         </div>
       )}
 
-      {selectedJobId && (
-        <SubcontractJobDetail jobId={selectedJobId} onClose={() => setSelectedJobId(null)} onUpdate={loadSubcontractJobs} />
-      )}
+      {selectedJobId && <SubcontractJobDetail jobId={selectedJobId} onClose={() => setSelectedJobId(null)} onUpdate={loadSubcontractJobs} />}
     </div>
   );
 }
