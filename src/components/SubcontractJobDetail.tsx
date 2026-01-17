@@ -42,9 +42,7 @@ type CustomerSubcontractRow = {
   invoice_number: string | null;
 
   created_at: string;
-  updated_at: string;
 
-  // IMPORTANT: do NOT ever reference contractors.name (it doesn't exist)
   contractor?: {
     company_name?: string | null;
   } | null;
@@ -60,22 +58,12 @@ export default function SubcontractJobDetail({ jobId, onClose, onUpdate }: Subco
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [jobId]);
 
-  /**
-   * WHY THIS FIX:
-   * - Your DB error shows queries were attempting contractors(name,...)
-   * - Your contractors table has company_name, not name
-   * - Also, if RLS blocks the row, the request returns 0 rows -> we show the same error message
-   *
-   * So we:
-   * 1) Fetch the job from customers WITHOUT joining contractors (no chance of "name" join bug)
-   * 2) If contractor_id exists, we fetch contractor separately selecting ONLY company_name
-   */
   const fetchJob = async () => {
     try {
       setLoading(true);
       setError(null);
 
-      // Step 1: get the subcontract job row (no join)
+      // Step 1: get the subcontract job row (NO updated_at)
       const { data: jobRow, error: jobErr } = await supabase
         .from('customers')
         .select(
@@ -98,7 +86,6 @@ export default function SubcontractJobDetail({ jobId, onClose, onUpdate }: Subco
             'detach_reset_status',
             'invoice_number',
             'created_at',
-            'updated_at',
           ].join(',')
         )
         .eq('id', jobId)
@@ -113,7 +100,7 @@ export default function SubcontractJobDetail({ jobId, onClose, onUpdate }: Subco
         return;
       }
 
-      // Step 2: optionally fetch contractor company_name (separate query, no "name" column ever)
+      // Step 2: optionally fetch contractor company_name (separate query)
       let contractorCompanyName: string | null = null;
 
       if (jobRow.contractor_id) {
@@ -123,7 +110,6 @@ export default function SubcontractJobDetail({ jobId, onClose, onUpdate }: Subco
           .eq('id', jobRow.contractor_id)
           .maybeSingle();
 
-        // If contractor fetch fails due to RLS, we do NOT block viewing the job
         if (!contractorErr && contractorRow) {
           contractorCompanyName = contractorRow.company_name ?? null;
         }
@@ -190,7 +176,6 @@ export default function SubcontractJobDetail({ jobId, onClose, onUpdate }: Subco
 
   const jobType = (job.job_type || 'new_install') as JobType;
 
-  // Keep your existing detail components exactly as-is (no UI changes)
   const adapted: any = {
     ...job,
     job_type: jobType,
@@ -210,7 +195,7 @@ export default function SubcontractJobDetail({ jobId, onClose, onUpdate }: Subco
     return <DetachResetJobDetail job={adapted} onUpdate={handleUpdate as any} />;
   }
 
-  // new_install fallback (unchanged UI)
+  // new_install fallback (UI unchanged)
   return (
     <div className="bg-white rounded-lg shadow p-6">
       <h2 className="text-2xl font-bold text-gray-900 mb-4">New Install Subcontract Job</h2>
