@@ -4,6 +4,9 @@ import { supabase, type SchedulingAppointment, type Customer, type Document, typ
 import InstallationPhotoTicket from './InstallationPhotoTicket';
 import SiteSurveyPhotoTicket from './SiteSurveyPhotoTicket';
 import InspectionPhotoTicket from './InspectionPhotoTicket';
+import DetachPhotoTicket from './DetachPhotoTicket';
+import ResetPhotoTicket from './ResetPhotoTicket';
+import ServicePhotoTicket from './ServicePhotoTicket';
 
 type TicketDetailModalProps = {
   ticketId: string;
@@ -230,7 +233,8 @@ export default function TicketDetailModal({ ticketId, onClose, onUpdate, onViewP
           updateProgressStep('begin_ticket_at', null);
         } else if (
           ticket.ticket_type === 'installation' ||
-          ticket.ticket_type === 'inspection'
+          ticket.ticket_type === 'inspection' ||
+          ticket.ticket_type === 'service'
         ) {
           console.log('Opening photo ticket modal for:', ticket.ticket_type, ticket.problem_code);
           setShowPhotoTicket(true);
@@ -1053,6 +1057,27 @@ export default function TicketDetailModal({ ticketId, onClose, onUpdate, onViewP
 
       {showPhotoTicket && ticket.ticket_type === 'inspection' && ticket.problem_code !== 'site_survey' && (
         <InspectionPhotoTicket
+          ticketId={ticketId}
+          onClose={handlePhotoTicketClose}
+        />
+      )}
+
+      {showPhotoTicket && ticket.ticket_type === 'service' && ticket.problem_code === 'detach_panels' && (
+        <DetachPhotoTicket
+          ticketId={ticketId}
+          onClose={handlePhotoTicketClose}
+        />
+      )}
+
+      {showPhotoTicket && ticket.ticket_type === 'service' && ticket.problem_code === 'reset_panels' && (
+        <ResetPhotoTicket
+          ticketId={ticketId}
+          onClose={handlePhotoTicketClose}
+        />
+      )}
+
+      {showPhotoTicket && ticket.ticket_type === 'service' && ticket.problem_code !== 'detach_panels' && ticket.problem_code !== 'reset_panels' && (
+        <ServicePhotoTicket
           ticketId={ticketId}
           onClose={handlePhotoTicketClose}
         />
