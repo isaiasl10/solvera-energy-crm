@@ -158,7 +158,7 @@ export default function CustomerList({ refreshTrigger, onSelectCustomer, searchQ
 
       const { data: proposalsData } = await supabase
         .from('proposals')
-        .select('customer_id, status')
+        .select('customer_id, proposal_status')
         .in('customer_id', customerIds);
 
       const customersWithTimeline = (customersData || [])
@@ -171,7 +171,7 @@ export default function CustomerList({ refreshTrigger, onSelectCustomer, searchQ
             timeline,
             timelineStage: getTimelineStage(timeline),
             salesRepName: salesRep?.full_name || 'Not assigned',
-            proposalStatus: proposal?.status,
+            proposalStatus: proposal?.proposal_status,
           };
         })
         .filter(customer => {
