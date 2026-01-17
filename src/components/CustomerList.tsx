@@ -156,15 +156,18 @@ export default function CustomerList({ refreshTrigger, onSelectCustomer, searchQ
         .select('id, full_name')
         .in('id', salesRepIds);
 
-      const customersWithTimeline = (customersData || []).map(customer => {
-        const timeline = timelinesData?.find(t => t.customer_id === customer.id);
-        const salesRep = salesRepsData?.find(rep => rep.id === customer.sales_rep_id);
-        return {
-          ...customer,
-          timelineStage: getTimelineStage(timeline),
-          salesRepName: salesRep?.full_name || 'Not assigned',
-        };
-      });
+      const customersWithTimeline = (customersData || [])
+        .map(customer => {
+          const timeline = timelinesData?.find(t => t.customer_id === customer.id);
+          const salesRep = salesRepsData?.find(rep => rep.id === customer.sales_rep_id);
+          return {
+            ...customer,
+            timeline,
+            timelineStage: getTimelineStage(timeline),
+            salesRepName: salesRep?.full_name || 'Not assigned',
+          };
+        })
+        .filter(customer => customer.timeline && customer.timeline.approved_for_site_survey === true);
 
       setCustomers(customersWithTimeline);
       setFilteredCustomers(customersWithTimeline);

@@ -129,7 +129,7 @@ Deno.serve(async (req: Request) => {
         first_login: true,
         password_last_changed: null,
       })
-      .eq("id", userId);
+      .eq("auth_user_id", userId);
 
     if (flagError) {
       throw flagError;

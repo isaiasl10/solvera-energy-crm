@@ -1094,7 +1094,17 @@ export default function SubcontractJobDetail({ jobId, onClose, onUpdate }: Subco
                     <div style={{ fontSize: '13px', color: '#6b7280', lineHeight: '1.6' }}>
                       <p style={{ marginBottom: '2px' }}><strong>Customer:</strong> {job.subcontract_customer_name}</p>
                       <p style={{ marginBottom: '2px' }}><strong>Address:</strong> {job.installation_address}</p>
-                      {job.job_type !== 'detach_reset' && (
+                      {job.job_type === 'detach_reset' ? (
+                        <>
+                          <p style={{ marginBottom: '2px' }}><strong>Panel Quantity:</strong> {job.panel_qty || 0}</p>
+                          {job.detach_date && (
+                            <p style={{ marginBottom: '2px' }}><strong>Detach Date:</strong> {new Date(job.detach_date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
+                          )}
+                          {job.reset_date && (
+                            <p><strong>Reset Date:</strong> {new Date(job.reset_date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
+                          )}
+                        </>
+                      ) : (
                         <>
                           <p style={{ marginBottom: '2px' }}><strong>System Size:</strong> {job.system_size_kw} kW</p>
                           <p style={{ marginBottom: '2px' }}><strong>Panels:</strong> {job.panel_quantity}</p>
