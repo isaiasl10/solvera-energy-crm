@@ -32,6 +32,9 @@ export interface SubcontractJob {
   contractor?: {
     name: string;
     company_name?: string;
+    default_new_install_ppw?: number;
+    default_detach_reset_price_per_panel?: number;
+    default_service_rate?: number;
   };
 }
 
@@ -47,15 +50,17 @@ export function useSubcontractJobs() {
 
       const { data, error: fetchError } = await supabase
         .from('subcontract_jobs')
-        .select(`
+        .select(
+          `
           *,
-          contractor:contractors(name, company_name)
-        `)
+          contractor:contractors(name, company_name, default_new_install_ppw, default_detach_reset_price_per_panel, default_service_rate)
+        `
+        )
         .order('created_at', { ascending: false });
 
       if (fetchError) throw fetchError;
 
-      setJobs(data || []);
+      setJobs((data as SubcontractJob[]) || []);
     } catch (err) {
       console.error('Error fetching subcontract jobs:', err);
       setError(err instanceof Error ? err.message : 'Failed to fetch subcontract jobs');
@@ -66,30 +71,41 @@ export function useSubcontractJobs() {
 
   const createJob = async (jobData: Partial<SubcontractJob>) => {
     try {
+      // Safety: never insert an id from client
+      // (Supabase/DB should generate it)
+      const { id, contractor, ...safeJobData } = (jobData || {}) as any;
+
       const { data, error: createError } = await supabase
         .from('subcontract_jobs')
-        .insert([jobData])
+        .insert([safeJobData])
         .select()
         .single();
 
       if (createError) throw createError;
 
       await fetchJobs();
-      return { data, error: null };
+      return { data: data as SubcontractJob, error: null as string | null };
     } catch (err) {
       console.error('Error creating subcontract job:', err);
       return {
         data: null,
-        error: err instanceof Error ? err.message : 'Failed to create subcontract job'
+        error: err instanceof Error ? err.message : 'Failed to create subcontract job',
       };
     }
   };
 
   const updateJob = async (jobId: string, updates: Partial<SubcontractJob>) => {
     try {
+      if (!jobId || typeof jobId !== 'string') {
+        return { data: null, error: 'Missing job id for update' };
+      }
+
+      // Safety: prevent updating immutable/derived fields accidentally (optional)
+      const { id, created_at, contractor, ...safeUpdates } = (updates || {}) as any;
+
       const { data, error: updateError } = await supabase
         .from('subcontract_jobs')
-        .update(updates)
+        .update(safeUpdates)
         .eq('id', jobId)
         .select()
         .single();
@@ -97,17 +113,22 @@ export function useSubcontractJobs() {
       if (updateError) throw updateError;
 
       await fetchJobs();
-      return { data, error: null };
+      return { data: data as SubcontractJob, error: null as string | null };
     } catch (err) {
       console.error('Error updating subcontract job:', err);
       return {
         data: null,
-        error: err instanceof Error ? err.message : 'Failed to update subcontract job'
+        error: err instanceof Error ? err.message : 'Failed to update subcontract job',
       };
     }
   };
 
   const deleteJob = async (jobId: string) => {
+    // ✅ hard safety: never allow delete without a valid id
+    if (!jobId || typeof jobId !== 'string') {
+      return { error: 'Missing job id for delete' };
+    }
+
     try {
       const { error: deleteError } = await supabase
         .from('subcontract_jobs')
@@ -117,48 +138,55 @@ export function useSubcontractJobs() {
       if (deleteError) throw deleteError;
 
       await fetchJobs();
-      return { error: null };
+      return { error: null as string | null };
     } catch (err) {
       console.error('Error deleting subcontract job:', err);
       return {
-        error: err instanceof Error ? err.message : 'Failed to delete subcontract job'
+        error: err instanceof Error ? err.message : 'Failed to delete subcontract job',
       };
     }
   };
 
   const getJobById = async (jobId: string) => {
     try {
+      if (!jobId || typeof jobId !== 'string') {
+        return { data: null, error: 'Missing job id' };
+      }
+
       const { data, error: fetchError } = await supabase
         .from('subcontract_jobs')
-        .select(`
+        .select(
+          `
           *,
           contractor:contractors(name, company_name, default_new_install_ppw, default_detach_reset_price_per_panel, default_service_rate)
-        `)
+        `
+        )
         .eq('id', jobId)
         .single();
 
       if (fetchError) throw fetchError;
 
-      return { data, error: null };
+      return { data: data as SubcontractJob, error: null as string | null };
     } catch (err) {
       console.error('Error fetching subcontract job:', err);
       return {
         data: null,
-        error: err instanceof Error ? err.message : 'Failed to fetch subcontract job'
+        error: err instanceof Error ? err.message : 'Failed to fetch subcontract job',
       };
     }
   };
 
   const getJobsByType = (jobType: 'new_install' | 'detach_reset' | 'service') => {
-    return jobs.filter(job => job.job_type === jobType);
+    return jobs.filter((job) => job.job_type === jobType);
   };
 
   const getJobsByContractor = (contractorId: string) => {
-    return jobs.filter(job => job.contractor_id === contractorId);
+    return jobs.filter((job) => job.contractor_id === contractorId);
   };
 
   useEffect(() => {
     fetchJobs();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return {
