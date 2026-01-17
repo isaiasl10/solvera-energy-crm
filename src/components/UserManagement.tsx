@@ -326,7 +326,7 @@ export default function UserManagement() {
         throw new Error('No active session');
       }
 
-      const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/reset-user-password`;
+      const apiUrl = `/.netlify/functions/reset-user-password`;
 
       const response = await fetch(apiUrl, {
         method: 'POST',
@@ -340,7 +340,7 @@ export default function UserManagement() {
       const result = await response.json();
 
       if (!response.ok) {
-        console.error('Edge Function error:', result);
+        console.error('Password reset error:', result);
         throw new Error(result.error || 'Failed to reset password');
       }
 

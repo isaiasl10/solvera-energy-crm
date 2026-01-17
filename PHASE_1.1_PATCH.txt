@@ -1,0 +1,326 @@
+=== PHASE 1.1 PATCH: Fix Password Reset 401 JWT Error ===
+
+This patch moves password reset from Supabase Edge Function to Netlify Function
+to resolve 401 Invalid JWT errors.
+
+Apply these files to your repository at: isaiasl10/solvera-energy-crm
+
+========================================================================================
+FILE: netlify/functions/reset-user-password.js
+========================================================================================
+NEW FILE - Create this complete file
+
+const { createClient } = require('@supabase/supabase-js');
+
+function generateSecurePassword(length) {
+  const lowercase = "abcdefghijklmnopqrstuvwxyz";
+  const uppercase = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+  const numbers = "0123456789";
+  const symbols = "!@#$%^&*";
+  const allChars = lowercase + uppercase + numbers + symbols;
+
+  let password = "";
+  password += lowercase[Math.floor(Math.random() * lowercase.length)];
+  password += uppercase[Math.floor(Math.random() * uppercase.length)];
+  password += numbers[Math.floor(Math.random() * numbers.length)];
+  password += symbols[Math.floor(Math.random() * symbols.length)];
+
+  for (let i = password.length; i < length; i++) {
+    password += allChars[Math.floor(Math.random() * allChars.length)];
+  }
+
+  return password.split("").sort(() => Math.random() - 0.5).join("");
+}
+
+exports.handler = async (event, context) => {
+  const headers = {
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type, Authorization",
+    "Content-Type": "application/json"
+  };
+
+  if (event.httpMethod === "OPTIONS") {
+    return {
+      statusCode: 200,
+      headers,
+      body: ""
+    };
+  }
+
+  if (event.httpMethod !== "POST") {
+    return {
+      statusCode: 405,
+      headers,
+      body: JSON.stringify({ error: "Method not allowed" })
+    };
+  }
+
+  try {
+    const authHeader = event.headers.authorization || event.headers.Authorization;
+    if (!authHeader) {
+      return {
+        statusCode: 401,
+        headers,
+        body: JSON.stringify({ error: "Missing authorization header" })
+      };
+    }
+
+    const supabaseUrl = process.env.VITE_SUPABASE_URL;
+    const supabaseAnonKey = process.env.VITE_SUPABASE_ANON_KEY;
+    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+    if (!supabaseUrl || !supabaseAnonKey || !supabaseServiceKey) {
+      console.error('Missing environment variables:', {
+        hasUrl: !!supabaseUrl,
+        hasAnonKey: !!supabaseAnonKey,
+        hasServiceKey: !!supabaseServiceKey
+      });
+      return {
+        statusCode: 500,
+        headers,
+        body: JSON.stringify({ error: "Server configuration error" })
+      };
+    }
+
+    const token = authHeader.replace("Bearer ", "");
+
+    const anonClient = createClient(supabaseUrl, supabaseAnonKey, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false
+      },
+      global: {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      }
+    });
+
+    const { data: { user }, error: authError } = await anonClient.auth.getUser();
+
+    if (authError || !user) {
+      console.error('Auth error:', authError);
+      return {
+        statusCode: 401,
+        headers,
+        body: JSON.stringify({ error: "Unauthorized" })
+      };
+    }
+
+    const { data: appUser, error: appUserError } = await anonClient
+      .from("app_users")
+      .select("role, role_category")
+      .eq("auth_user_id", user.id)
+      .maybeSingle();
+
+    if (appUserError || !appUser || appUser.role_category !== "admin") {
+      console.error('User role check failed:', { appUserError, appUser });
+      return {
+        statusCode: 403,
+        headers,
+        body: JSON.stringify({ error: "Unauthorized: Admin access required" })
+      };
+    }
+
+    const body = JSON.parse(event.body || '{}');
+    const { userId } = body;
+
+    if (!userId) {
+      return {
+        statusCode: 400,
+        headers,
+        body: JSON.stringify({ error: "Missing userId" })
+      };
+    }
+
+    const serviceClient = createClient(supabaseUrl, supabaseServiceKey, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false
+      }
+    });
+
+    const newPassword = generateSecurePassword(16);
+
+    const { error: updateError } = await serviceClient.auth.admin.updateUserById(
+      userId,
+      { password: newPassword }
+    );
+
+    if (updateError) {
+      console.error('Password update error:', updateError);
+      throw updateError;
+    }
+
+    const { error: flagError } = await serviceClient
+      .from("app_users")
+      .update({
+        first_login: true,
+        password_last_changed: null
+      })
+      .eq("auth_user_id", userId);
+
+    if (flagError) {
+      console.error('Flag update error:', flagError);
+      throw flagError;
+    }
+
+    return {
+      statusCode: 200,
+      headers,
+      body: JSON.stringify({ password: newPassword })
+    };
+
+  } catch (error) {
+    console.error("Error resetting password:", error);
+    return {
+      statusCode: 500,
+      headers,
+      body: JSON.stringify({ error: error.message || "Internal server error" })
+    };
+  }
+};
+
+========================================================================================
+FILE: src/components/UserManagement.tsx
+========================================================================================
+CHANGES - Apply these 2 line changes
+
+Line 329:
+BEFORE: const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/reset-user-password`;
+AFTER:  const apiUrl = `/.netlify/functions/reset-user-password`;
+
+Line 343:
+BEFORE: console.error('Edge Function error:', result);
+AFTER:  console.error('Password reset error:', result);
+
+========================================================================================
+NETLIFY ENVIRONMENT VARIABLES - CRITICAL
+========================================================================================
+
+MUST ADD to Netlify Dashboard → Site settings → Environment variables:
+
+Key: SUPABASE_SERVICE_ROLE_KEY
+Value: [Get from Supabase Dashboard → Settings → API → service_role key]
+Scopes: All scopes (production and branch deploys)
+
+VERIFY EXISTING:
+
+Key: VITE_SUPABASE_URL
+Value: https://waqaaujbkpoiavzezlu.supabase.co
+NOTE: Your .env shows "waqaaujbkpoiavzezluh" (with 'h') but production is "waqaaujbkpoiavzezlu" (no 'h')
+ACTION: Verify Netlify has correct URL without the 'h'
+
+Key: VITE_SUPABASE_ANON_KEY
+Value: [Your anon key from Supabase]
+
+========================================================================================
+GIT COMMANDS TO APPLY THIS PATCH
+========================================================================================
+
+# Add new Netlify function
+git add netlify/functions/reset-user-password.js
+
+# Add modified frontend
+git add src/components/UserManagement.tsx
+
+# Commit
+git commit -m "Phase 1.1: Fix password reset 401 JWT error
+
+- Move password reset from Supabase Edge Function to Netlify Function
+- Use server-side SUPABASE_SERVICE_ROLE_KEY for auth bypass
+- Frontend now calls /.netlify/functions/reset-user-password
+- Fixes 401 Invalid JWT error
+
+Files:
+- NEW: netlify/functions/reset-user-password.js
+- MODIFIED: src/components/UserManagement.tsx (2 lines)
+
+Requires: SUPABASE_SERVICE_ROLE_KEY in Netlify env vars"
+
+# Push to GitHub
+git push origin main
+
+========================================================================================
+DEPLOYMENT CHECKLIST
+========================================================================================
+
+BEFORE deploying code:
+[ ] Get service role key from Supabase Dashboard → Settings → API
+[ ] Add SUPABASE_SERVICE_ROLE_KEY to Netlify env vars
+[ ] Verify VITE_SUPABASE_URL in Netlify (should be waqaaujbkpoiavzezlu, not waqaaujbkpoiavzezluh)
+[ ] Verify VITE_SUPABASE_ANON_KEY in Netlify
+
+AFTER env vars set:
+[ ] Git add netlify/functions/reset-user-password.js
+[ ] Git add src/components/UserManagement.tsx
+[ ] Git commit and push
+[ ] Wait for Netlify deploy (2-3 min)
+[ ] Verify function appears in Netlify Dashboard → Functions
+
+========================================================================================
+ACCEPTANCE TEST
+========================================================================================
+
+Test 1: Admin resets password
+  1. Login as admin
+  2. Go to User Management
+  3. Click Reset Password on test user
+  4. Check Network tab:
+     - Request URL: https://YOUR-SITE.netlify.app/.netlify/functions/reset-user-password
+     - Status: 200 OK
+     - Response: {"password": "..."}
+  5. Modal shows temporary password
+
+Test 2: User logs in with temp password
+  1. Logout, open incognito
+  2. Login with test user + temp password
+  3. Redirected to forced password change
+
+Test 3: User sets new password
+  1. Enter new password twice
+  2. Click Set Password
+  3. Redirected to dashboard
+  4. Can use app normally
+
+Test 4: Temp password rejected
+  1. Logout
+  2. Try temp password again
+  3. Login fails
+
+ALL TESTS MUST PASS - No 401 errors
+
+========================================================================================
+VERIFICATION IN NETWORK TAB
+========================================================================================
+
+BEFORE this fix:
+  Request: POST https://waqaaujbkpoiavzezlu.supabase.co/functions/v1/reset-user-password
+  Status: 401 Unauthorized
+  Response: {"error": "Invalid JWT"}
+
+AFTER this fix:
+  Request: POST https://YOUR-SITE.netlify.app/.netlify/functions/reset-user-password
+  Status: 200 OK
+  Response: {"password": "Abc123!@#$..."}
+
+Confirm:
+  [ ] URL contains .netlify.app (NOT .supabase.co)
+  [ ] Path is /.netlify/functions/reset-user-password
+  [ ] Status is 200
+  [ ] Response has password field
+
+========================================================================================
+BUILD VERIFICATION
+========================================================================================
+
+✅ BUILD PASSED
+
+npm run build
+✓ 1986 modules transformed
+✓ built in 15.00s
+
+No errors, ready to deploy.
+
+========================================================================================
