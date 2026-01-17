@@ -78,7 +78,7 @@ export default function SchedulingSection({ customer }: SchedulingSectionProps) 
     let filtered = [...tickets];
 
     if (showActiveOnly) {
-      filtered = filtered.filter(t => t.is_active);
+      filtered = filtered.filter(t => !t.closed_at);
     }
 
     if (filterTicketType !== 'all') {

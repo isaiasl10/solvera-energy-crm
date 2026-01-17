@@ -38,7 +38,7 @@ export default function ServiceTicketsQueue() {
         .from('scheduling')
         .select('*')
         .eq('ticket_type', 'service')
-        .in('ticket_status', ['open', 'in_progress', 'scheduled'])
+        .in('ticket_status', ['open', 'in_progress', 'scheduled', 'completed'])
         .eq('is_active', true)
         .order('created_at', { ascending: false });
 
@@ -85,7 +85,8 @@ export default function ServiceTicketsQueue() {
         .from('scheduling')
         .update({
           ticket_status: 'completed',
-          is_active: false
+          closed_at: new Date().toISOString(),
+          close_reason: 'Service Complete'
         })
         .eq('id', ticketId);
 
@@ -146,6 +147,7 @@ export default function ServiceTicketsQueue() {
       case 'open': return 'text-blue-600 bg-blue-50';
       case 'in_progress': return 'text-orange-600 bg-orange-50';
       case 'scheduled': return 'text-green-600 bg-green-50';
+      case 'completed': return 'text-emerald-700 bg-emerald-100 font-semibold';
       default: return 'text-gray-600 bg-gray-50';
     }
   };
