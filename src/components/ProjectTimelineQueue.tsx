@@ -193,10 +193,12 @@ export default function ProjectTimelineQueue() {
 
       if (timelinesError) throw timelinesError;
 
-      const customersWithTimeline: CustomerWithTimeline[] = (customersData || []).map(customer => ({
-        ...customer,
-        timeline: timelinesData?.find(t => t.customer_id === customer.id) || null
-      }));
+      const customersWithTimeline: CustomerWithTimeline[] = (customersData || [])
+        .map(customer => ({
+          ...customer,
+          timeline: timelinesData?.find(t => t.customer_id === customer.id) || null
+        }))
+        .filter(customer => customer.timeline !== null);
 
       setCustomers(customersWithTimeline);
     } catch (error) {

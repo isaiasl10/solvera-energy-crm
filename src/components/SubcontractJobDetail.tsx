@@ -303,11 +303,18 @@ export default function SubcontractJobDetail({ jobId, onClose, onUpdate }: Subco
     doc.setFontSize(10);
     doc.text(`Customer: ${job.subcontract_customer_name || 'N/A'}`, 20, 117);
     doc.text(`Address: ${job.installation_address || 'N/A'}`, 20, 124);
-    doc.text(`System Size: ${job.system_size_kw || 0} kW`, 20, 131);
-    doc.text(`Panel Quantity: ${job.panel_quantity || 0}`, 20, 138);
-    doc.text(`Install Date: ${job.install_date ? new Date(job.install_date).toLocaleDateString() : 'N/A'}`, 20, 145);
 
-    let yPos = 162;
+    let yPos = 131;
+    if (job.job_type !== 'detach_reset') {
+      doc.text(`System Size: ${job.system_size_kw || 0} kW`, 20, yPos);
+      yPos += 7;
+      doc.text(`Panel Quantity: ${job.panel_quantity || 0}`, 20, yPos);
+      yPos += 7;
+      doc.text(`Install Date: ${job.install_date ? new Date(job.install_date).toLocaleDateString() : 'N/A'}`, 20, yPos);
+      yPos += 17;
+    } else {
+      yPos += 7;
+    }
     doc.setFontSize(12);
     doc.text('Invoice Total:', 20, yPos);
     yPos += 7;
@@ -1087,9 +1094,13 @@ export default function SubcontractJobDetail({ jobId, onClose, onUpdate }: Subco
                     <div style={{ fontSize: '13px', color: '#6b7280', lineHeight: '1.6' }}>
                       <p style={{ marginBottom: '2px' }}><strong>Customer:</strong> {job.subcontract_customer_name}</p>
                       <p style={{ marginBottom: '2px' }}><strong>Address:</strong> {job.installation_address}</p>
-                      <p style={{ marginBottom: '2px' }}><strong>System Size:</strong> {job.system_size_kw} kW</p>
-                      <p style={{ marginBottom: '2px' }}><strong>Panels:</strong> {job.panel_quantity}</p>
-                      <p><strong>Install Date:</strong> {job.install_date ? new Date(job.install_date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : 'N/A'}</p>
+                      {job.job_type !== 'detach_reset' && (
+                        <>
+                          <p style={{ marginBottom: '2px' }}><strong>System Size:</strong> {job.system_size_kw} kW</p>
+                          <p style={{ marginBottom: '2px' }}><strong>Panels:</strong> {job.panel_quantity}</p>
+                          <p><strong>Install Date:</strong> {job.install_date ? new Date(job.install_date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : 'N/A'}</p>
+                        </>
+                      )}
                     </div>
                   </div>
                 </div>

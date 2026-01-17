@@ -30,8 +30,11 @@ interface SubcontractJob {
   created_at: string;
   job_type: string;
   panel_qty: number;
+  price_per_panel: number;
   gross_amount: number;
   detach_reset_status: string;
+  labor_cost: number;
+  material_cost: number;
 }
 
 export default function SubcontractingIntake() {
@@ -407,7 +410,15 @@ export default function SubcontractingIntake() {
                           : (job.gross_revenue ? `$${job.gross_revenue.toLocaleString('en-US', { minimumFractionDigits: 2 })}` : '-')}
                       </td>
                       <td className="px-3 sm:px-4 py-3 sm:py-4 text-sm text-green-600 font-bold">
-                        {job.net_revenue ? `$${job.net_revenue.toLocaleString('en-US', { minimumFractionDigits: 2 })}` : '-'}
+                        {job.job_type === 'detach_reset'
+                          ? (job.panel_qty && job.price_per_panel
+                              ? `$${(
+                                  (job.panel_qty * job.price_per_panel) -
+                                  (job.labor_cost || 0) -
+                                  (job.material_cost || 0)
+                                ).toLocaleString('en-US', { minimumFractionDigits: 2 })}`
+                              : '-')
+                          : (job.net_revenue ? `$${job.net_revenue.toLocaleString('en-US', { minimumFractionDigits: 2 })}` : '-')}
                       </td>
                       <td className="px-3 sm:px-4 py-3 sm:py-4">
                         <span
