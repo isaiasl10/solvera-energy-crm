@@ -1,12 +1,10 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { supabase } from "../lib/supabase";
-
-export type JobType = "new_install" | "detach_reset" | "service";
 
 export interface SubcontractJob {
   id: string;
   contractor_id: string;
-  job_type: JobType;
+  job_type: "new_install" | "detach_reset" | "service";
   customer_name: string;
   address: string;
 
@@ -46,17 +44,15 @@ export interface SubcontractJob {
     default_new_install_ppw?: number | null;
     default_detach_reset_price_per_panel?: number | null;
     default_service_rate?: number | null;
-  };
+  } | null;
 }
-
-type ApiResult<T> = { data: T | null; error: string | null };
 
 export function useSubcontractJobs() {
   const [jobs, setJobs] = useState<SubcontractJob[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchJobs = async (): Promise<void> => {
+  const fetchJobs = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -80,18 +76,17 @@ export function useSubcontractJobs() {
       if (fetchError) throw fetchError;
 
       setJobs((data as SubcontractJob[]) || []);
-    } catch (err) {
+    } catch (err: any) {
       console.error("Error fetching subcontract jobs:", err);
-      setError(err instanceof Error ? err.message : "Failed to fetch subcontract jobs");
+      setError(err?.message || "Failed to fetch subcontract jobs");
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  const createJob = async (jobData: Partial<SubcontractJob>): Promise<ApiResult<SubcontractJob>> => {
+  const createJob = async (jobData: Partial<SubcontractJob>) => {
     try {
-      // Hard safety: never allow accidental deletes/unsafe operations
-      // (this function only inserts)
+      // IMPORTANT: create must insert into subcontract_jobs (not customers)
       const { data, error: createError } = await supabase
         .from("subcontract_jobs")
         .insert([jobData])
@@ -113,22 +108,16 @@ export function useSubcontractJobs() {
 
       await fetchJobs();
       return { data: data as SubcontractJob, error: null };
-    } catch (err) {
+    } catch (err: any) {
       console.error("Error creating subcontract job:", err);
-      return {
-        data: null,
-        error: err instanceof Error ? err.message : "Failed to create subcontract job",
-      };
+      return { data: null, error: err?.message || "Failed to create subcontract job" };
     }
   };
 
-  const updateJob = async (
-    jobId: string,
-    updates: Partial<SubcontractJob>
-  ): Promise<ApiResult<SubcontractJob>> => {
-    if (!jobId) return { data: null, error: "Missing job id for update" };
-
+  const updateJob = async (jobId: string, updates: Partial<SubcontractJob>) => {
     try {
+      if (!jobId) return { data: null, error: "Missing job id for update" };
+
       const { data, error: updateError } = await supabase
         .from("subcontract_jobs")
         .update(updates)
@@ -151,22 +140,16 @@ export function useSubcontractJobs() {
 
       await fetchJobs();
       return { data: data as SubcontractJob, error: null };
-    } catch (err) {
+    } catch (err: any) {
       console.error("Error updating subcontract job:", err);
-      return {
-        data: null,
-        error: err instanceof Error ? err.message : "Failed to update subcontract job",
-      };
+      return { data: null, error: err?.message || "Failed to update subcontract job" };
     }
   };
 
-  const deleteJob = async (jobId: string): Promise<ApiResult<null>> => {
-    // ✅ hard safety: never allow delete without a valid id
-    if (!jobId || typeof jobId !== "string") {
-      return { data: null, error: "Missing job id for delete" };
-    }
-
+  const deleteJob = async (jobId: string) => {
     try {
+      if (!jobId) return { error: "Missing job id for delete" };
+
       const { error: deleteError } = await supabase
         .from("subcontract_jobs")
         .delete()
@@ -175,20 +158,17 @@ export function useSubcontractJobs() {
       if (deleteError) throw deleteError;
 
       await fetchJobs();
-      return { data: null, error: null };
-    } catch (err) {
+      return { error: null };
+    } catch (err: any) {
       console.error("Error deleting subcontract job:", err);
-      return {
-        data: null,
-        error: err instanceof Error ? err.message : "Failed to delete subcontract job",
-      };
+      return { error: err?.message || "Failed to delete subcontract job" };
     }
   };
 
-  const getJobById = async (jobId: string): Promise<ApiResult<SubcontractJob>> => {
-    if (!jobId) return { data: null, error: "Missing job id" };
-
+  const getJobById = async (jobId: string) => {
     try {
+      if (!jobId) return { data: null, error: "Missing job id" };
+
       const { data, error: fetchError } = await supabase
         .from("subcontract_jobs")
         .select(
@@ -209,25 +189,21 @@ export function useSubcontractJobs() {
       if (fetchError) throw fetchError;
 
       return { data: data as SubcontractJob, error: null };
-    } catch (err) {
+    } catch (err: any) {
       console.error("Error fetching subcontract job:", err);
-      return {
-        data: null,
-        error: err instanceof Error ? err.message : "Failed to fetch subcontract job",
-      };
+      return { data: null, error: err?.message || "Failed to fetch subcontract job" };
     }
   };
 
-  const helpers = useMemo(() => {
-    const getJobsByType = (jobType: JobType) => jobs.filter((j) => j.job_type === jobType);
-    const getJobsByContractor = (contractorId: string) => jobs.filter((j) => j.contractor_id === contractorId);
-    return { getJobsByType, getJobsByContractor };
-  }, [jobs]);
+  const getJobsByType = (jobType: SubcontractJob["job_type"]) =>
+    jobs.filter((j) => j.job_type === jobType);
+
+  const getJobsByContractor = (contractorId: string) =>
+    jobs.filter((j) => j.contractor_id === contractorId);
 
   useEffect(() => {
     fetchJobs();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [fetchJobs]);
 
   return {
     jobs,
@@ -238,6 +214,7 @@ export function useSubcontractJobs() {
     updateJob,
     deleteJob,
     getJobById,
-    ...helpers,
+    getJobsByType,
+    getJobsByContractor,
   };
 }
