@@ -2,8 +2,20 @@ import React, { useEffect, useMemo, useState } from "react";
 import { supabase } from "../lib/supabase";
 
 type JobType = "new_install" | "detach_reset" | "service";
-
 type PaymentType = "CHECK" | "ACH" | "WIRE";
+
+/**
+ * Your contractors table does NOT have a `name` column.
+ * It has `company_name` (per your screenshot).
+ * So we must NEVER select/order/render `name`.
+ */
+type Contractor = {
+  id: string;
+  company_name: string | null;
+  default_new_install_ppw?: number | null;
+  default_detach_reset_price_per_panel?: number | null;
+  default_service_rate?: number | null;
+};
 
 type SubcontractJob = {
   id: string;
@@ -13,18 +25,13 @@ type SubcontractJob = {
   customer_name: string;
   address: string;
 
-  // new install fields
-  system_size_kw?: number | null;
+  system_size_kw?: number | null; // new install
+  panel_qty?: number | null; // detach/reset
+  price_per_panel?: number | null; // detach/reset
 
-  // detach/reset fields
-  panel_qty?: number | null;
-  price_per_panel?: number | null;
+  labor_cost?: number | null; // service
+  material_cost?: number | null; // service
 
-  // service fields (optional)
-  labor_cost?: number | null;
-  material_cost?: number | null;
-
-  // calculated by DB triggers (or can be null on insert)
   gross_amount?: number | null;
   net_revenue?: number | null;
 
@@ -47,21 +54,11 @@ type SubcontractJob = {
   updated_at: string;
 
   contractor?: {
-    name: string;
     company_name?: string | null;
     default_new_install_ppw?: number | null;
     default_detach_reset_price_per_panel?: number | null;
     default_service_rate?: number | null;
   } | null;
-};
-
-type Contractor = {
-  id: string;
-  name: string;
-  company_name?: string | null;
-  default_new_install_ppw?: number | null;
-  default_detach_reset_price_per_panel?: number | null;
-  default_service_rate?: number | null;
 };
 
 export default function SubcontractingIntake() {
@@ -71,7 +68,7 @@ export default function SubcontractingIntake() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // ---- FORM STATE (simple + safe) ----
+  // ---- FORM STATE ----
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [contractorId, setContractorId] = useState<string>("");
   const [jobType, setJobType] = useState<JobType>("new_install");
@@ -79,7 +76,6 @@ export default function SubcontractingIntake() {
   const [address, setAddress] = useState("");
 
   const [systemSizeKw, setSystemSizeKw] = useState<string>("");
-
   const [panelQty, setPanelQty] = useState<string>("");
   const [pricePerPanel, setPricePerPanel] = useState<string>("");
 
@@ -92,8 +88,10 @@ export default function SubcontractingIntake() {
   const fetchContractors = async () => {
     const { data, error } = await supabase
       .from("contractors")
-      .select("id, name, company_name, default_new_install_ppw, default_detach_reset_price_per_panel, default_service_rate")
-      .order("name", { ascending: true });
+      .select(
+        "id, company_name, default_new_install_ppw, default_detach_reset_price_per_panel, default_service_rate"
+      )
+      .order("company_name", { ascending: true });
 
     if (error) throw error;
     setContractors((data || []) as Contractor[]);
@@ -106,7 +104,6 @@ export default function SubcontractingIntake() {
         `
         *,
         contractor:contractors(
-          name,
           company_name,
           default_new_install_ppw,
           default_detach_reset_price_per_panel,
@@ -164,17 +161,15 @@ export default function SubcontractingIntake() {
     setError(null);
 
     try {
-      // defaults by contractor (if user didn't enter price)
       const defaultPPW = selectedContractor?.default_new_install_ppw ?? null;
-      const defaultPricePerPanel = selectedContractor?.default_detach_reset_price_per_panel ?? null;
+      const defaultPricePerPanel =
+        selectedContractor?.default_detach_reset_price_per_panel ?? null;
 
       const payload: Partial<SubcontractJob> = {
         contractor_id: contractorId,
         job_type: jobType,
         customer_name: customerName.trim(),
         address: address.trim(),
-
-        // IMPORTANT: status belongs on subcontract_jobs
         workflow_status:
           jobType === "new_install"
             ? "install_scheduled"
@@ -186,22 +181,20 @@ export default function SubcontractingIntake() {
       if (jobType === "new_install") {
         payload.system_size_kw = systemSizeKw ? Number(systemSizeKw) : null;
 
-        // OPTIONAL: if you want to store PPW later, add a column in DB.
-        // For now we keep it out, because your subcontract_jobs schema does not include ppw.
-        // You can store it in notes if needed:
+        // Optional: preserve default PPW in notes if you want
         if (defaultPPW && !payload.notes) payload.notes = `Default PPW: ${defaultPPW}`;
       }
 
       if (jobType === "detach_reset") {
         payload.panel_qty = panelQty ? Number(panelQty) : null;
-        payload.price_per_panel = pricePerPanel ? Number(pricePerPanel) : defaultPricePerPanel;
+        payload.price_per_panel = pricePerPanel
+          ? Number(pricePerPanel)
+          : defaultPricePerPanel;
       }
 
-      if (jobType === "service") {
-        // you can set defaults for service rate later if you add a column for it
-      }
-
-      const { error: insertError } = await supabase.from("subcontract_jobs").insert(payload);
+      const { error: insertError } = await supabase
+        .from("subcontract_jobs")
+        .insert([payload]);
 
       if (insertError) throw insertError;
 
@@ -238,7 +231,14 @@ export default function SubcontractingIntake() {
 
   return (
     <div style={{ padding: 16 }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          marginBottom: 12,
+        }}
+      >
         <h2 style={{ margin: 0 }}>Subcontracting</h2>
         <button onClick={openModal} style={{ padding: "8px 12px" }}>
           + Add Subcontract Job
@@ -246,14 +246,31 @@ export default function SubcontractingIntake() {
       </div>
 
       {error && (
-        <div style={{ background: "#fee", color: "#900", padding: 10, borderRadius: 8, marginBottom: 12 }}>
+        <div
+          style={{
+            background: "#fee",
+            color: "#900",
+            padding: 10,
+            borderRadius: 8,
+            marginBottom: 12,
+          }}
+        >
           {error}
         </div>
       )}
 
       {/* LIST */}
       <div style={{ border: "1px solid #ddd", borderRadius: 10, overflow: "hidden" }}>
-        <div style={{ display: "grid", gridTemplateColumns: "180px 140px 1fr 140px 120px", gap: 8, padding: 10, background: "#f7f7f7", fontWeight: 600 }}>
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "220px 140px 1fr 140px 120px",
+            gap: 8,
+            padding: 10,
+            background: "#f7f7f7",
+            fontWeight: 600,
+          }}
+        >
           <div>Contractor</div>
           <div>Job Type</div>
           <div>Customer / Address</div>
@@ -262,8 +279,17 @@ export default function SubcontractingIntake() {
         </div>
 
         {jobs.map((j) => (
-          <div key={j.id} style={{ display: "grid", gridTemplateColumns: "180px 140px 1fr 140px 120px", gap: 8, padding: 10, borderTop: "1px solid #eee" }}>
-            <div>{j.contractor?.name || j.contractor_id}</div>
+          <div
+            key={j.id}
+            style={{
+              display: "grid",
+              gridTemplateColumns: "220px 140px 1fr 140px 120px",
+              gap: 8,
+              padding: 10,
+              borderTop: "1px solid #eee",
+            }}
+          >
+            <div>{j.contractor?.company_name || j.contractor_id}</div>
             <div>{j.job_type}</div>
             <div>
               <div style={{ fontWeight: 600 }}>{j.customer_name}</div>
@@ -278,7 +304,9 @@ export default function SubcontractingIntake() {
           </div>
         ))}
 
-        {jobs.length === 0 && <div style={{ padding: 12, opacity: 0.8 }}>No subcontract jobs yet.</div>}
+        {jobs.length === 0 && (
+          <div style={{ padding: 12, opacity: 0.8 }}>No subcontract jobs yet.</div>
+        )}
       </div>
 
       {/* MODAL */}
@@ -296,26 +324,40 @@ export default function SubcontractingIntake() {
           }}
         >
           <div style={{ width: 520, background: "#fff", borderRadius: 12, padding: 16 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <div
+              style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}
+            >
               <h3 style={{ margin: 0 }}>Add Subcontract Job</h3>
               <button onClick={closeModal}>✕</button>
             </div>
 
             <div style={{ marginTop: 12 }}>
-              <label style={{ display: "block", fontWeight: 600, marginBottom: 6 }}>Select Contractor *</label>
-              <select value={contractorId} onChange={(e) => setContractorId(e.target.value)} style={{ width: "100%", padding: 8 }}>
+              <label style={{ display: "block", fontWeight: 600, marginBottom: 6 }}>
+                Select Contractor *
+              </label>
+              <select
+                value={contractorId}
+                onChange={(e) => setContractorId(e.target.value)}
+                style={{ width: "100%", padding: 8 }}
+              >
                 <option value="">Select…</option>
                 {contractors.map((c) => (
                   <option key={c.id} value={c.id}>
-                    {c.name}
+                    {c.company_name || c.id}
                   </option>
                 ))}
               </select>
             </div>
 
             <div style={{ marginTop: 12 }}>
-              <label style={{ display: "block", fontWeight: 600, marginBottom: 6 }}>Job Type *</label>
-              <select value={jobType} onChange={(e) => setJobType(e.target.value as JobType)} style={{ width: "100%", padding: 8 }}>
+              <label style={{ display: "block", fontWeight: 600, marginBottom: 6 }}>
+                Job Type *
+              </label>
+              <select
+                value={jobType}
+                onChange={(e) => setJobType(e.target.value as JobType)}
+                style={{ width: "100%", padding: 8 }}
+              >
                 <option value="new_install">New Install</option>
                 <option value="detach_reset">Detach & Reset</option>
                 <option value="service">Service</option>
@@ -323,34 +365,62 @@ export default function SubcontractingIntake() {
             </div>
 
             <div style={{ marginTop: 12 }}>
-              <label style={{ display: "block", fontWeight: 600, marginBottom: 6 }}>Customer Name *</label>
-              <input value={customerName} onChange={(e) => setCustomerName(e.target.value)} style={{ width: "100%", padding: 8 }} />
+              <label style={{ display: "block", fontWeight: 600, marginBottom: 6 }}>
+                Customer Name *
+              </label>
+              <input
+                value={customerName}
+                onChange={(e) => setCustomerName(e.target.value)}
+                style={{ width: "100%", padding: 8 }}
+              />
             </div>
 
             <div style={{ marginTop: 12 }}>
-              <label style={{ display: "block", fontWeight: 600, marginBottom: 6 }}>Address *</label>
-              <input value={address} onChange={(e) => setAddress(e.target.value)} style={{ width: "100%", padding: 8 }} />
+              <label style={{ display: "block", fontWeight: 600, marginBottom: 6 }}>
+                Address *
+              </label>
+              <input
+                value={address}
+                onChange={(e) => setAddress(e.target.value)}
+                style={{ width: "100%", padding: 8 }}
+              />
             </div>
 
             {jobType === "new_install" && (
               <div style={{ marginTop: 12 }}>
-                <label style={{ display: "block", fontWeight: 600, marginBottom: 6 }}>System Size (kW)</label>
-                <input value={systemSizeKw} onChange={(e) => setSystemSizeKw(e.target.value)} style={{ width: "100%", padding: 8 }} />
+                <label style={{ display: "block", fontWeight: 600, marginBottom: 6 }}>
+                  System Size (kW)
+                </label>
+                <input
+                  value={systemSizeKw}
+                  onChange={(e) => setSystemSizeKw(e.target.value)}
+                  style={{ width: "100%", padding: 8 }}
+                />
               </div>
             )}
 
             {jobType === "detach_reset" && (
               <>
                 <div style={{ marginTop: 12 }}>
-                  <label style={{ display: "block", fontWeight: 600, marginBottom: 6 }}>Panel Qty</label>
-                  <input value={panelQty} onChange={(e) => setPanelQty(e.target.value)} style={{ width: "100%", padding: 8 }} />
+                  <label style={{ display: "block", fontWeight: 600, marginBottom: 6 }}>
+                    Panel Qty
+                  </label>
+                  <input
+                    value={panelQty}
+                    onChange={(e) => setPanelQty(e.target.value)}
+                    style={{ width: "100%", padding: 8 }}
+                  />
                 </div>
 
                 <div style={{ marginTop: 12 }}>
                   <label style={{ display: "block", fontWeight: 600, marginBottom: 6 }}>
                     Price per Panel (defaults to contractor if blank)
                   </label>
-                  <input value={pricePerPanel} onChange={(e) => setPricePerPanel(e.target.value)} style={{ width: "100%", padding: 8 }} />
+                  <input
+                    value={pricePerPanel}
+                    onChange={(e) => setPricePerPanel(e.target.value)}
+                    style={{ width: "100%", padding: 8 }}
+                  />
                 </div>
               </>
             )}

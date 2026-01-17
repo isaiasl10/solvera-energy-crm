@@ -1,6 +1,13 @@
 import { useEffect, useState, useCallback } from "react";
 import { supabase } from "../lib/supabase";
 
+export interface ContractorLite {
+  company_name: string;
+  default_new_install_ppw?: number | null;
+  default_detach_reset_price_per_panel?: number | null;
+  default_service_rate?: number | null;
+}
+
 export interface SubcontractJob {
   id: string;
   contractor_id: string;
@@ -38,13 +45,16 @@ export interface SubcontractJob {
   created_at: string;
   updated_at: string;
 
-  contractor?: {
-    company_name?: string | null;
-    default_new_install_ppw?: number | null;
-    default_detach_reset_price_per_panel?: number | null;
-    default_service_rate?: number | null;
-  } | null;
+  // IMPORTANT: contractors table does NOT have "name" column.
+  contractor?: ContractorLite | null;
 }
+
+const CONTRACTOR_SELECT = `
+  company_name,
+  default_new_install_ppw,
+  default_detach_reset_price_per_panel,
+  default_service_rate
+`;
 
 export function useSubcontractJobs() {
   const [jobs, setJobs] = useState<SubcontractJob[]>([]);
@@ -61,12 +71,7 @@ export function useSubcontractJobs() {
         .select(
           `
           *,
-          contractor:contractors(
-            company_name,
-            default_new_install_ppw,
-            default_detach_reset_price_per_panel,
-            default_service_rate
-          )
+          contractor:contractors(${CONTRACTOR_SELECT})
         `
         )
         .order("created_at", { ascending: false });
@@ -90,12 +95,7 @@ export function useSubcontractJobs() {
         .select(
           `
           *,
-          contractor:contractors(
-            company_name,
-            default_new_install_ppw,
-            default_detach_reset_price_per_panel,
-            default_service_rate
-          )
+          contractor:contractors(${CONTRACTOR_SELECT})
         `
         )
         .single();
@@ -121,12 +121,7 @@ export function useSubcontractJobs() {
         .select(
           `
           *,
-          contractor:contractors(
-            company_name,
-            default_new_install_ppw,
-            default_detach_reset_price_per_panel,
-            default_service_rate
-          )
+          contractor:contractors(${CONTRACTOR_SELECT})
         `
         )
         .single();
@@ -143,7 +138,10 @@ export function useSubcontractJobs() {
 
   const deleteJob = async (jobId: string) => {
     try {
-      if (!jobId) return { error: "Missing job id for delete" };
+      // SAFETY: never delete without an id filter
+      if (!jobId || typeof jobId !== "string") {
+        return { error: "Missing job id for delete" };
+      }
 
       const { error: deleteError } = await supabase
         .from("subcontract_jobs")
@@ -169,12 +167,7 @@ export function useSubcontractJobs() {
         .select(
           `
           *,
-          contractor:contractors(
-            company_name,
-            default_new_install_ppw,
-            default_detach_reset_price_per_panel,
-            default_service_rate
-          )
+          contractor:contractors(${CONTRACTOR_SELECT})
         `
         )
         .eq("id", jobId)

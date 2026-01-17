@@ -11,11 +11,7 @@ interface SubcontractJobDetailProps {
   onUpdate?: () => void;
 }
 
-export default function SubcontractJobDetail({
-  jobId,
-  onClose,
-  onUpdate,
-}: SubcontractJobDetailProps) {
+export default function SubcontractJobDetail({ jobId, onClose, onUpdate }: SubcontractJobDetailProps) {
   const [job, setJob] = useState<SubcontractJob | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -49,10 +45,9 @@ export default function SubcontractJobDetail({
       if (fetchError) throw fetchError;
 
       setJob(data as SubcontractJob);
-    } catch (err) {
+    } catch (err: any) {
       console.error("Error fetching job:", err);
-      setError(err instanceof Error ? err.message : "Failed to fetch job");
-      setJob(null);
+      setError(err?.message || "Failed to fetch job");
     } finally {
       setLoading(false);
     }
@@ -90,10 +85,7 @@ export default function SubcontractJobDetail({
         <AlertCircle className="w-12 h-12 text-red-500" />
         <p className="text-red-600">{error || "Job not found"}</p>
         {onClose && (
-          <button
-            onClick={onClose}
-            className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700"
-          >
+          <button onClick={onClose} className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700">
             Go Back
           </button>
         )}
@@ -112,53 +104,36 @@ export default function SubcontractJobDetail({
   if (job.job_type === "new_install") {
     return (
       <div className="bg-white rounded-lg shadow p-6">
-        <h2 className="text-2xl font-bold text-gray-900 mb-4">
-          New Install Subcontract Job
-        </h2>
-        <p className="text-gray-600 mb-4">
-          {job.customer_name} - {job.address}
-        </p>
+        <h2 className="text-2xl font-bold text-gray-900 mb-4">New Install Subcontract Job</h2>
 
-        {/* Show contractor safely (company_name exists) */}
-        <p className="text-gray-700 mb-4">
+        <p className="text-gray-600 mb-2">
           <span className="font-medium">Contractor:</span>{" "}
           {job.contractor?.company_name || "—"}
         </p>
 
+        <p className="text-gray-600 mb-4">
+          {job.customer_name} - {job.address}
+        </p>
+
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              System Size
-            </label>
-            <p className="text-gray-900">
-              {job.system_size_kw ?? 0} kW
-            </p>
+            <label className="block text-sm font-medium text-gray-700 mb-1">System Size</label>
+            <p className="text-gray-900">{job.system_size_kw ?? 0} kW</p>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Gross Amount
-            </label>
-            <p className="text-gray-900">
-              ${Number(job.gross_amount ?? 0).toFixed(2)}
-            </p>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Gross Amount</label>
+            <p className="text-gray-900">${Number(job.gross_amount || 0).toFixed(2)}</p>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Net Revenue
-            </label>
-            <p className="text-gray-900 font-semibold">
-              ${Number(job.net_revenue ?? 0).toFixed(2)}
-            </p>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Net Revenue</label>
+            <p className="text-gray-900 font-semibold">${Number(job.net_revenue || 0).toFixed(2)}</p>
           </div>
         </div>
 
         {onClose && (
-          <button
-            onClick={onClose}
-            className="mt-4 px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700"
-          >
+          <button onClick={onClose} className="mt-4 px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700">
             Go Back
           </button>
         )}
