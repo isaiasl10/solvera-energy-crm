@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from "react";
 import { supabase } from "../lib/supabase";
-import { Loader2, AlertCircle } from "lucide-react";
 import ServiceJobDetail from "./ServiceJobDetail";
 import DetachResetJobDetail from "./DetachResetJobDetail";
+import { Loader2, AlertCircle } from "lucide-react";
 
 interface SubcontractJobDetailProps {
   jobId: string;
@@ -10,12 +10,6 @@ interface SubcontractJobDetailProps {
   onUpdate?: () => void;
 }
 
-/**
- * IMPORTANT:
- * - Subcontracting Intake reads from `customers` (job_source=subcontract).
- * - contractors table does NOT have `name`, only `company_name`.
- * - Use maybeSingle() to avoid "Cannot coerce the result..." when 0 rows return (RLS / filters).
- */
 export default function SubcontractJobDetail({
   jobId,
   onClose,
@@ -35,8 +29,6 @@ export default function SubcontractJobDetail({
       setLoading(true);
       setError(null);
 
-      // ✅ Read the exact same source as your Intake list: customers
-      // ✅ Keep subcontract scope
       const { data, error: fetchError } = await supabase
         .from("customers")
         .select(
@@ -51,25 +43,36 @@ export default function SubcontractJobDetail({
         `
         )
         .eq("id", jobId)
-        .eq("job_source", "subcontract")
-        .maybeSingle(); // ✅ prevents PGRST116/406 when 0 rows
+        .maybeSingle();
+
+      // IMPORTANT: PostgREST can return 406/PGRST116 for "0 rows" when requesting a single object.
+      // maybeSingle() SHOULD normalize it, but we handle it anyway to be 100% safe.
+      if (fetchError?.code === "PGRST116") {
+        setJob(null);
+        setError("Job not found (0 rows). This is usually RLS blocking access to that record.");
+        return;
+      }
 
       if (fetchError) throw fetchError;
 
       if (!data) {
-        // 0 rows: either not found, not subcontract, inactive filtering elsewhere, or RLS blocked
         setJob(null);
-        setError(
-          "Job not found (or access blocked). If this job exists, check customers.job_source='subcontract' and RLS policies."
-        );
+        setError("Job not found (0 rows). This is usually RLS blocking access to that record.");
+        return;
+      }
+
+      // Optional safety: ensure it's actually a subcontract row
+      if (data.job_source && data.job_source !== "subcontract") {
+        setJob(null);
+        setError("This job is not a subcontract job.");
         return;
       }
 
       setJob(data);
     } catch (err: any) {
       console.error("Error fetching job:", err);
-      setError(err?.message || "Failed to fetch job");
       setJob(null);
+      setError(err?.message || "Failed to fetch job");
     } finally {
       setLoading(false);
     }
@@ -79,12 +82,10 @@ export default function SubcontractJobDetail({
     if (!job) return;
 
     try {
-      // ✅ Update the same record in customers
       const { error: updateError } = await supabase
         .from("customers")
         .update(updates)
-        .eq("id", job.id)
-        .eq("job_source", "subcontract");
+        .eq("id", job.id);
 
       if (updateError) throw updateError;
 
@@ -122,11 +123,8 @@ export default function SubcontractJobDetail({
     );
   }
 
-  // Your intake writes job_type to customers
   const jobType = job.job_type;
 
-  // Keep your existing detail components without changing layout.
-  // They will receive the same job object, just sourced from customers.
   if (jobType === "service") {
     return <ServiceJobDetail job={job} onUpdate={handleUpdate} />;
   }
@@ -142,8 +140,8 @@ export default function SubcontractJobDetail({
           New Install Subcontract Job
         </h2>
         <p className="text-gray-600 mb-4">
-          {(job.subcontract_customer_name || job.customer_name || "-")} -{" "}
-          {(job.installation_address || job.address || "-")}
+          {(job.subcontract_customer_name || job.full_name || "-")} -{" "}
+          {(job.installation_address || "-")}
         </p>
         <div className="grid grid-cols-2 gap-4">
           <div>
@@ -154,7 +152,6 @@ export default function SubcontractJobDetail({
               {job.system_size_kw ? `${job.system_size_kw} kW` : "-"}
             </p>
           </div>
-
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Gross Amount
@@ -167,7 +164,6 @@ export default function SubcontractJobDetail({
                 : "-"}
             </p>
           </div>
-
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Net Revenue
@@ -179,7 +175,6 @@ export default function SubcontractJobDetail({
             </p>
           </div>
         </div>
-
         {onClose && (
           <button
             onClick={onClose}
@@ -195,14 +190,6 @@ export default function SubcontractJobDetail({
   return (
     <div className="bg-white rounded-lg shadow p-6">
       <p className="text-red-600">Unknown job type: {String(jobType)}</p>
-      {onClose && (
-        <button
-          onClick={onClose}
-          className="mt-4 px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700"
-        >
-          Go Back
-        </button>
-      )}
     </div>
   );
 }
