@@ -369,7 +369,10 @@ export default function SubcontractingIntake() {
   };
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto">
+    <div
+      className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto"
+      style={{ maxHeight: "100vh", overflowY: "auto" }}
+    >
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-4 sm:mb-6">
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-1">Subcontracting Jobs Intake</h1>
