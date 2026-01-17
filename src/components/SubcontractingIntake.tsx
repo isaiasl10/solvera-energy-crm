@@ -353,7 +353,7 @@ export default function SubcontractingIntake() {
                     Address
                   </th>
                   <th className="px-3 sm:px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider whitespace-nowrap">
-                    System Size
+                    Size/Qty
                   </th>
                   <th className="px-3 sm:px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider whitespace-nowrap">
                     Gross Revenue

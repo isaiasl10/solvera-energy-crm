@@ -182,7 +182,7 @@ export default function UserManagement() {
       setLoading(true);
       let query = supabase
         .from('app_users')
-        .select('id, custom_id, email, full_name, phone, role, role_category, status, photo_url, reporting_manager_id, created_at, updated_at, hourly_rate, is_salary, battery_pay_rates, per_watt_rate, ppw_redline');
+        .select('id, custom_id, email, full_name, phone, role, role_category, status, photo_url, reporting_manager_id, created_at, updated_at, hourly_rate, is_salary, battery_pay_rates, per_watt_rate, ppw_redline, auth_user_id');
 
       if (currentUser?.role === 'sales_manager') {
         const { data: currentUserData } = await supabase
@@ -1435,7 +1435,7 @@ export default function UserManagement() {
                           {canManageUser(user) && (
                             <div className="flex items-center gap-1 ml-2">
                               <button
-                                onClick={() => handleResetPassword(user.id, user.email)}
+                                onClick={() => handleResetPassword(user.auth_user_id || user.id, user.email)}
                                 disabled={resettingPassword === user.id}
                                 className="p-1.5 text-orange-600 hover:bg-orange-50 rounded transition-colors disabled:opacity-50"
                                 title="Reset password"

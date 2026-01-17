@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import { X, Save, Plus, Trash2, FileText, Download } from 'lucide-react';
 import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
 import SchedulingSection from './SchedulingSection';
 
 interface ContractorInfo {
@@ -88,6 +89,8 @@ export default function SubcontractJobDetail({ jobId, onClose, onUpdate }: Subco
 
   const [adders, setAdders] = useState<Adder[]>([]);
   const [newAdder, setNewAdder] = useState({ name: '', amount: '', type: 'fixed' as 'fixed' | 'per_watt' | 'per_panel' });
+
+  const invoiceRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     loadJob();
@@ -271,87 +274,38 @@ export default function SubcontractJobDetail({ jobId, onClose, onUpdate }: Subco
     return gross + addersTotal - labor - expenses;
   };
 
-  const generateInvoicePDF = () => {
-    if (!job) return;
+  const generateInvoicePDF = async () => {
+    if (!job || !invoiceRef.current) return;
 
-    const doc = new jsPDF();
-
-    doc.setFontSize(20);
-    doc.text('SOLVERA ENERGY', 105, 20, { align: 'center' });
-
-    doc.setFontSize(12);
-    doc.text('INVOICE', 105, 30, { align: 'center' });
-
-    doc.setFontSize(10);
-    doc.text(`Invoice #: ${job.invoice_number || 'N/A'}`, 20, 50);
-    doc.text(`Date: ${job.invoice_generated_at ? new Date(job.invoice_generated_at).toLocaleDateString() : new Date().toLocaleDateString()}`, 20, 57);
-
-    doc.setFontSize(12);
-    doc.text('Bill To:', 20, 70);
-    doc.setFontSize(10);
-    const contractorInfo = job.contractors as ContractorInfo;
-    doc.text(contractorInfo?.company_name || job.contractor_name || 'N/A', 20, 77);
-    if (contractorInfo?.address) {
-      doc.text(contractorInfo.address, 20, 84);
-    }
-    if (contractorInfo?.phone_number) {
-      doc.text(contractorInfo.phone_number, 20, contractorInfo?.address ? 91 : 84);
-    }
-
-    doc.setFontSize(12);
-    doc.text('Job Details:', 20, 110);
-    doc.setFontSize(10);
-    doc.text(`Customer: ${job.subcontract_customer_name || 'N/A'}`, 20, 117);
-    doc.text(`Address: ${job.installation_address || 'N/A'}`, 20, 124);
-
-    let yPos = 131;
-    if (job.job_type !== 'detach_reset') {
-      doc.text(`System Size: ${job.system_size_kw || 0} kW`, 20, yPos);
-      yPos += 7;
-      doc.text(`Panel Quantity: ${job.panel_quantity || 0}`, 20, yPos);
-      yPos += 7;
-      doc.text(`Install Date: ${job.install_date ? new Date(job.install_date).toLocaleDateString() : 'N/A'}`, 20, yPos);
-      yPos += 17;
-    } else {
-      yPos += 7;
-    }
-    doc.setFontSize(12);
-    doc.text('Invoice Total:', 20, yPos);
-    yPos += 7;
-
-    doc.setFontSize(10);
-    doc.text(`System Price (${job.ppw || 0} $/kW):`, 20, yPos);
-    doc.text(`$${(job.gross_revenue || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, 160, yPos, { align: 'right' });
-    yPos += 7;
-
-    if (adders.length > 0) {
-      const systemSizeKw = job.system_size_kw || 0;
-      const panelQty = job.panel_quantity || 0;
-      adders.forEach(adder => {
-        let adderAmount = adder.amount;
-        if (adder.type === 'per_watt') {
-          adderAmount = adder.amount * systemSizeKw;
-        } else if (adder.type === 'per_panel') {
-          adderAmount = adder.amount * panelQty;
-        }
-        doc.text(`  - ${adder.name}:`, 20, yPos);
-        doc.text(`$${adderAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, 160, yPos, { align: 'right' });
-        yPos += 7;
+    try {
+      const canvas = await html2canvas(invoiceRef.current, {
+        scale: 2,
+        useCORS: true,
+        logging: false,
+        backgroundColor: '#ffffff',
       });
+
+      const imgData = canvas.toDataURL('image/png');
+      const pdf = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4',
+      });
+
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = pdf.internal.pageSize.getHeight();
+      const imgWidth = canvas.width;
+      const imgHeight = canvas.height;
+      const ratio = Math.min(pdfWidth / imgWidth, pdfHeight / imgHeight);
+      const imgX = (pdfWidth - imgWidth * ratio) / 2;
+      const imgY = 0;
+
+      pdf.addImage(imgData, 'PNG', imgX, imgY, imgWidth * ratio, imgHeight * ratio);
+      pdf.save(`invoice-${job.invoice_number}.pdf`);
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      alert('Failed to generate PDF. Please try again.');
     }
-
-    yPos += 3;
-
-    doc.setLineWidth(0.5);
-    doc.line(20, yPos, 190, yPos);
-    yPos += 7;
-
-    const totalAmount = (job.gross_revenue || 0) + adders.reduce((sum, a) => sum + a.amount, 0);
-    doc.setFontSize(12);
-    doc.text('Total Amount:', 20, yPos);
-    doc.text(`$${totalAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, 160, yPos, { align: 'right' });
-
-    doc.save(`invoice-${job.invoice_number}.pdf`);
   };
 
   if (loading) {
@@ -1033,7 +987,7 @@ export default function SubcontractJobDetail({ jobId, onClose, onUpdate }: Subco
             </div>
           ) : activeTab === 'invoice' ? (
             <div className="flex flex-col gap-6">
-              <div className="bg-white rounded-xl border-2 border-gray-200 shadow-lg overflow-hidden">
+              <div ref={invoiceRef} className="bg-white rounded-xl border-2 border-gray-200 shadow-lg overflow-hidden">
                 <div className="bg-gradient-to-r from-orange-600 to-orange-700 p-4 sm:p-8 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                   <div>
                     <img
