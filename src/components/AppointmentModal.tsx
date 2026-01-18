@@ -26,6 +26,29 @@ interface AppointmentModalProps {
   onSave: () => void;
 }
 
+type SubcontractUrlContext = {
+  source: 'subcontract';
+  jobId: string;
+  jobType: 'new_install' | 'detach_reset' | 'service' | string;
+};
+
+function readSubcontractUrlContext(): SubcontractUrlContext | null {
+  const params = new URLSearchParams(window.location.search);
+  const source = params.get('source');
+  const jobId = params.get('jobId');
+  const jobType = params.get('jobType') || 'new_install';
+  if (source === 'subcontract' && jobId) return { source: 'subcontract', jobId, jobType };
+  return null;
+}
+
+function clearSubcontractUrlParams() {
+  const url = new URL(window.location.href);
+  url.searchParams.delete('source');
+  url.searchParams.delete('jobId');
+  url.searchParams.delete('jobType');
+  window.history.replaceState({}, '', url.pathname + url.search);
+}
+
 export default function AppointmentModal({ appointment, defaultDate, onClose, onSave }: AppointmentModalProps) {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [formData, setFormData] = useState({
@@ -41,9 +64,21 @@ export default function AppointmentModal({ appointment, defaultDate, onClose, on
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // ✅ Detect subcontract scheduling context from URL (no UI change)
+  const [subcontractCtx, setSubcontractCtx] = useState<SubcontractUrlContext | null>(null);
+
+  // Cache subcontract job display info (for auto-title/description only)
+  const [subJobLabel, setSubJobLabel] = useState<{ customer_name?: string | null; address?: string | null } | null>(null);
+
+  useEffect(() => {
+    const ctx = readSubcontractUrlContext();
+    setSubcontractCtx(ctx);
+  }, []);
+
   useEffect(() => {
     fetchCustomers();
 
+    // Normal edit existing appointment
     if (appointment) {
       const date = new Date(appointment.scheduled_date);
       setFormData({
@@ -56,7 +91,11 @@ export default function AppointmentModal({ appointment, defaultDate, onClose, on
         technician_name: appointment.technician_name,
         status: appointment.status,
       });
-    } else if (defaultDate) {
+      return;
+    }
+
+    // New appointment defaults
+    if (defaultDate) {
       setFormData(prev => ({
         ...prev,
         scheduled_date: defaultDate.toISOString().split('T')[0],
@@ -64,6 +103,54 @@ export default function AppointmentModal({ appointment, defaultDate, onClose, on
       }));
     }
   }, [appointment, defaultDate]);
+
+  // ✅ If subcontract context, auto-load subcontract job and prefill title/description
+  useEffect(() => {
+    if (!subcontractCtx?.jobId) return;
+
+    (async () => {
+      try {
+        const { data, error } = await supabase
+          .from('subcontract_jobs')
+          .select('id, job_type, customer_name, address')
+          .eq('id', subcontractCtx.jobId)
+          .maybeSingle();
+
+        if (error) {
+          console.error('Error loading subcontract job for scheduling:', error);
+          return;
+        }
+        if (!data) return;
+
+        setSubJobLabel({ customer_name: data.customer_name, address: data.address });
+
+        // Prefill title/description but DO NOT change UI layout
+        const jt = (data.job_type || subcontractCtx.jobType || 'new_install') as string;
+        const title =
+          jt === 'detach_reset'
+            ? 'Subcontract Detach & Reset'
+            : jt === 'service'
+            ? 'Subcontract Service'
+            : 'Subcontract New Install';
+
+        const descParts = [
+          `Subcontract Job: ${data.id}`,
+          data.customer_name ? `Customer: ${data.customer_name}` : null,
+          data.address ? `Address: ${data.address}` : null,
+        ].filter(Boolean);
+
+        setFormData(prev => ({
+          ...prev,
+          // Keep type as scheduled_install so it stays consistent with your existing modal
+          type: 'scheduled_install',
+          title: prev.title || title,
+          description: prev.description || descParts.join('\n'),
+        }));
+      } catch (e) {
+        console.error('Unexpected error loading subcontract job:', e);
+      }
+    })();
+  }, [subcontractCtx?.jobId]);
 
   const fetchCustomers = async () => {
     try {
@@ -86,6 +173,62 @@ export default function AppointmentModal({ appointment, defaultDate, onClose, on
     setError(null);
 
     try {
+      const isSubcontract = !!subcontractCtx?.jobId;
+
+      // ✅ Subcontract scheduling: only require date + time (NO customer required)
+      if (isSubcontract) {
+        if (!formData.scheduled_date || !formData.scheduled_time) {
+          throw new Error('Please fill in Date and Time');
+        }
+
+        const scheduledDateTime = new Date(`${formData.scheduled_date}T${formData.scheduled_time}`);
+        const jt = (subcontractCtx?.jobType || 'new_install') as string;
+
+        // Decide which field to set based on job type
+        const payload: any = {};
+        if (jt === 'detach_reset') {
+          payload.detach_date = scheduledDateTime.toISOString();
+          // keep reset_date untouched (handled in job detail)
+          payload.workflow_status = 'detach_scheduled';
+        } else {
+          payload.scheduled_date = scheduledDateTime.toISOString();
+          payload.workflow_status = 'install_scheduled';
+        }
+
+        // Store quick scheduling note (no schema changes)
+        // Append to notes rather than overwriting if possible
+        const { data: existing } = await supabase
+          .from('subcontract_jobs')
+          .select('notes')
+          .eq('id', subcontractCtx!.jobId)
+          .maybeSingle();
+
+        const existingNotes = (existing?.notes || '').toString();
+        const extra = [
+          `Scheduled via Calendar`,
+          `When: ${formData.scheduled_date} ${formData.scheduled_time}`,
+          formData.technician_name ? `Tech: ${formData.technician_name}` : null,
+        ].filter(Boolean).join(' | ');
+
+        payload.notes = existingNotes
+          ? `${existingNotes}\n${extra}`
+          : extra;
+
+        const { error: updateErr } = await supabase
+          .from('subcontract_jobs')
+          .update(payload)
+          .eq('id', subcontractCtx!.jobId);
+
+        if (updateErr) throw updateErr;
+
+        // ✅ IMPORTANT: remove URL params so modal does NOT auto-open again
+        clearSubcontractUrlParams();
+
+        onSave();
+        return;
+      }
+
+      // ✅ Normal CRM appointment flow (existing behavior)
       if (!formData.customer_id || !formData.title || !formData.scheduled_date || !formData.scheduled_time) {
         throw new Error('Please fill in all required fields');
       }
@@ -126,6 +269,36 @@ export default function AppointmentModal({ appointment, defaultDate, onClose, on
   };
 
   const handleDelete = async () => {
+    // ✅ If subcontract context, delete means "unschedule" the subcontract job date
+    if (subcontractCtx?.jobId) {
+      if (!confirm('Are you sure you want to remove this subcontract schedule?')) return;
+
+      setLoading(true);
+      setError(null);
+      try {
+        const jt = (subcontractCtx?.jobType || 'new_install') as string;
+        const payload: any = jt === 'detach_reset'
+          ? { detach_date: null }
+          : { scheduled_date: null };
+
+        const { error } = await supabase
+          .from('subcontract_jobs')
+          .update(payload)
+          .eq('id', subcontractCtx.jobId);
+
+        if (error) throw error;
+
+        clearSubcontractUrlParams();
+        onSave();
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to remove schedule');
+      } finally {
+        setLoading(false);
+      }
+      return;
+    }
+
+    // Normal appointment delete
     if (!appointment) return;
     if (!confirm('Are you sure you want to delete this appointment?')) return;
 
@@ -145,6 +318,12 @@ export default function AppointmentModal({ appointment, defaultDate, onClose, on
     }
   };
 
+  const handleClose = () => {
+    // If opened from subcontract context, clean URL params so it doesn’t reopen
+    if (subcontractCtx?.jobId) clearSubcontractUrlParams();
+    onClose();
+  };
+
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-lg shadow-xl max-w-xl w-full max-h-[90vh] overflow-y-auto">
@@ -153,7 +332,7 @@ export default function AppointmentModal({ appointment, defaultDate, onClose, on
             {appointment ? 'Edit Appointment' : 'New Appointment'}
           </h2>
           <button
-            onClick={onClose}
+            onClick={handleClose}
             className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors"
           >
             <X className="w-4 h-4" />
@@ -167,6 +346,9 @@ export default function AppointmentModal({ appointment, defaultDate, onClose, on
             </div>
           )}
 
+          {/* NOTE: No design changes. Same layout. Same fields.
+              Subcontract mode just relaxes validation + saves to subcontract_jobs. */}
+
           <div>
             <label className="block text-xs font-medium text-gray-700 mb-1">
               Customer *
@@ -175,9 +357,11 @@ export default function AppointmentModal({ appointment, defaultDate, onClose, on
               value={formData.customer_id}
               onChange={(e) => setFormData({ ...formData, customer_id: e.target.value })}
               className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              required
+              required={!subcontractCtx?.jobId}
             >
-              <option value="">Select a customer</option>
+              <option value="">
+                {subcontractCtx?.jobId ? 'Not required for subcontract scheduling' : 'Select a customer'}
+              </option>
               {customers.map(customer => (
                 <option key={customer.id} value={customer.id}>
                   {customer.first_name} {customer.last_name}
@@ -213,8 +397,13 @@ export default function AppointmentModal({ appointment, defaultDate, onClose, on
               onChange={(e) => setFormData({ ...formData, title: e.target.value })}
               className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               placeholder="e.g., Solar Panel Installation"
-              required
+              required={!subcontractCtx?.jobId ? true : false}
             />
+            {subcontractCtx?.jobId && subJobLabel?.customer_name && (
+              <div className="mt-1 text-[11px] text-gray-500">
+                Scheduling for subcontract job: {subJobLabel.customer_name}
+              </div>
+            )}
           </div>
 
           <div>
@@ -288,7 +477,7 @@ export default function AppointmentModal({ appointment, defaultDate, onClose, on
           </div>
 
           <div className="flex justify-between items-center pt-3 border-t border-gray-200">
-            {appointment && (
+            {(appointment || subcontractCtx?.jobId) && (
               <button
                 type="button"
                 onClick={handleDelete}
@@ -302,7 +491,7 @@ export default function AppointmentModal({ appointment, defaultDate, onClose, on
             <div className={`flex gap-2 ${!appointment ? 'w-full justify-end' : ''}`}>
               <button
                 type="button"
-                onClick={onClose}
+                onClick={handleClose}
                 disabled={loading}
                 className="px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-50"
               >

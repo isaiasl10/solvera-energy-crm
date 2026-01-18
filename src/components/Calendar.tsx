@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { ChevronLeft, ChevronRight, Search, Filter, X, Plus } from 'lucide-react';
-import { supabase, type SchedulingAppointment, type Customer } from '../lib/supabase';
+import { ChevronLeft, ChevronRight, Search, Filter, Plus } from 'lucide-react';
+import { supabase } from '../lib/supabase';
 import AppointmentModal from './AppointmentModal';
 import TicketDetailModal from './TicketDetailModal';
 import { useAuth } from '../contexts/AuthContext';
@@ -79,25 +79,13 @@ export default function Calendar({ onViewCustomerProject }: CalendarProps) {
       .channel(channelName)
       .on(
         'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'scheduling',
-        },
-        () => {
-          fetchAppointments();
-        }
+        { event: '*', schema: 'public', table: 'scheduling' },
+        () => fetchAppointments()
       )
       .on(
         'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'appointments',
-        },
-        () => {
-          fetchAppointments();
-        }
+        { event: '*', schema: 'public', table: 'appointments' },
+        () => fetchAppointments()
       )
       .subscribe();
 
@@ -128,6 +116,19 @@ export default function Calendar({ onViewCustomerProject }: CalendarProps) {
   useEffect(() => {
     applyFilters();
   }, [appointments, searchTerm, selectedTypes, selectedTechnician]);
+
+  // ✅ If calendar opened from subcontract job, auto-open the EXISTING modal (no UI changes)
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const source = params.get('source');
+    const jobId = params.get('jobId');
+
+    if (source === 'subcontract' && jobId) {
+      setSelectedDate(new Date());
+      setSelectedAppointment(null);
+      setShowAppointmentModal(true);
+    }
+  }, []);
 
   const fetchAppointments = async () => {
     try {
@@ -163,17 +164,18 @@ export default function Calendar({ onViewCustomerProject }: CalendarProps) {
       }
 
       const { data: appointmentsData, error: appointmentsError } = await appointmentsQuery.order('scheduled_date');
-
       if (appointmentsError) throw appointmentsError;
 
       const formattedAppointments = (appointmentsData || []).map(apt => {
         const customer = Array.isArray(apt.customer) ? apt.customer[0] : apt.customer;
         return {
           ...apt,
-          customer: customer ? {
-            first_name: customer.full_name?.split(' ')[0] || '',
-            last_name: customer.full_name?.split(' ').slice(1).join(' ') || '',
-          } : undefined,
+          customer: customer
+            ? {
+                first_name: customer.full_name?.split(' ')[0] || '',
+                last_name: customer.full_name?.split(' ').slice(1).join(' ') || '',
+              }
+            : undefined,
           isSchedulingTicket: false,
           job_source: customer?.job_source || 'internal',
           address: customer?.address || '',
@@ -200,15 +202,16 @@ export default function Calendar({ onViewCustomerProject }: CalendarProps) {
       }
 
       const { data: schedulingData, error: schedulingError } = await schedulingQuery.order('scheduled_date');
-
-      if (schedulingError) {
-        console.error('Error fetching scheduling tickets:', schedulingError);
-      }
+      if (schedulingError) console.error('Error fetching scheduling tickets:', schedulingError);
 
       const formattedScheduling = (schedulingData || []).map(ticket => {
         const customer = Array.isArray(ticket.customer) ? ticket.customer[0] : ticket.customer;
         const ticketType = ticket.ticket_type || 'service';
-        const formatLabel = (value: string) => value.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
+        const formatLabel = (value: string) =>
+          value
+            .split('_')
+            .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+            .join(' ');
 
         return {
           id: ticket.id,
@@ -219,10 +222,12 @@ export default function Calendar({ onViewCustomerProject }: CalendarProps) {
           scheduled_date: ticket.scheduled_date || '',
           technician_name: ticket.assigned_technicians?.join(', ') || 'Unassigned',
           status: ticket.ticket_status || 'scheduled',
-          customer: customer ? {
-            first_name: customer.full_name?.split(' ')[0] || '',
-            last_name: customer.full_name?.split(' ').slice(1).join(' ') || '',
-          } : undefined,
+          customer: customer
+            ? {
+                first_name: customer.full_name?.split(' ')[0] || '',
+                last_name: customer.full_name?.split(' ').slice(1).join(' ') || '',
+              }
+            : undefined,
           isSchedulingTicket: true,
           closed_at: ticket.closed_at || null,
           job_source: customer?.job_source || 'internal',
@@ -273,21 +278,13 @@ export default function Calendar({ onViewCustomerProject }: CalendarProps) {
     const startingDayOfWeek = firstDay.getDay();
 
     const days = [];
-
-    for (let i = 0; i < startingDayOfWeek; i++) {
-      days.push(null);
-    }
-
-    for (let day = 1; day <= daysInMonth; day++) {
-      days.push(new Date(year, month, day));
-    }
-
+    for (let i = 0; i < startingDayOfWeek; i++) days.push(null);
+    for (let day = 1; day <= daysInMonth; day++) days.push(new Date(year, month, day));
     return days;
   };
 
   const getAppointmentsForDay = (date: Date | null) => {
     if (!date) return [];
-
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, '0');
     const day = String(date.getDate()).padStart(2, '0');
@@ -300,22 +297,12 @@ export default function Calendar({ onViewCustomerProject }: CalendarProps) {
     });
   };
 
-  const previousMonth = () => {
-    setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1));
-  };
-
-  const nextMonth = () => {
-    setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1));
-  };
-
-  const today = () => {
-    setCurrentDate(new Date());
-  };
+  const previousMonth = () => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1));
+  const nextMonth = () => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1));
+  const today = () => setCurrentDate(new Date());
 
   const toggleTypeFilter = (type: string) => {
-    setSelectedTypes(prev =>
-      prev.includes(type) ? prev.filter(t => t !== type) : [...prev, type]
-    );
+    setSelectedTypes(prev => (prev.includes(type) ? prev.filter(t => t !== type) : [...prev, type]));
   };
 
   const clearFilters = () => {
@@ -397,7 +384,9 @@ export default function Calendar({ onViewCustomerProject }: CalendarProps) {
           >
             <Filter className="w-4 h-4" />
             Filters
-            {hasActiveFilters && <span className="bg-white text-orange-600 rounded-full w-4 h-4 flex items-center justify-center text-xs font-bold">!</span>}
+            {hasActiveFilters && (
+              <span className="bg-white text-orange-600 rounded-full w-4 h-4 flex items-center justify-center text-xs font-bold">!</span>
+            )}
           </button>
           {hasActiveFilters && (
             <button
@@ -413,9 +402,7 @@ export default function Calendar({ onViewCustomerProject }: CalendarProps) {
           <div className="mt-3 p-3 bg-gray-50 rounded-lg border border-gray-200">
             <div className="space-y-3">
               <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1.5">
-                  Appointment Type
-                </label>
+                <label className="block text-xs font-medium text-gray-700 mb-1.5">Appointment Type</label>
                 <div className="flex flex-wrap gap-1.5">
                   {Object.entries(typeLabels).map(([type, label]) => (
                     <button
@@ -434,9 +421,7 @@ export default function Calendar({ onViewCustomerProject }: CalendarProps) {
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1.5">
-                  Technician
-                </label>
+                <label className="block text-xs font-medium text-gray-700 mb-1.5">Technician</label>
                 <select
                   value={selectedTechnician}
                   onChange={(e) => setSelectedTechnician(e.target.value)}
@@ -456,10 +441,7 @@ export default function Calendar({ onViewCustomerProject }: CalendarProps) {
       <div className="flex-1 overflow-auto p-3">
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
           <div className="flex items-center justify-between p-2 border-b border-gray-200 bg-gray-50">
-            <button
-              onClick={previousMonth}
-              className="p-1.5 hover:bg-gray-200 rounded-lg transition-colors"
-            >
+            <button onClick={previousMonth} className="p-1.5 hover:bg-gray-200 rounded-lg transition-colors">
               <ChevronLeft className="w-4 h-4" />
             </button>
             <div className="flex items-center gap-2">
@@ -471,10 +453,7 @@ export default function Calendar({ onViewCustomerProject }: CalendarProps) {
                 Today
               </button>
             </div>
-            <button
-              onClick={nextMonth}
-              className="p-1.5 hover:bg-gray-200 rounded-lg transition-colors"
-            >
+            <button onClick={nextMonth} className="p-1.5 hover:bg-gray-200 rounded-lg transition-colors">
               <ChevronRight className="w-4 h-4" />
             </button>
           </div>
@@ -490,8 +469,7 @@ export default function Calendar({ onViewCustomerProject }: CalendarProps) {
           <div className="grid grid-cols-7">
             {days.map((date, index) => {
               const dayAppointments = getAppointmentsForDay(date);
-              const isToday = date &&
-                date.toDateString() === new Date().toDateString();
+              const isToday = date && date.toDateString() === new Date().toDateString();
 
               return (
                 <div
@@ -503,9 +481,13 @@ export default function Calendar({ onViewCustomerProject }: CalendarProps) {
                 >
                   {date && (
                     <>
-                      <div className={`text-xs font-medium mb-1 ${
-                        isToday ? 'bg-orange-600 text-white w-5 h-5 rounded-full flex items-center justify-center' : 'text-gray-900'
-                      }`}>
+                      <div
+                        className={`text-xs font-medium mb-1 ${
+                          isToday
+                            ? 'bg-orange-600 text-white w-5 h-5 rounded-full flex items-center justify-center'
+                            : 'text-gray-900'
+                        }`}
+                      >
                         {date.getDate()}
                       </div>
                       <div className="space-y-0.5">
